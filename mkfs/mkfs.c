@@ -153,6 +153,7 @@ main(int argc, char *argv[])
 
     bzero(&de, sizeof(de));
     de.inum = xshort(inum);
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
     strncpy(de.name, shortname, DIRSIZ);
     iappend(rootino, &de, sizeof(de));
 

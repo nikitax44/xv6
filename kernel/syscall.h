@@ -1,3 +1,4 @@
+#pragma once
 // System call numbers
 #define SYS_fork    1
 #define SYS_wait    3
@@ -5,7 +6,6 @@
 
 #define SYS_exec    7
 #define SYS_getpid 11
-#define SYS_sbrk   12
 #define SYS_sleep  13
 #define SYS_uptime 14
 #define SYS_mknod  17
@@ -22,7 +22,5 @@
 #define SYS_fstat  80
 #define SYS_exit   93
 #define SYS_kill   129
+#define SYS_sbrk   214
 #define SYS_open   430
-
-// 62 - lseek
-// 214 brk - set break address

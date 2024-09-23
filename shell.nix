@@ -3,7 +3,7 @@ let
   tpkg = pkgs.pkgsCross.riscv64-embedded;
 in
   tpkg.mkShell {
-    nativeBuildInputs = [pkgs.gcc pkgs.perl pkgs.gnumake];
+    nativeBuildInputs = [pkgs.gcc pkgs.perl pkgs.gnumake pkgs.clang-tools];
     buildInputs = [(tpkg.newlib.override {nanoizeNewlib = true;})];
     TOOLPREFIX = "riscv64-none-elf-";
     # TOOLPREFIX = "riscv64-unknown-linux-gnu-";

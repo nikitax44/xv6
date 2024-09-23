@@ -1,3 +1,7 @@
+#pragma once
+#include "types.h"
+#include "riscv.h"
+
 struct buf;
 struct context;
 struct file;
@@ -79,7 +83,7 @@ int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
 
 // printf.c
-int            printf(char*, ...) __attribute__ ((format (printf, 1, 2)));
+int            printf(const char*, ...) __attribute__ ((format (printf, 1, 2)));
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
 
@@ -127,13 +131,13 @@ int             holdingsleep(struct sleeplock*);
 void            initsleeplock(struct sleeplock*, char*);
 
 // string.c
-int             memcmp(const void*, const void*, uint);
-void*           memmove(void*, const void*, uint);
-void*           memset(void*, int, uint);
+int             memcmp(const void*, const void*, uint64);
+void*           memmove(void*, const void*, uint64);
+void*           memset(void*, int, uint64);
 char*           safestrcpy(char*, const char*, int);
-int             strlen(const char*);
-int             strncmp(const char*, const char*, uint);
-char*           strncpy(char*, const char*, int);
+uint64             strlen(const char*);
+int             strncmp(const char*, const char*, uint64);
+char*           strncpy(char*, const char*, uint64);
 
 // syscall.c
 void            argint(int, int*);

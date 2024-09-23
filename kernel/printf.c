@@ -52,7 +52,7 @@ printint(long long xx, int base, int sign)
 static void
 printptr(uint64 x)
 {
-  int i;
+  uint i;
   consputc('0');
   consputc('x');
   for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4)
@@ -61,7 +61,7 @@ printptr(uint64 x)
 
 // Print to the console.
 int
-printf(char *fmt, ...)
+printf(const char *fmt, ...)
 {
   va_list ap;
   int i, cx, c0, c1, c2, locking;

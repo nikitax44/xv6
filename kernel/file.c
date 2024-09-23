@@ -129,6 +129,39 @@ fileread(struct file *f, uint64 addr, int n)
   return r;
 }
 
+int
+fileseek(struct file *f, uint64 offset, WHENCE whence)
+{
+  int r = -1;
+
+  if(f->type == FD_INODE) {
+    struct stat st;
+    ilock(f->ip);
+    switch (whence) {
+      case SEEK_SET:
+        f->off = offset;
+        r=f->off;
+        break;
+      case SEEK_CUR:
+        f->off += offset;
+        r=f->off;
+        break;
+      case SEEK_END:
+        stati(f->ip, &st);
+        f->off = st.size - f->off;
+        r=f->off;
+        break;
+      default:
+        return -1;
+    }
+    iunlock(f->ip);
+  } else {
+    return -1;
+  }
+
+  return r;
+}
+
 // Write to file f.
 // addr is a user virtual address.
 int

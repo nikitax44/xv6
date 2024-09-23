@@ -1,27 +1,30 @@
+#include "kernel/types.h"
+
 struct stat;
 
 // system calls
-int fork(void);
-int exit(int) __attribute__((noreturn));
-int wait(int*);
-int pipe(int*);
-int write(int, const void*, int);
-int read(int, void*, int);
-int close(int);
-int kill(int);
-int exec(const char*, char**);
-int open(const char*, int);
-int mknod(const char*, short, short);
-int unlink(const char*);
-int fstat(int fd, struct stat*);
-int link(const char*, const char*);
-int mkdir(const char*);
-int chdir(const char*);
-int dup(int);
-int getpid(void);
-char* sbrk(int);
-int sleep(int);
-int uptime(void);
+int _fork(void);
+void _exit(int) __attribute__((noreturn));
+int _wait(int*);
+int _pipe(int*);
+int _write(int, const void*, int);
+int _read(int, void*, int);
+long _seek(int, long, int);
+int _close(int);
+int _kill(int);
+int _exec(const char*, char**);
+int _open(const char*, int);
+int _mknod(const char*, short, short);
+int _unlink(const char*);
+int _fstat(int fd, struct stat*);
+int _link(const char*, const char*);
+int _mkdir(const char*);
+int _chdir(const char*);
+int _dup(int);
+int _getpid(void);
+char* _sbrk(int);
+int _sleep(int);
+int _uptime(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

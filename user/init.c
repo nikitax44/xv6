@@ -16,36 +16,36 @@ main(void)
 {
   int pid, wpid;
 
-  if(open("console", O_RDWR) < 0){
-    mknod("console", CONSOLE, 0);
-    open("console", O_RDWR);
+  if(_open("console", O_RDWR) < 0){
+    _mknod("console", CONSOLE, 0);
+    _open("console", O_RDWR);
   }
-  dup(0);  // stdout
-  dup(0);  // stderr
+  _dup(0);  // stdout
+  _dup(0);  // stderr
 
   for(;;){
     printf("init: starting sh\n");
-    pid = fork();
+    pid = _fork();
     if(pid < 0){
       printf("init: fork failed\n");
-      exit(1);
+      _exit(1);
     }
     if(pid == 0){
-      exec("sh", argv);
+      _exec("sh", argv);
       printf("init: exec sh failed\n");
-      exit(1);
+      _exit(1);
     }
 
     for(;;){
-      // this call to wait() returns if the shell exits,
+      // this call to _wait() returns if the shell exits,
       // or if a parentless process exits.
-      wpid = wait((int *) 0);
+      wpid = _wait((int *) 0);
       if(wpid == pid){
         // the shell exited; restart it.
         break;
       } else if(wpid < 0){
         printf("init: wait returned an error\n");
-        exit(1);
+        _exit(1);
       } else {
         // it was a parentless process; do nothing.
       }

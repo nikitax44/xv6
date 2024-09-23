@@ -66,7 +66,7 @@ runcmd(struct cmd *cmd)
   struct redircmd *rcmd;
 
   if(cmd == 0)
-    exit(1);
+    _exit(1);
 
   switch(cmd->type){
   default:
@@ -75,17 +75,17 @@ runcmd(struct cmd *cmd)
   case EXEC:
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
-      exit(1);
-    exec(ecmd->argv[0], ecmd->argv);
+      _exit(1);
+    _exec(ecmd->argv[0], ecmd->argv);
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
 
   case REDIR:
     rcmd = (struct redircmd*)cmd;
-    close(rcmd->fd);
-    if(open(rcmd->file, rcmd->mode) < 0){
+    _close(rcmd->fd);
+    if(_open(rcmd->file, rcmd->mode) < 0){
       fprintf(2, "open %s failed\n", rcmd->file);
-      exit(1);
+      _exit(1);
     }
     runcmd(rcmd->cmd);
     break;
@@ -94,32 +94,32 @@ runcmd(struct cmd *cmd)
     lcmd = (struct listcmd*)cmd;
     if(fork1() == 0)
       runcmd(lcmd->left);
-    wait(0);
+    _wait(0);
     runcmd(lcmd->right);
     break;
 
   case PIPE:
     pcmd = (struct pipecmd*)cmd;
-    if(pipe(p) < 0)
+    if(_pipe(p) < 0)
       panic("pipe");
     if(fork1() == 0){
-      close(1);
-      dup(p[1]);
-      close(p[0]);
-      close(p[1]);
+      _close(1);
+      _dup(p[1]);
+      _close(p[0]);
+      _close(p[1]);
       runcmd(pcmd->left);
     }
     if(fork1() == 0){
-      close(0);
-      dup(p[0]);
-      close(p[0]);
-      close(p[1]);
+      _close(0);
+      _dup(p[0]);
+      _close(p[0]);
+      _close(p[1]);
       runcmd(pcmd->right);
     }
-    close(p[0]);
-    close(p[1]);
-    wait(0);
-    wait(0);
+    _close(p[0]);
+    _close(p[1]);
+    _wait(0);
+    _wait(0);
     break;
 
   case BACK:
@@ -128,13 +128,13 @@ runcmd(struct cmd *cmd)
       runcmd(bcmd->cmd);
     break;
   }
-  exit(0);
+  _exit(0);
 }
 
 int
 getcmd(char *buf, int nbuf)
 {
-  write(2, "$ ", 2);
+  _write(2, "$ ", 2);
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
@@ -149,9 +149,9 @@ main(void)
   int fd;
 
   // Ensure that three file descriptors are open.
-  while((fd = open("console", O_RDWR)) >= 0){
+  while((fd = _open("console", O_RDWR)) >= 0){
     if(fd >= 3){
-      close(fd);
+      _close(fd);
       break;
     }
   }
@@ -161,22 +161,22 @@ main(void)
     if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf)-1] = 0;  // chop \n
-      if(chdir(buf+3) < 0)
+      if(_chdir(buf+3) < 0)
         fprintf(2, "cannot cd %s\n", buf+3);
       continue;
     }
     if(fork1() == 0)
       runcmd(parsecmd(buf));
-    wait(0);
+    _wait(0);
   }
-  exit(0);
+  _exit(0);
 }
 
 void
 panic(char *s)
 {
   fprintf(2, "%s\n", s);
-  exit(1);
+  _exit(1);
 }
 
 int
@@ -184,7 +184,7 @@ fork1(void)
 {
   int pid;
 
-  pid = fork();
+  pid = _fork();
   if(pid == -1)
     panic("fork");
   return pid;

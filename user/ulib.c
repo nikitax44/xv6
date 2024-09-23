@@ -4,14 +4,14 @@
 #include "user/user.h"
 
 //
-// wrapper so that it's OK if main() does not call exit().
+// wrapper so that it's OK if main() does not call _exit().
 //
 void
 start()
 {
   extern int main();
   main();
-  exit(0);
+  _exit(0);
 }
 
 char*
@@ -70,7 +70,7 @@ gets(char *buf, int max)
   char c;
 
   for(i=0; i+1 < max; ){
-    cc = read(0, &c, 1);
+    cc = _read(0, &c, 1);
     if(cc < 1)
       break;
     buf[i++] = c;
@@ -87,11 +87,11 @@ stat(const char *n, struct stat *st)
   int fd;
   int r;
 
-  fd = open(n, O_RDONLY);
+  fd = _open(n, O_RDONLY);
   if(fd < 0)
     return -1;
-  r = fstat(fd, st);
-  close(fd);
+  r = _fstat(fd, st);
+  _close(fd);
   return r;
 }
 

@@ -8,8 +8,8 @@ print "#include \"kernel/syscall.h\"\n";
 
 sub entry {
     my $name = shift;
-    print ".global $name\n";
-    print "${name}:\n";
+    print ".global _$name\n";
+    print "_${name}:\n";
     print " li a7, SYS_${name}\n";
     print " ecall\n";
     print " ret\n";
@@ -19,6 +19,7 @@ entry("fork");
 entry("exit");
 entry("wait");
 entry("pipe");
+entry("seek");
 entry("read");
 entry("write");
 entry("close");

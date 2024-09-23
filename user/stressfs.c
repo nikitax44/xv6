@@ -24,26 +24,26 @@ main(int argc, char *argv[])
   memset(data, 'a', sizeof(data));
 
   for(i = 0; i < 4; i++)
-    if(fork() > 0)
+    if(_fork() > 0)
       break;
 
   printf("write %d\n", i);
 
   path[8] += i;
-  fd = open(path, O_CREATE | O_RDWR);
+  fd = _open(path, O_CREATE | O_RDWR);
   for(i = 0; i < 20; i++)
 //    printf(fd, "%d\n", i);
-    write(fd, data, sizeof(data));
-  close(fd);
+    _write(fd, data, sizeof(data));
+  _close(fd);
 
   printf("read\n");
 
-  fd = open(path, O_RDONLY);
+  fd = _open(path, O_RDONLY);
   for (i = 0; i < 20; i++)
-    read(fd, data, sizeof(data));
-  close(fd);
+    _read(fd, data, sizeof(data));
+  _close(fd);
 
-  wait(0);
+  _wait(0);
 
-  exit(0);
+  _exit(0);
 }

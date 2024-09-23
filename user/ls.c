@@ -31,14 +31,14 @@ ls(char *path)
   struct dirent de;
   struct stat st;
 
-  if((fd = open(path, O_RDONLY)) < 0){
+  if((fd = _open(path, O_RDONLY)) < 0){
     fprintf(2, "ls: cannot open %s\n", path);
     return;
   }
 
-  if(fstat(fd, &st) < 0){
+  if(_fstat(fd, &st) < 0){
     fprintf(2, "ls: cannot stat %s\n", path);
-    close(fd);
+    _close(fd);
     return;
   }
 
@@ -56,7 +56,7 @@ ls(char *path)
     strcpy(buf, path);
     p = buf+strlen(buf);
     *p++ = '/';
-    while(read(fd, &de, sizeof(de)) == sizeof(de)){
+    while(_read(fd, &de, sizeof(de)) == sizeof(de)){
       if(de.inum == 0)
         continue;
       memmove(p, de.name, DIRSIZ);
@@ -69,7 +69,7 @@ ls(char *path)
     }
     break;
   }
-  close(fd);
+  _close(fd);
 }
 
 int
@@ -79,9 +79,9 @@ main(int argc, char *argv[])
 
   if(argc < 2){
     ls(".");
-    exit(0);
+    _exit(0);
   }
   for(i=1; i<argc; i++)
     ls(argv[i]);
-  exit(0);
+  _exit(0);
 }

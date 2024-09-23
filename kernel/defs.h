@@ -8,6 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+typedef enum { SEEK_SET, SEEK_CUR, SEEK_END } WHENCE;
 
 // bio.c
 void            binit(void);
@@ -32,6 +33,7 @@ struct file*    filedup(struct file*);
 void            fileinit(void);
 int             fileread(struct file*, uint64, int n);
 int             filestat(struct file*, uint64 addr);
+int             fileseek(struct file*, uint64, WHENCE n);
 int             filewrite(struct file*, uint64, int n);
 
 // fs.c

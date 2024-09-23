@@ -128,13 +128,12 @@ main(int argc, char *argv[])
   iappend(rootino, &de, sizeof(de));
 
   for(i = 2; i < argc; i++){
-    // get rid of "user/"
-    char *shortname;
-    if(strncmp(argv[i], "user/", 5) == 0)
-      shortname = argv[i] + 5;
-    else
-      shortname = argv[i];
-    
+    // get rid of "user/(ports/)?"
+    char *shortname=argv[i];
+    if(strncmp(shortname, "user/", 5) == 0)
+      shortname += 5;
+    if(strncmp(shortname, "ports/", 6) == 0)
+      shortname += 6;
     assert(index(shortname, '/') == 0);
 
     if((fd = open(argv[i], 0)) < 0)

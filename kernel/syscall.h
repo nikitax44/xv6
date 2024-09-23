@@ -16,6 +16,7 @@
 #define SYS_dup    23
 #define SYS_chdir  49
 #define SYS_close  57
+#define SYS_seek   62
 #define SYS_read   63
 #define SYS_write  64
 #define SYS_fstat  80

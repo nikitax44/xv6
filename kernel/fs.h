@@ -3,7 +3,7 @@
 
 
 #define ROOTINO  1   // root i-number
-#define BSIZE 1024  // block size
+#define BSIZE 4096  // block size
 
 // Disk layout:
 // [ boot block | super block | log | inode blocks |
@@ -24,7 +24,7 @@ struct superblock {
 
 #define FSMAGIC 0x10203040
 
-#define NDIRECT 12
+#define NDIRECT 28
 #define NINDIRECT (BSIZE / sizeof(uint))
 #define MAXFILE (NDIRECT + NINDIRECT)
 
@@ -40,6 +40,9 @@ struct dinode {
 
 // Inodes per block.
 #define IPB           (BSIZE / sizeof(struct dinode))
+// Assertion:
+//   BSIZE % sizeof(struct dinode) == 0
+//   BSIZE % (16+4*NDIRECT) == 0
 
 // Block containing inode i
 #define IBLOCK(i, sb)     ((i) / IPB + sb.inodestart)

@@ -8,6 +8,7 @@ in
     src = ./.;
     pname = "xv6";
     version = "none";
+    preBuild = "make clean";
     buildFlags = ["kernel/kernel fs.img"];
     nativeBuildInputs = [pkgs.gcc pkgs.perl];
     makeFlags = ["TOOLPREFIX=riscv64-none-elf-"];

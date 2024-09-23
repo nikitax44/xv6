@@ -68,8 +68,23 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
-    printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
-    printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
+    switch (r_scause()) {
+      case 2:
+        printf("usertrap: Illegal Instruction: opcode=0x%lx sepc=0x%lx\n", r_stval(), r_sepc());
+        break;
+      case 12:
+        printf("usertrap: Instruction page fault: mepc=0x%lx sepc=0x%lx\n", r_stval(), r_sepc());
+        break;
+      case 13:
+        printf("usertrap: Load page fault: page=0x%lx sepc=0x%lx\n", r_stval(), r_sepc());
+        break;
+      case 15:
+        printf("usertrap: Store/AMO page fault: page=0x%lx sepc=0x%lx\n", r_stval(), r_sepc());
+        break;
+      default:
+        printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
+        printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
+    }
     setkilled(p);
   }
 

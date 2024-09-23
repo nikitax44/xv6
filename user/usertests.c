@@ -2298,7 +2298,7 @@ bsstest(char *s)
 }
 
 // does exec return an error if the arguments
-// are larger than a page? or does it write
+// are larger than stack size? or does it write
 // below the stack and wreck the instructions/data?
 void
 bigargtest(char *s)
@@ -2310,7 +2310,7 @@ bigargtest(char *s)
   if(pid == 0){
     static char *args[MAXARG];
     int i;
-    char big[400];
+    char big[(USERSTACK*PGSIZE)/(MAXARG-1)+2];
     memset(big, ' ', sizeof(big));
     big[sizeof(big)-1] = '\0';
     for(i = 0; i < MAXARG-1; i++)

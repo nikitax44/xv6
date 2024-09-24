@@ -413,44 +413,79 @@ uint64 sys_chdir(void) {
   return 0;
 }
 
-uint64 sys_exec(void) {
-  char   path[MAXPATH], *argv[MAXARG];
+uint64 sys_execve(void) {
+  char   path[MAXPATH], *argv[MAXARG], *envp[MAXARG];
   int    i;
-  uint64 uargv, uarg;
+  uint64 uargv, uarg, uenvp, uenv;
 
   argaddr(1, &uargv);
+  argaddr(2, &uenvp);
   if (argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
   memset(argv, 0, sizeof(argv));
-  for (i = 0;; i++) {
-    if (i >= NELEM(argv)) {
-      goto bad;
+  memset(envp, 0, sizeof(envp));
+  if (uargv != 0) {
+    for (i = 0;; i++) {
+      if (i >= NELEM(argv)) {
+        goto bad;
+      }
+      if (fetchaddr(uargv + sizeof(uint64) * i, (uint64*)&uarg) < 0) {
+        goto bad;
+      }
+      if (uarg == 0) {
+        argv[i] = 0;
+        break;
+      }
+      argv[i] = kalloc();
+      if (argv[i] == 0)
+        goto bad;
+      if (fetchstr(uarg, argv[i], PGSIZE) < 0)
+        goto bad;
     }
-    if (fetchaddr(uargv + sizeof(uint64) * i, (uint64*)&uarg) < 0) {
-      goto bad;
-    }
-    if (uarg == 0) {
-      argv[i] = 0;
-      break;
-    }
-    argv[i] = kalloc();
-    if (argv[i] == 0)
-      goto bad;
-    if (fetchstr(uarg, argv[i], PGSIZE) < 0)
-      goto bad;
+  } else {
+    argv[0] = 0;
   }
 
-  int ret = exec(path, argv);
+  if (uenvp != 0) {
+    for (i = 0;; i++) {
+      if (i >= NELEM(envp)) {
+        goto bad;
+      }
+      if (fetchaddr(uenvp + sizeof(uint64) * i, (uint64*)&uenv) < 0) {
+        goto bad;
+      }
+      if (uenv == 0) {
+        envp[i] = 0;
+        break;
+      }
+      envp[i] = kalloc();
+      if (envp[i] == 0)
+        goto bad;
+      if (fetchstr(uenv, envp[i], PGSIZE) < 0)
+        goto bad;
+    }
+  } else {
+    envp[0] = 0;
+  }
+
+  int ret = exec(path, argv, envp);
 
   for (i = 0; i < NELEM(argv) && argv[i] != 0; i++)
     kfree(argv[i]);
+
+  for (i = 0; i < NELEM(envp) && envp[i] != 0; i++)
+    kfree(envp[i]);
 
   return ret;
 
 bad:
   for (i = 0; i < NELEM(argv) && argv[i] != 0; i++)
     kfree(argv[i]);
+
+  for (i = 0; i < NELEM(envp) && envp[i] != 0; i++)
+    kfree(envp[i]);
+
   return -1;
 }
 

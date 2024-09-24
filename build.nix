@@ -5,11 +5,14 @@ let
 
   qemu-script = ''
     #!/bin/sh
+    set -e
     BASE="$(dirname "$0")"
     KERNEL="''${KERNEL:-$BASE/kernel}"
     if [ -z "$FS" ]; then
-      FS="$(mktemp)"
+      FS="$(mktemp fs.XXXXXX.img)"
       cp "$BASE/fs.img" "$FS"
+      echo "copied fs.img to $FS"
+      trap "rm -vf '$FS'" EXIT
     fi
     CPUS="''${CPUS:-$(nproc)}"
     qemu-system-riscv64 \
@@ -19,6 +22,7 @@ let
       -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0   \
       -kernel "$KERNEL"
   '';
+  libnewlib = "${newlib}/riscv64-none-elf/lib";
 in
   pkgs.pkgsCross.riscv64-embedded.stdenv.mkDerivation {
     src = ./.;
@@ -30,9 +34,9 @@ in
     buildInputs = [newlib];
     makeFlags = [
       "TOOLPREFIX=riscv64-none-elf-"
-      "EXTRA_CFLAGS=-I${newlib}/riscv64-none-elf/include"
-      "EXTRA_LDFLAGS=${newlib}/riscv64-none-elf/lib/libc.a"
     ];
+    EXTRA_CFLAGS = "-I${newlib}/riscv64-none-elf/include  --specs=${libnewlib}/nano.specs";
+    EXTRA_LDFLAGS = "${libnewlib}/libc.a";
     installPhase = ''
       mkdir $out
       cp kernel/kernel $out/

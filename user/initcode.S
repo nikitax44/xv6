@@ -8,7 +8,8 @@
 start:
         la a0, init
         la a1, argv
-        li a7, SYS_exec
+        la a2, envp
+        li a7, SYS_execve
         ecall
 
 # for(;;) exit();
@@ -21,8 +22,12 @@ exit:
 init:
   .string "/init\0"
 
-# char *argv[] = { init, 0 };
 .p2align 2
+# char *argv[] = { init, 0 };
 argv:
   .quad init
+  .quad 0
+
+# char *envp[] = { 0 };
+envp:
   .quad 0

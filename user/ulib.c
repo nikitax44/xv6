@@ -121,3 +121,9 @@ int memcmp(const void* s1, const void* s2, uint n) {
 void* memcpy(void* dst, const void* src, uint n) {
   return memmove(dst, src, n);
 }
+
+int _execve(const char* path, char** argv, char** envp);
+
+int _exec(const char* path, char** argv) {
+  return _execve(path, argv, (char**)0);
+}

@@ -18,10 +18,10 @@ int flags2perm(int flags) {
   return perm;
 }
 
-int exec(char* path, char** argv) {
+int exec(char* path, char** argv, char** envp) {
   char *         s, *last;
   int            i, off;
-  uint64         argc, sz = 0, sp, ustack[MAXARG], stackbase;
+  uint64         argc, envc, sz = 0, sp, ustack[MAXARG], stackbase;
   struct elfhdr  elf;
   struct inode*  ip;
   struct proghdr ph;
@@ -99,19 +99,35 @@ int exec(char* path, char** argv) {
     ustack[argc] = sp;
   }
   ustack[argc] = 0;
+  // Push env strings
+  for (envc = 0; envp[envc]; envc++) {
+    if (argc + 1 + envc >= MAXARG)
+      goto bad;
+    sp -= strlen(envp[envc]) + 1;
+    sp -= sp % 16; // riscv sp must be 16-byte aligned
+    if (sp < stackbase)
+      goto bad;
+    if (copyout(pagetable, sp, envp[envc], strlen(envp[envc]) + 1) < 0)
+      goto bad;
+    ustack[argc + 1 + envc] = sp;
+  }
+  ustack[argc + 1 + envc] = 0;
 
-  // push the array of argv[] pointers.
+  // push the arrays of argv[] and envp[] pointers.
   sp -= (argc + 1) * sizeof(uint64);
+  sp -= (envc + 1) * sizeof(uint64);
   sp -= sp % 16;
   if (sp < stackbase)
     goto bad;
-  if (copyout(pagetable, sp, (char*)ustack, (argc + 1) * sizeof(uint64)) < 0)
+  if (copyout(pagetable, sp, (char*)ustack,
+              (argc + 1 + envc + 1) * sizeof(uint64)) < 0)
     goto bad;
 
-  // arguments to user main(argc, argv)
+  // arguments to user main(argc, argv, envp)
   // argc is returned via the system call return
   // value, which goes in a0.
   p->trapframe->a1 = sp;
+  p->trapframe->a2 = sp + (argc + 1) * sizeof(uint64);
 
   // Save program name for debugging.
   for (last = s = path; *s; s++)
@@ -127,7 +143,8 @@ int exec(char* path, char** argv) {
   p->trapframe->sp  = sp;        // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
-  return argc; // this ends up in a0, the first argument to main(argc, argv)
+  return argc; // this ends up in a0, the first argument to main(argc, argv,
+               // envp)
 
 bad:
   if (pagetable)

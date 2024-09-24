@@ -28,7 +28,7 @@ void consoleintr(int);
 void consputc(int);
 
 // exec.c
-int exec(char*, char**);
+int exec(char*, char**, char**);
 
 // file.c
 struct file* filealloc(void);

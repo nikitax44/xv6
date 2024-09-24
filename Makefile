@@ -161,6 +161,7 @@ clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*.asm *.sym \
 	*/*.o */*.d */*.asm */*.sym \
+	*/*/*.o */*/*.d */*/*.asm */*/*.sym \
 	$U/initcode $U/initcode.out $K/kernel fs.img \
 	mkfs/mkfs .gdbinit \
         $U/usys.S \

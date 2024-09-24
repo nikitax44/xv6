@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(int argc, char* argv[]) {
+// extern char* environ[];
+
+int main(int argc, char* argv[], char* envp[]) {
   int i;
 
   for (i = 1; i < argc; i++) {
@@ -11,5 +13,9 @@ int main(int argc, char* argv[]) {
     } else {
       printf("\n");
     }
+  }
+  for (; *envp; envp++) {
+    printf("%s", *envp);
+    printf("\n");
   }
 }

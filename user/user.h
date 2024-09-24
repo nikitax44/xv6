@@ -13,6 +13,7 @@ long  _seek(int, long, int);
 int   _close(int);
 int   _kill(int);
 int   _exec(const char*, char**);
+int   _execve(const char*, char**, char**);
 int   _open(const char*, int);
 int   _mknod(const char*, short, short);
 int   _unlink(const char*);

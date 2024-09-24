@@ -104,8 +104,8 @@ $U/_%: $U/%.o $(ULIB)
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
-$P/_%: $P/%.o $U/usys.o $P/fixes.o
-	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $^ $(EXTRA_LDFLAGS)
+$P/_%: $P/%.o $U/usys.o $P/fixes.o $P/app.ld
+	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $(filter %.o,$^) $(EXTRA_LDFLAGS)
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
@@ -159,6 +159,7 @@ fs.img: mkfs/mkfs README $(UPROGS) $(PORTS)
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
+	*.asm *.sym \
 	*/*.o */*.d */*.asm */*.sym \
 	$U/initcode $U/initcode.out $K/kernel fs.img \
 	mkfs/mkfs .gdbinit \

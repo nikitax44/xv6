@@ -9,6 +9,7 @@
 #include "types.h"
 
 static int loadseg(pde_t*, uint64, struct inode*, uint, uint);
+static int loaddata(pde_t*, uint64, struct inode*, uint, uint);
 
 int flags2perm(int flags) {
   int perm = 0;
@@ -70,10 +71,6 @@ int execve(const char* path, char* const* argv, char* const* envp) {
       ret = ENOEXEC;
       goto bad;
     }
-    if (ph.vaddr % PGSIZE != 0) {
-      ret = ENOEXEC;
-      goto bad;
-    }
     uint64 sz1;
     if ((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,
                         flags2perm(ph.flags))) == 0) {
@@ -81,8 +78,7 @@ int execve(const char* path, char* const* argv, char* const* envp) {
       goto bad;
     }
     sz = sz1;
-    if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0) {
-      ret = ENOEXEC;
+    if ((ret = loaddata(pagetable, ph.vaddr, ip, ph.off, ph.filesz)) != 0) {
       goto bad;
     }
   }
@@ -194,6 +190,33 @@ bad:
   return ret;
 }
 
+// allows unaligned loading
+static int loaddata(pagetable_t pagetable, uint64 va, struct inode* ip,
+                    uint offset, uint sz) {
+  uint64 bt = PGROUNDUP(va);
+
+  uint64 diff = bt - va; // >=0
+  if (diff != 0) {
+    uint   n;
+    uint64 pa = walkaddr(pagetable, PGROUNDDOWN(va));
+    if (pa == 0) {
+      panic("loaddata: address should exist");
+    }
+    if (sz > diff) {
+      n = diff;
+    } else {
+      n = sz;
+    }
+    if (readi(ip, 0, (uint64)pa + (va % PGSIZE), offset, n) != n)
+      return ENOEXEC;
+  }
+
+  if (sz > diff) {
+    return loadseg(pagetable, bt, ip, offset + diff, sz - diff);
+  }
+  return 0;
+}
+
 // Load a program segment into pagetable at virtual address va.
 // va must be page-aligned
 // and the pages from va to va+sz must already be mapped.
@@ -212,7 +235,7 @@ static int loadseg(pagetable_t pagetable, uint64 va, struct inode* ip,
     else
       n = PGSIZE;
     if (readi(ip, 0, (uint64)pa, offset + i, n) != n)
-      return -1;
+      return ENOEXEC;
   }
 
   return 0;

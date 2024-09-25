@@ -1,5 +1,6 @@
 // Shell.
 
+#include "kernel/errno.h"
 #include "kernel/fcntl.h"
 #include "kernel/types.h"
 #include "user/user.h"
@@ -54,6 +55,19 @@ void        panic(char*);
 struct cmd* parsecmd(char*);
 void        runcmd(struct cmd*) __attribute__((noreturn));
 
+void print_error(const char* name, int errno) {
+  switch (errno) {
+  case ENOENT:
+    fprintf(2, "%s: command not found\n", name);
+    break;
+  case ENOEXEC:
+    fprintf(2, "%s: exec format error\n", name);
+    break;
+  default:
+    fprintf(2, "exec %s failed: %d\n", name, errno);
+  }
+}
+
 // Execute cmd.  Never returns.
 void runcmd(struct cmd* cmd) {
   int              p[2];
@@ -74,8 +88,8 @@ void runcmd(struct cmd* cmd) {
     ecmd = (struct execcmd*)cmd;
     if (ecmd->argv[0] == 0)
       _exit(1);
-    int err = _execve(ecmd->argv[0], ecmd->argv, (char*[]){"SHELL=/sh", 0});
-    fprintf(2, "exec %s failed: %d\n", ecmd->argv[0], err);
+    int errno = _execve(ecmd->argv[0], ecmd->argv, (char*[]){"SHELL=/sh", 0});
+    print_error(ecmd->argv[0], errno);
     break;
 
   case REDIR:

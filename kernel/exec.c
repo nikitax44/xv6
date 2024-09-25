@@ -8,8 +8,10 @@
 #include "spinlock.h"
 #include "types.h"
 
-static int loadseg(pde_t*, uint64, struct inode*, uint, uint);
-static int loaddata(pde_t*, uint64, struct inode*, uint, uint);
+static int    loadseg(pde_t*, uint64, struct inode*, uint, uint);
+static int    loaddata(pde_t*, uint64, struct inode*, uint, uint);
+static uint64 putargs(pde_t*, char* const* argv, uint64* sp, uint64 stackbase,
+                      uint64* ustack, uint64* base);
 
 int flags2perm(int flags) {
   int perm = 0;
@@ -23,7 +25,7 @@ int flags2perm(int flags) {
 int execve(const char* path, char* const* argv, char* const* envp) {
   const char *   s, *last;
   int            i, off;
-  uint64         argc, envc, sz = 0, sp, ustack[MAXARG], stackbase;
+  uint64         argc, envc, sz = 0, sp, ustack[MAXARG], stackbase, base;
   struct elfhdr  elf;
   struct inode*  ip;
   struct proghdr ph;
@@ -104,55 +106,28 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   sp        = sz;
   stackbase = sp - USERSTACK * PGSIZE;
 
-  // Push argument strings, prepare rest of stack in ustack.
-  for (argc = 0; argv[argc]; argc++) {
-    if (argc >= MAXARG) {
-      ret = E2BIG;
-      goto bad;
-    }
-    sp -= strlen(argv[argc]) + 1;
-    sp -= sp % 16; // riscv sp must be 16-byte aligned
-    if (sp < stackbase) {
-      ret = E2BIG;
-      goto bad;
-    }
-    if (copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0) {
-      ret = -1; // TODO
-      goto bad;
-    }
-    ustack[argc] = sp;
+  base = 0;
+
+  argc = putargs(pagetable, argv, &sp, stackbase, ustack, &base);
+  if (argc == (uint64)-1) {
+    ret = E2BIG;
+    goto bad;
   }
-  ustack[argc] = 0;
-  // Push env strings
-  for (envc = 0; envp[envc]; envc++) {
-    if (argc + 1 + envc >= MAXARG) {
-      ret = E2BIG;
-      goto bad;
-    }
-    sp -= strlen(envp[envc]) + 1;
-    sp -= sp % 16; // riscv sp must be 16-byte aligned
-    if (sp < stackbase) {
-      ret = E2BIG;
-      goto bad;
-    }
-    if (copyout(pagetable, sp, envp[envc], strlen(envp[envc]) + 1) < 0) {
-      return -1;
-      goto bad;
-    }
-    ustack[argc + 1 + envc] = sp;
+
+  envc = putargs(pagetable, envp, &sp, stackbase, ustack, &base);
+  if (envc == (uint64)-1) {
+    ret = E2BIG;
+    goto bad;
   }
-  ustack[argc + 1 + envc] = 0;
 
   // push the arrays of argv[] and envp[] pointers.
-  sp -= (argc + 1) * sizeof(uint64);
-  sp -= (envc + 1) * sizeof(uint64);
+  sp -= base * sizeof(uint64);
   sp -= sp % 16;
   if (sp < stackbase) {
     ret = E2BIG;
     goto bad;
   }
-  if (copyout(pagetable, sp, (char*)ustack,
-              (argc + 1 + envc + 1) * sizeof(uint64)) < 0) {
+  if (copyout(pagetable, sp, (char*)ustack, base * sizeof(uint64)) < 0) {
     ret = -1;
     goto bad;
   }
@@ -239,4 +214,27 @@ static int loadseg(pagetable_t pagetable, uint64 va, struct inode* ip,
   }
 
   return 0;
+}
+
+static uint64 putargs(pagetable_t pagetable, char* const* argv, uint64* sp,
+                      uint64 stackbase, uint64* ustack, uint64* base) {
+  uint64 argc;
+  // Push argument strings, prepare rest of stack in ustack.
+  for (argc = 0; argv[argc]; argc++) {
+    if (*base + argc >= MAXARG) {
+      return -1;
+    }
+    *sp -= strlen(argv[argc]) + 1;
+    *sp -= *sp % 16; // riscv sp must be 16-byte aligned
+    if (*sp < stackbase) {
+      return -1;
+    }
+    if (copyout(pagetable, *sp, argv[argc], strlen(argv[argc]) + 1) < 0) {
+      return -1;
+    }
+    ustack[*base + argc] = *sp;
+  }
+  ustack[*base + argc] = 0;
+  *base += argc + 1;
+  return argc;
 }

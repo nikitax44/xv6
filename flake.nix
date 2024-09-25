@@ -28,6 +28,7 @@
       }: let
         tpkg = pkgs.pkgsCross.riscv64-embedded;
         newlib = tpkg.newlib.override {nanoizeNewlib = true;};
+        platform = tpkg.stdenv.hostPlatform.config;
 
         qemu-script = pkgs.writeScript "qemu-script" ''
           #!/bin/sh
@@ -48,12 +49,17 @@
             -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0   \
             -kernel "$KERNEL"
         '';
-        libnewlib = "${newlib}/riscv64-none-elf/lib";
+        libnewlib = "${newlib}/${platform}/lib";
 
-        TOOLPREFIX = "riscv64-none-elf-";
-        EXTRA_CFLAGS = "-I${newlib}/riscv64-none-elf/include  --specs=${libnewlib}/nano.specs";
-        EXTRA_LDFLAGS = "${libnewlib}/libc.a";
+        TOOLPREFIX = "${platform}-";
+        EXTRA_CFLAGS = "-I${newlib}/${platform}/include  --specs=${libnewlib}/nano.specs -static";
+        EXTRA_LDFLAGS = "${libnewlib}/libc.a -static";
         buildInputs = [newlib];
+        busybox = pkgs.pkgsCross.riscv64.busybox.override {
+          enableStatic = true;
+          enableAppletSymlinks = false;
+          enableMinimal = true;
+        };
       in {
         treefmt.config = import ./treefmt.nix;
 
@@ -64,10 +70,12 @@
         devShells.default = tpkg.mkShell {
           packages = [
             config.treefmt.build.wrapper
+            # pkgs.pkgsCross.riscv64.stdenv.cc # not tpkg.stdenv.cc
             pkgs.stdenv.cc
             pkgs.perl
             pkgs.gnumake
             pkgs.clang-tools
+            (pkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
           ];
           inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs;
         };
@@ -76,7 +84,10 @@
           src = ./.;
           pname = "xv6";
           version = "none";
-          preBuild = "make clean";
+          preBuild = ''
+            make clean
+            cp ${busybox}/bin/busybox ./_busybox
+          '';
           buildFlags = ["kernel/kernel fs.img"];
           nativeBuildInputs = [pkgs.stdenv.cc pkgs.perl];
           inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs;

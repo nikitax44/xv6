@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(int argc, char* argv[], char* envp[]) {
+extern char** environ;
+
+int main(int argc, char* argv[]) {
+  char** envp = environ;
   printf("%d\n", argc);
   while (*argv) {
     printf("%s", *argv);

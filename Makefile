@@ -125,6 +125,9 @@ $U/_forktest: $U/forktest.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
+_exp: $P/dump.c
+	$(CC) -o $@ $^
+
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 	gcc -Werror -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
 
@@ -156,8 +159,8 @@ PORTS=\
 	$P/_test\
 	$P/_dump\
 
-fs.img: mkfs/mkfs README $(UPROGS) $(PORTS)
-	mkfs/mkfs $@ README $(UPROGS) $(PORTS)
+fs.img: mkfs/mkfs README $(UPROGS) $(PORTS) _exp _busybox
+	mkfs/mkfs $@ README $(UPROGS) $(PORTS) _exp _busybox
 
 -include kernel/*.d user/*.d
 

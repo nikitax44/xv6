@@ -23,6 +23,7 @@
       perSystem = {
         config,
         pkgs,
+        self',
         ...
       }: let
         tpkg = pkgs.pkgsCross.riscv64-embedded;
@@ -56,8 +57,18 @@
       in {
         treefmt.config = import ./treefmt.nix;
 
+        checks = {
+          build-test = self'.packages.default;
+        };
+
         devShells.default = tpkg.mkShell {
-          nativeBuildInputs = [pkgs.gcc pkgs.perl pkgs.gnumake pkgs.clang-tools];
+          packages = [
+            config.treefmt.build.wrapper
+            pkgs.gcc
+            pkgs.perl
+            pkgs.gnumake
+            pkgs.clang-tools
+          ];
           inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs;
         };
 

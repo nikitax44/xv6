@@ -153,6 +153,7 @@ UPROGS=\
 
 PORTS=\
 	$P/_test\
+	$P/_dump\
 
 fs.img: mkfs/mkfs README $(UPROGS) $(PORTS)
 	mkfs/mkfs fs.img README $(UPROGS) $(PORTS)

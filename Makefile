@@ -83,6 +83,8 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
+all: $K/kernel fs.img
+
 $K/kernel: $(OBJS) $K/kernel.ld $U/initcode
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
@@ -101,13 +103,13 @@ ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
 
 $U/_%: $U/%.o $(ULIB)
 	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
-	$(OBJDUMP) -S $@ > $*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
+	$(OBJDUMP) -S $@ > $U/$*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
 
 $P/_%: $P/%.o $U/usys.o $P/fixes.o $P/app.ld
 	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $(filter %.o,$^) $(EXTRA_LDFLAGS)
-	$(OBJDUMP) -S $@ > $*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
+	$(OBJDUMP) -S $@ > $P/$*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $P/$*.sym
 
 
 $U/usys.S : $U/usys.pl

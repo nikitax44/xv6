@@ -5,6 +5,7 @@
 //
 
 #include "defs.h"
+#include "errno.h"
 #include "fcntl.h"
 #include "file.h"
 #include "fs.h"
@@ -167,7 +168,7 @@ bad:
 
 // Is the directory dp empty except for "." and ".." ?
 static int isdirempty(struct inode* dp) {
-  int           off;
+  uint          off;
   struct dirent de;
 
   for (off = 2 * sizeof(de); off < dp->size; off += sizeof(de)) {
@@ -413,80 +414,68 @@ uint64 sys_chdir(void) {
   return 0;
 }
 
+static uint64 fetchargs(uint64 uargv, char* (*argv)[MAXARG]) {
+  uint64 i, uarg;
+  memset(argv, 0, sizeof((argv[0])));
+  if (uargv == 0) {
+    (*argv)[0] = 0;
+    return 0;
+  }
+  for (i = 0;; i++) {
+    if (i >= NELEM((*argv))) {
+      return E2BIG;
+    }
+    if (fetchaddr(uargv + sizeof(uint64) * i, (uint64*)&uarg) < 0) {
+      return EFAULT;
+    }
+    if (uarg == 0) {
+      (*argv)[i] = 0;
+      break;
+    }
+    (*argv)[i] = kalloc();
+    if ((*argv)[i] == 0) {
+      return ENOMEM;
+    }
+    if (fetchstr(uarg, (*argv)[i], PGSIZE) < 0) {
+      return E2BIG;
+    }
+  }
+  return 0;
+}
+
 uint64 sys_execve(void) {
   char   path[MAXPATH], *argv[MAXARG], *envp[MAXARG];
-  int    i;
-  uint64 uargv, uarg, uenvp, uenv;
+  uint64 i;
+  uint64 uargv, uenvp;
+  int    err;
 
   argaddr(1, &uargv);
   argaddr(2, &uenvp);
   if (argstr(0, path, MAXPATH) < 0) {
-    return -1;
-  }
-  memset(argv, 0, sizeof(argv));
-  memset(envp, 0, sizeof(envp));
-  if (uargv != 0) {
-    for (i = 0;; i++) {
-      if (i >= NELEM(argv)) {
-        goto bad;
-      }
-      if (fetchaddr(uargv + sizeof(uint64) * i, (uint64*)&uarg) < 0) {
-        goto bad;
-      }
-      if (uarg == 0) {
-        argv[i] = 0;
-        break;
-      }
-      argv[i] = kalloc();
-      if (argv[i] == 0)
-        goto bad;
-      if (fetchstr(uarg, argv[i], PGSIZE) < 0)
-        goto bad;
-    }
-  } else {
-    argv[0] = 0;
+    return E2BIG;
   }
 
-  if (uenvp != 0) {
-    for (i = 0;; i++) {
-      if (i >= NELEM(envp)) {
-        goto bad;
-      }
-      if (fetchaddr(uenvp + sizeof(uint64) * i, (uint64*)&uenv) < 0) {
-        goto bad;
-      }
-      if (uenv == 0) {
-        envp[i] = 0;
-        break;
-      }
-      envp[i] = kalloc();
-      if (envp[i] == 0)
-        goto bad;
-      if (fetchstr(uenv, envp[i], PGSIZE) < 0)
-        goto bad;
-    }
-  } else {
+  err = fetchargs(uargv, &argv);
+  if (err != 0) {
     envp[0] = 0;
+    goto end;
   }
 
-  int ret = exec(path, argv, envp);
+  err = fetchargs(uenvp, &envp);
+  if (err != 0) {
+    goto end;
+  }
 
+  err = execve(path, argv, envp);
+
+end:
   for (i = 0; i < NELEM(argv) && argv[i] != 0; i++)
     kfree(argv[i]);
 
   for (i = 0; i < NELEM(envp) && envp[i] != 0; i++)
     kfree(envp[i]);
 
-  return ret;
-
-bad:
-  for (i = 0; i < NELEM(argv) && argv[i] != 0; i++)
-    kfree(argv[i]);
-
-  for (i = 0; i < NELEM(envp) && envp[i] != 0; i++)
-    kfree(envp[i]);
-
-  return -1;
+  return err;
 }
 
 uint64 sys_pipe(void) {

@@ -28,7 +28,7 @@ void consoleintr(int);
 void consputc(int);
 
 // exec.c
-int exec(char*, char**, char**);
+int execve(const char*, char* const*, char* const*);
 
 // file.c
 struct file* filealloc(void);
@@ -53,11 +53,11 @@ void          iunlock(struct inode*);
 void          iunlockput(struct inode*);
 void          iupdate(struct inode*);
 int           namecmp(const char*, const char*);
-struct inode* namei(char*);
+struct inode* namei(const char*);
 struct inode* nameiparent(char*, char*);
-int           readi(struct inode*, int, uint64, uint, uint);
+uint          readi(struct inode*, int, uint64, uint, uint);
 void          stati(struct inode*, struct stat*);
-int           writei(struct inode*, int, uint64, uint, uint);
+uint          writei(struct inode*, int, uint64, uint, uint);
 void          itrunc(struct inode*);
 
 // ramdisk.c

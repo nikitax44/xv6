@@ -52,11 +52,11 @@ endif
 
 QEMU = qemu-system-riscv64
 
-CC = $(TOOLPREFIX)gcc
-AS = $(TOOLPREFIX)gas
-LD = $(TOOLPREFIX)ld
-OBJCOPY = $(TOOLPREFIX)objcopy
-OBJDUMP = $(TOOLPREFIX)objdump
+CC ?= $(TOOLPREFIX)gcc
+AS ?= $(TOOLPREFIX)gas
+LD ?= $(TOOLPREFIX)ld
+OBJCOPY ?= $(TOOLPREFIX)objcopy
+OBJDUMP ?= $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -gdwarf-2
 CFLAGS += -MD
@@ -156,7 +156,7 @@ PORTS=\
 	$P/_dump\
 
 fs.img: mkfs/mkfs README $(UPROGS) $(PORTS)
-	mkfs/mkfs fs.img README $(UPROGS) $(PORTS)
+	mkfs/mkfs $@ README $(UPROGS) $(PORTS)
 
 -include kernel/*.d user/*.d
 

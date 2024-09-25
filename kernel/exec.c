@@ -1,5 +1,6 @@
 #include "defs.h"
 #include "elf.h"
+#include "errno.h"
 #include "memlayout.h"
 #include "param.h"
 #include "proc.h"
@@ -18,8 +19,8 @@ int flags2perm(int flags) {
   return perm;
 }
 
-int exec(char* path, char** argv, char** envp) {
-  char *         s, *last;
+int execve(const char* path, char* const* argv, char* const* envp) {
+  const char *   s, *last;
   int            i, off;
   uint64         argc, envc, sz = 0, sp, ustack[MAXARG], stackbase;
   struct elfhdr  elf;
@@ -27,44 +28,63 @@ int exec(char* path, char** argv, char** envp) {
   struct proghdr ph;
   pagetable_t    pagetable = 0, oldpagetable;
   struct proc*   p         = myproc();
+  int            ret;
 
   begin_op();
 
   if ((ip = namei(path)) == 0) {
     end_op();
-    return -1;
+    return ENOENT;
   }
   ilock(ip);
 
   // Check ELF header
-  if (readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
+  if (readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf)) {
+    ret = ENOEXEC;
     goto bad;
+  }
 
-  if (elf.magic != ELF_MAGIC)
+  if (elf.magic != ELF_MAGIC) {
+    ret = ENOEXEC;
     goto bad;
+  }
 
-  if ((pagetable = proc_pagetable(p)) == 0)
+  if ((pagetable = proc_pagetable(p)) == 0) {
+    ret = -1; // TODO: set valid errno
     goto bad;
+  }
 
   // Load program into memory.
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-    if (readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
+    if (readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph)) {
+      ret = ENOEXEC;
       goto bad;
+    }
     if (ph.type != ELF_PROG_LOAD)
       continue;
-    if (ph.memsz < ph.filesz)
+    if (ph.memsz < ph.filesz) {
+      ret = ENOEXEC;
       goto bad;
-    if (ph.vaddr + ph.memsz < ph.vaddr)
+    }
+    if (ph.vaddr + ph.memsz < ph.vaddr) {
+      ret = ENOEXEC;
       goto bad;
-    if (ph.vaddr % PGSIZE != 0)
+    }
+    if (ph.vaddr % PGSIZE != 0) {
+      ret = ENOEXEC;
       goto bad;
+    }
     uint64 sz1;
     if ((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,
-                        flags2perm(ph.flags))) == 0)
+                        flags2perm(ph.flags))) == 0) {
+      ret = ENOMEM;
       goto bad;
+    }
     sz = sz1;
-    if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
+    if (loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0) {
+      ret = ENOEXEC;
       goto bad;
+    }
   }
   iunlockput(ip);
   end_op();
@@ -79,8 +99,10 @@ int exec(char* path, char** argv, char** envp) {
   sz = PGROUNDUP(sz);
   uint64 sz1;
   if ((sz1 = uvmalloc(pagetable, sz, sz + (USERSTACK + 1) * PGSIZE, PTE_W)) ==
-      0)
+      0) {
+    ret = ENOMEM;
     goto bad;
+  }
   sz = sz1;
   uvmclear(pagetable, sz - (USERSTACK + 1) * PGSIZE);
   sp        = sz;
@@ -88,27 +110,39 @@ int exec(char* path, char** argv, char** envp) {
 
   // Push argument strings, prepare rest of stack in ustack.
   for (argc = 0; argv[argc]; argc++) {
-    if (argc >= MAXARG)
+    if (argc >= MAXARG) {
+      ret = E2BIG;
       goto bad;
+    }
     sp -= strlen(argv[argc]) + 1;
     sp -= sp % 16; // riscv sp must be 16-byte aligned
-    if (sp < stackbase)
+    if (sp < stackbase) {
+      ret = E2BIG;
       goto bad;
-    if (copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
+    }
+    if (copyout(pagetable, sp, argv[argc], strlen(argv[argc]) + 1) < 0) {
+      ret = -1; // TODO
       goto bad;
+    }
     ustack[argc] = sp;
   }
   ustack[argc] = 0;
   // Push env strings
   for (envc = 0; envp[envc]; envc++) {
-    if (argc + 1 + envc >= MAXARG)
+    if (argc + 1 + envc >= MAXARG) {
+      ret = E2BIG;
       goto bad;
+    }
     sp -= strlen(envp[envc]) + 1;
     sp -= sp % 16; // riscv sp must be 16-byte aligned
-    if (sp < stackbase)
+    if (sp < stackbase) {
+      ret = E2BIG;
       goto bad;
-    if (copyout(pagetable, sp, envp[envc], strlen(envp[envc]) + 1) < 0)
+    }
+    if (copyout(pagetable, sp, envp[envc], strlen(envp[envc]) + 1) < 0) {
+      return -1;
       goto bad;
+    }
     ustack[argc + 1 + envc] = sp;
   }
   ustack[argc + 1 + envc] = 0;
@@ -117,11 +151,15 @@ int exec(char* path, char** argv, char** envp) {
   sp -= (argc + 1) * sizeof(uint64);
   sp -= (envc + 1) * sizeof(uint64);
   sp -= sp % 16;
-  if (sp < stackbase)
+  if (sp < stackbase) {
+    ret = E2BIG;
     goto bad;
+  }
   if (copyout(pagetable, sp, (char*)ustack,
-              (argc + 1 + envc + 1) * sizeof(uint64)) < 0)
+              (argc + 1 + envc + 1) * sizeof(uint64)) < 0) {
+    ret = -1;
     goto bad;
+  }
 
   // arguments to user main(argc, argv, envp)
   // argc is returned via the system call return
@@ -153,7 +191,7 @@ bad:
     iunlockput(ip);
     end_op();
   }
-  return -1;
+  return ret;
 }
 
 // Load a program segment into pagetable at virtual address va.

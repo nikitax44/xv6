@@ -1,3 +1,4 @@
+#include "kernel/errno.h"
 #include "kernel/fcntl.h"
 #include "kernel/fs.h"
 #include "kernel/memlayout.h"
@@ -159,8 +160,8 @@ void copyinstr2(char* s) {
 
   char* args[] = {"xx", 0};
   ret          = _exec(b, args);
-  if (ret != -1) {
-    printf("_exec(%s) returned %d, not -1\n", b, fd);
+  if (ret != E2BIG) {
+    printf("_exec(%s) returned %d, not E2BIG\n", b, fd);
     _exit(1);
   }
 
@@ -176,8 +177,8 @@ void copyinstr2(char* s) {
     big[PGSIZE]   = '\0';
     char* args2[] = {big, big, big, 0};
     ret           = _exec("echo", args2);
-    if (ret != -1) {
-      printf("_exec(echo, BIG) returned %d, not -1\n", fd);
+    if (ret != E2BIG) {
+      printf("_exec(echo, BIG) returned %d, not E2BIG\n", fd);
       _exit(1);
     }
     _exit(747); // OK
@@ -227,8 +228,8 @@ void copyinstr3(char* s) {
 
   char* args[] = {"xx", 0};
   ret          = _exec(b, args);
-  if (ret != -1) {
-    printf("_exec(%s) returned %d, not -1\n", b, fd);
+  if (ret != EFAULT) {
+    printf("_exec(%s) returned %d, not EFAULT\n", b, fd);
     _exit(1);
   }
 }

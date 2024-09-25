@@ -64,7 +64,7 @@
         devShells.default = tpkg.mkShell {
           packages = [
             config.treefmt.build.wrapper
-            pkgs.gcc
+            pkgs.stdenv.cc
             pkgs.perl
             pkgs.gnumake
             pkgs.clang-tools
@@ -78,8 +78,7 @@
           version = "none";
           preBuild = "make clean";
           buildFlags = ["kernel/kernel fs.img"];
-          nativeBuildInputs = [pkgs.gcc pkgs.perl];
-
+          nativeBuildInputs = [pkgs.stdenv.cc pkgs.perl];
           inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs;
           installPhase = ''
             mkdir $out

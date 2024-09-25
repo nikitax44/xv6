@@ -58,7 +58,7 @@ static void bzero(int dev, int bno) {
 // Allocate a zeroed disk block.
 // returns 0 if out of disk space.
 static uint balloc(uint dev) {
-  int         b, bi, m;
+  uint        b, bi, m;
   struct buf* bp;
 
   bp = 0;
@@ -185,7 +185,7 @@ static struct inode* iget(uint dev, uint inum);
 // Returns an unlocked but allocated and referenced inode,
 // or NULL if there is no free inode.
 struct inode* ialloc(uint dev, short type) {
-  int            inum;
+  uint           inum;
   struct buf*    bp;
   struct dinode* dip;
 
@@ -394,9 +394,10 @@ static uint bmap(struct inode* ip, uint bn) {
 // Truncate inode (discard contents).
 // Caller must hold ip->lock.
 void itrunc(struct inode* ip) {
-  int         i, j;
+  int         i;
   struct buf* bp;
   uint*       a;
+  uint64      j;
 
   for (i = 0; i < NDIRECT; i++) {
     if (ip->addrs[i]) {
@@ -435,7 +436,7 @@ void stati(struct inode* ip, struct stat* st) {
 // Caller must hold ip->lock.
 // If user_dst==1, then dst is a user virtual address;
 // otherwise, dst is a kernel address.
-int readi(struct inode* ip, int user_dst, uint64 dst, uint off, uint n) {
+uint readi(struct inode* ip, int user_dst, uint64 dst, uint off, uint n) {
   uint        tot, m;
   struct buf* bp;
 
@@ -467,7 +468,7 @@ int readi(struct inode* ip, int user_dst, uint64 dst, uint off, uint n) {
 // Returns the number of bytes successfully written.
 // If the return value is less than the requested n,
 // there was an error of some kind.
-int writei(struct inode* ip, int user_src, uint64 src, uint off, uint n) {
+uint writei(struct inode* ip, int user_src, uint64 src, uint off, uint n) {
   uint        tot, m;
   struct buf* bp;
 
@@ -534,7 +535,7 @@ struct inode* dirlookup(struct inode* dp, char* name, uint* poff) {
 // Write a new directory entry (name, inum) into the directory dp.
 // Returns 0 on success, -1 on failure (e.g. out of disk blocks).
 int dirlink(struct inode* dp, char* name, uint inum) {
-  int           off;
+  uint          off;
   struct dirent de;
   struct inode* ip;
 
@@ -574,9 +575,9 @@ int dirlink(struct inode* dp, char* name, uint inum) {
 //   skipelem("a", name) = "", setting name = "a"
 //   skipelem("", name) = skipelem("////", name) = 0
 //
-static char* skipelem(char* path, char* name) {
-  char* s;
-  int   len;
+static const char* skipelem(const char* path, char* name) {
+  const char* s;
+  int         len;
 
   while (*path == '/')
     path++;
@@ -601,7 +602,7 @@ static char* skipelem(char* path, char* name) {
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
-static struct inode* namex(char* path, int nameiparent, char* name) {
+static struct inode* namex(const char* path, int nameiparent, char* name) {
   struct inode *ip, *next;
 
   if (*path == '/')
@@ -634,7 +635,7 @@ static struct inode* namex(char* path, int nameiparent, char* name) {
   return ip;
 }
 
-struct inode* namei(char* path) {
+struct inode* namei(const char* path) {
   char name[DIRSIZ];
   return namex(path, 0, name);
 }

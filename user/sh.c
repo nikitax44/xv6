@@ -74,8 +74,8 @@ void runcmd(struct cmd* cmd) {
     ecmd = (struct execcmd*)cmd;
     if (ecmd->argv[0] == 0)
       _exit(1);
-    _execve(ecmd->argv[0], ecmd->argv, (char*[]){"SHELL=/sh", 0});
-    fprintf(2, "exec %s failed\n", ecmd->argv[0]);
+    int err = _execve(ecmd->argv[0], ecmd->argv, (char*[]){"SHELL=/sh", 0});
+    fprintf(2, "exec %s failed: %d\n", ecmd->argv[0], err);
     break;
 
   case REDIR:

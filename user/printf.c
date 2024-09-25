@@ -33,7 +33,7 @@ static void printint(int fd, int xx, int base, int sgn) {
 }
 
 static void printptr(int fd, uint64 x) {
-  int i;
+  uint64 i;
   putc(fd, '0');
   putc(fd, 'x');
   for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4)

@@ -4,10 +4,10 @@
 #include "riscv.h"
 #include "types.h"
 
-volatile static int started = 0;
+static volatile int started = 0;
 
 // start() jumps here in supervisor mode on all CPUs.
-void main() {
+int main() {
   if (cpuid() == 0) {
     consoleinit();
     printfinit();
@@ -40,4 +40,5 @@ void main() {
   }
 
   scheduler();
+  // unreachable
 }

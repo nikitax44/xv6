@@ -13,7 +13,7 @@
 #include "kernel/types.h"
 #include "user/user.h"
 
-int main(int argc, char* argv[]) {
+int main() {
   int  fd, i;
   char path[] = "stressfs0";
   char data[512];

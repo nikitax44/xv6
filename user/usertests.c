@@ -18,6 +18,9 @@
 // prints "OK".
 //
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+
 #define BUFSZ ((MAXOPBLOCKS + 2) * BSIZE)
 
 char buf[BUFSZ];
@@ -258,7 +261,7 @@ void rwsbrk() {
   }
   n = _write(fd, (void*)(a + 4096), 1024);
   if (n >= 0) {
-    printf("_write(fd, %p, 1024) returned %d, not -1\n", (void*)a + 4096, n);
+    printf("_write(fd, %p, 1024) returned %d, not -1\n", (void*)(a + 4096), n);
     _exit(1);
   }
   _close(fd);
@@ -271,7 +274,7 @@ void rwsbrk() {
   }
   n = _read(fd, (void*)(a + 4096), 10);
   if (n >= 0) {
-    printf("_read(fd, %p, 10) returned %d, not -1\n", (void*)a + 4096, n);
+    printf("_read(fd, %p, 10) returned %d, not -1\n", (void*)(a + 4096), n);
     _exit(1);
   }
   _close(fd);
@@ -2338,7 +2341,7 @@ void nowrite(char* s) {
     if (pid == 0) {
       volatile int* addr = (int*)addrs[ai];
       *addr              = 10;
-      printf("%s: write to %p did not fail!\n", s, addr);
+      printf("%s: write to %p did not fail!\n", s, (void*)addr);
       _exit(0);
     } else if (pid < 0) {
       printf("%s: fork failed\n", s);

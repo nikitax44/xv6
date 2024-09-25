@@ -166,6 +166,7 @@ int main(void) {
   _exit(0);
 }
 
+void panic(char* s) __attribute__((noreturn));
 void panic(char* s) {
   fprintf(2, "%s\n", s);
   _exit(1);

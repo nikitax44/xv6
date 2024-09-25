@@ -43,7 +43,7 @@ uint64 sys_sleep(void) {
     n = 0;
   acquire(&tickslock);
   ticks0 = ticks;
-  while (ticks - ticks0 < n) {
+  while (ticks - ticks0 < (uint)n) {
     if (killed(myproc())) {
       release(&tickslock);
       return -1;

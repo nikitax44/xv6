@@ -106,7 +106,8 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   sp        = sz;
   stackbase = sp - USERSTACK * PGSIZE;
 
-  base = 0;
+  base = 1;
+  sp -= sizeof(uint64);
 
   argc = putargs(pagetable, argv, &sp, stackbase, ustack, &base);
   if (argc == (uint64)-1) {
@@ -127,6 +128,9 @@ int execve(const char* path, char* const* argv, char* const* envp) {
     ret = E2BIG;
     goto bad;
   }
+
+  ustack[0] = argc;
+
   if (copyout(pagetable, sp, (char*)ustack, base * sizeof(uint64)) < 0) {
     ret = -1;
     goto bad;
@@ -135,8 +139,8 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   // arguments to user main(argc, argv, envp)
   // argc is returned via the system call return
   // value, which goes in a0.
-  p->trapframe->a1 = sp;
-  p->trapframe->a2 = sp + (argc + 1) * sizeof(uint64);
+  p->trapframe->a1 = sp + sizeof(uint64);
+  p->trapframe->a2 = sp + (1 + argc + 1) * sizeof(uint64);
 
   // Save program name for debugging.
   for (last = s = path; *s; s++)

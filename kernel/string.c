@@ -15,8 +15,9 @@ int memcmp(const void* v1, const void* v2, uint64 n) {
   s1 = v1;
   s2 = v2;
   while (n-- > 0) {
-    if (*s1 != *s2)
+    if (*s1 != *s2) {
       return *s1 - *s2;
+    }
     s1++, s2++;
   }
 
@@ -27,19 +28,23 @@ void* memmove(void* dst, const void* src, uint64 n) {
   const char* s;
   char*       d;
 
-  if (n == 0)
+  if (n == 0) {
     return dst;
+  }
 
   s = src;
   d = dst;
   if (s < d && s + n > d) {
     s += n;
     d += n;
-    while (n-- > 0)
+    while (n-- > 0) {
       *--d = *--s;
-  } else
-    while (n-- > 0)
+    }
+  } else {
+    while (n-- > 0) {
       *d++ = *s++;
+    }
+  }
 
   return dst;
 }
@@ -50,10 +55,12 @@ void* memcpy(void* dst, const void* src, uint64 n) {
 }
 
 int strncmp(const char* p, const char* q, uint64 n) {
-  while (n > 0 && *p && *p == *q)
+  while (n > 0 && *p && *p == *q) {
     n--, p++, q++;
-  if (n == 0)
+  }
+  if (n == 0) {
     return 0;
+  }
   return (uchar)*p - (uchar)*q;
 }
 
@@ -63,11 +70,13 @@ char* strncpy(char* s, const char* t, uint64 n) {
   os = s;
   while (n > 0) {
     --n;
-    if ((*s++ = *t++) == 0)
+    if ((*s++ = *t++) == 0) {
       break;
+    }
   };
-  while (n-- > 0)
+  while (n-- > 0) {
     *s++ = 0;
+  }
   return os;
 }
 
@@ -76,8 +85,9 @@ char* safestrcpy(char* s, const char* t, int n) {
   char* os;
 
   os = s;
-  if (n <= 0)
+  if (n <= 0) {
     return os;
+  }
   while (--n > 0 && (*s++ = *t++) != 0)
     ;
   *s = 0;

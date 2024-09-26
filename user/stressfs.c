@@ -21,24 +21,28 @@ int main() {
   printf("stressfs starting\n");
   memset(data, 'a', sizeof(data));
 
-  for (i = 0; i < 4; i++)
-    if (_fork() > 0)
+  for (i = 0; i < 4; i++) {
+    if (_fork() > 0) {
       break;
+    }
+  }
 
   printf("write %d\n", i);
 
   path[8] += i;
   fd = _open(path, O_CREATE | O_RDWR);
-  for (i = 0; i < 20; i++)
+  for (i = 0; i < 20; i++) {
     //    printf(fd, "%d\n", i);
     _write(fd, data, sizeof(data));
+  }
   _close(fd);
 
   printf("read\n");
 
   fd = _open(path, O_RDONLY);
-  for (i = 0; i < 20; i++)
+  for (i = 0; i < 20; i++) {
     _read(fd, data, sizeof(data));
+  }
   _close(fd);
 
   _wait(0);

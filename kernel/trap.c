@@ -28,8 +28,9 @@ void trapinithart(void) { w_stvec((uint64)kernelvec); }
 void usertrap(void) {
   int which_dev = 0;
 
-  if ((r_sstatus() & SSTATUS_SPP) != 0)
+  if ((r_sstatus() & SSTATUS_SPP) != 0) {
     panic("usertrap: not from user mode");
+  }
 
   // send interrupts and exceptions to kerneltrap(),
   // since we're now in the kernel.
@@ -43,8 +44,9 @@ void usertrap(void) {
   if (r_scause() == 8) {
     // system call
 
-    if (killed(p))
+    if (killed(p)) {
       exit(-1);
+    }
 
     // sepc points to the ecall instruction,
     // but we want to return to the next instruction.
@@ -83,12 +85,14 @@ void usertrap(void) {
     setkilled(p);
   }
 
-  if (killed(p))
+  if (killed(p)) {
     exit(-1);
+  }
 
   // give up the CPU if this is a timer interrupt.
-  if (which_dev == 2)
+  if (which_dev == 2) {
     yield();
+  }
 
   usertrapret();
 }
@@ -145,10 +149,12 @@ void kerneltrap() {
   uint64 sstatus   = r_sstatus();
   uint64 scause    = r_scause();
 
-  if ((sstatus & SSTATUS_SPP) == 0)
+  if ((sstatus & SSTATUS_SPP) == 0) {
     panic("kerneltrap: not from supervisor mode");
-  if (intr_get() != 0)
+  }
+  if (intr_get() != 0) {
     panic("kerneltrap: interrupts enabled");
+  }
 
   if ((which_dev = devintr()) == 0) {
     // interrupt or trap from an unknown source
@@ -158,8 +164,9 @@ void kerneltrap() {
   }
 
   // give up the CPU if this is a timer interrupt.
-  if (which_dev == 2 && myproc() != 0)
+  if (which_dev == 2 && myproc() != 0) {
     yield();
+  }
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.
@@ -206,8 +213,9 @@ int devintr() {
     // the PLIC allows each device to raise at most one
     // interrupt at a time; tell the PLIC the device is
     // now allowed to interrupt again.
-    if (irq)
+    if (irq) {
       plic_complete(irq);
+    }
 
     return 1;
   } else if (scause == 0x8000000000000005L) {

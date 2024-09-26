@@ -15,10 +15,12 @@ static uint64 putargs(pde_t*, char* const* argv, uint64* sp, uint64 stackbase,
 
 int flags2perm(int flags) {
   int perm = 0;
-  if (flags & 0x1)
+  if (flags & 0x1) {
     perm = PTE_X;
-  if (flags & 0x2)
+  }
+  if (flags & 0x2) {
     perm |= PTE_W;
+  }
   return perm;
 }
 
@@ -63,8 +65,9 @@ int execve(const char* path, char* const* argv, char* const* envp) {
       ret = ENOEXEC;
       goto bad;
     }
-    if (ph.type != ELF_PROG_LOAD)
+    if (ph.type != ELF_PROG_LOAD) {
       continue;
+    }
     if (ph.memsz < ph.filesz) {
       ret = ENOEXEC;
       goto bad;
@@ -143,9 +146,11 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   p->trapframe->a2 = sp + (1 + argc + 1) * sizeof(uint64);
 
   // Save program name for debugging.
-  for (last = s = path; *s; s++)
-    if (*s == '/')
+  for (last = s = path; *s; s++) {
+    if (*s == '/') {
       last = s + 1;
+    }
+  }
   safestrcpy(p->name, last, sizeof(p->name));
 
   // Commit to the user image.
@@ -160,8 +165,9 @@ int execve(const char* path, char* const* argv, char* const* envp) {
                // envp)
 
 bad:
-  if (pagetable)
+  if (pagetable) {
     proc_freepagetable(pagetable, sz);
+  }
   if (ip) {
     iunlockput(ip);
     end_op();
@@ -186,8 +192,9 @@ static int loaddata(pagetable_t pagetable, uint64 va, struct inode* ip,
     } else {
       n = sz;
     }
-    if (readi(ip, 0, (uint64)pa + (va % PGSIZE), offset, n) != n)
+    if (readi(ip, 0, (uint64)pa + (va % PGSIZE), offset, n) != n) {
       return ENOEXEC;
+    }
   }
 
   if (sz > diff) {
@@ -207,14 +214,17 @@ static int loadseg(pagetable_t pagetable, uint64 va, struct inode* ip,
 
   for (i = 0; i < sz; i += PGSIZE) {
     pa = walkaddr(pagetable, va + i);
-    if (pa == 0)
+    if (pa == 0) {
       panic("loadseg: address should exist");
-    if (sz - i < PGSIZE)
+    }
+    if (sz - i < PGSIZE) {
       n = sz - i;
-    else
+    } else {
       n = PGSIZE;
-    if (readi(ip, 0, (uint64)pa, offset + i, n) != n)
+    }
+    if (readi(ip, 0, (uint64)pa, offset + i, n) != n) {
       return ENOEXEC;
+    }
   }
 
   return 0;

@@ -29,8 +29,9 @@ int do_rand(unsigned long* ctx) {
   hi = x / 127773;
   lo = x % 127773;
   x  = 16807 * lo - 2836 * hi;
-  if (x < 0)
+  if (x < 0) {
     x += 0x7fffffff;
+  }
   /* Transform to [0, 0x7ffffffd] range. */
   x--;
   *ctx = x;
@@ -56,8 +57,9 @@ void go(int which_child) {
 
   while (1) {
     iters++;
-    if ((iters % 500) == 0)
+    if ((iters % 500) == 0) {
       _write(1, which_child ? "B" : "A", 1);
+    }
     int what = rand() % 23;
     if (what == 1) {
       _close(_open("grindir/../a", O_CREATE | O_RDWR));
@@ -119,8 +121,9 @@ void go(int which_child) {
     } else if (what == 15) {
       _sbrk(6011);
     } else if (what == 16) {
-      if (_sbrk(0) > break0)
+      if (_sbrk(0) > break0) {
         _sbrk(-(_sbrk(0) - break0));
+      }
     } else if (what == 17) {
       int pid = _fork();
       if (pid == 0) {
@@ -156,11 +159,13 @@ void go(int which_child) {
       if (pid == 0) {
         _fork();
         _fork();
-        if (_write(fds[1], "x", 1) != 1)
+        if (_write(fds[1], "x", 1) != 1) {
           printf("grind: pipe write failed\n");
+        }
         char c;
-        if (_read(fds[0], &c, 1) != 1)
+        if (_read(fds[0], &c, 1) != 1) {
           printf("grind: pipe read failed\n");
+        }
         _exit(0);
       } else if (pid < 0) {
         printf("grind: fork failed\n");

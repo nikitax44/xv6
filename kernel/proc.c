@@ -34,8 +34,9 @@ void proc_mapstacks(pagetable_t kpgtbl) {
 
   for (p = proc; p < &proc[NPROC]; p++) {
     char* pa = kalloc();
-    if (pa == 0)
+    if (pa == 0) {
       panic("kalloc");
+    }
     uint64 va = KSTACK((int)(p - proc));
     kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   }
@@ -139,11 +140,13 @@ found:
 // including user pages.
 // p->lock must be held.
 static void freeproc(struct proc* p) {
-  if (p->trapframe)
+  if (p->trapframe) {
     kfree((void*)p->trapframe);
+  }
   p->trapframe = 0;
-  if (p->pagetable)
+  if (p->pagetable) {
     proc_freepagetable(p->pagetable, p->sz);
+  }
   p->pagetable = 0;
   p->sz        = 0;
   p->pid       = 0;
@@ -162,8 +165,9 @@ pagetable_t proc_pagetable(struct proc* p) {
 
   // An empty page table.
   pagetable = uvmcreate();
-  if (pagetable == 0)
+  if (pagetable == 0) {
     return 0;
+  }
 
   // map the trampoline code (for system call return)
   // at the highest user virtual address.
@@ -276,9 +280,11 @@ int fork(void) {
   np->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
-  for (i = 0; i < NOFILE; i++)
-    if (p->ofile[i])
+  for (i = 0; i < NOFILE; i++) {
+    if (p->ofile[i]) {
       np->ofile[i] = filedup(p->ofile[i]);
+    }
+  }
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
@@ -317,8 +323,9 @@ void reparent(struct proc* p) {
 void exit(int status) {
   struct proc* p = myproc();
 
-  if (p == initproc)
+  if (p == initproc) {
     panic("init exiting");
+  }
 
   // Close all open files.
   for (int fd = 0; fd < NOFILE; fd++) {
@@ -456,14 +463,18 @@ void sched(void) {
   int          intena;
   struct proc* p = myproc();
 
-  if (!holding(&p->lock))
+  if (!holding(&p->lock)) {
     panic("sched p->lock");
-  if (mycpu()->noff != 1)
+  }
+  if (mycpu()->noff != 1) {
     panic("sched locks");
-  if (p->state == RUNNING)
+  }
+  if (p->state == RUNNING) {
     panic("sched running");
-  if (intr_get())
+  }
+  if (intr_get()) {
     panic("sched interruptible");
+  }
 
   intena = mycpu()->intena;
   swtch(&p->context, &mycpu()->context);
@@ -638,12 +649,14 @@ void procdump(void) {
 
   printf("\n");
   for (p = proc; p < &proc[NPROC]; p++) {
-    if (p->state == UNUSED)
+    if (p->state == UNUSED) {
       continue;
-    if (p->state >= 0 && p->state < NELEM(states) && states[p->state])
+    }
+    if (p->state >= 0 && p->state < NELEM(states) && states[p->state]) {
       state = states[p->state];
-    else
+    } else {
       state = "???";
+    }
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }

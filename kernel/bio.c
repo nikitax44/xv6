@@ -97,16 +97,18 @@ struct buf* bread(uint dev, uint blockno) {
 
 // Write b's contents to disk.  Must be locked.
 void bwrite(struct buf* b) {
-  if (!holdingsleep(&b->lock))
+  if (!holdingsleep(&b->lock)) {
     panic("bwrite");
+  }
   virtio_disk_rw(b, 1);
 }
 
 // Release a locked buffer.
 // Move to the head of the most-recently-used list.
 void brelse(struct buf* b) {
-  if (!holdingsleep(&b->lock))
+  if (!holdingsleep(&b->lock)) {
     panic("brelse");
+  }
 
   releasesleep(&b->lock);
 

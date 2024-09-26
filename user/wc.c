@@ -14,11 +14,12 @@ void wc(int fd, char* name) {
   while ((n = _read(fd, buf, sizeof(buf))) > 0) {
     for (i = 0; i < n; i++) {
       c++;
-      if (buf[i] == '\n')
+      if (buf[i] == '\n') {
         l++;
-      if (strchr(" \r\t\n\v", buf[i]))
+      }
+      if (strchr(" \r\t\n\v", buf[i])) {
         inword = 0;
-      else if (!inword) {
+      } else if (!inword) {
         w++;
         inword = 1;
       }

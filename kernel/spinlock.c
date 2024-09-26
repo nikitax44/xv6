@@ -18,8 +18,9 @@ void initlock(struct spinlock* lk, char* name) {
 // Loops (spins) until the lock is acquired.
 void acquire(struct spinlock* lk) {
   push_off(); // disable interrupts to avoid deadlock.
-  if (holding(lk))
+  if (holding(lk)) {
     panic("acquire");
+  }
 
   // On RISC-V, sync_lock_test_and_set turns into an atomic swap:
   //   a5 = 1
@@ -40,8 +41,9 @@ void acquire(struct spinlock* lk) {
 
 // Release the lock.
 void release(struct spinlock* lk) {
-  if (!holding(lk))
+  if (!holding(lk)) {
     panic("release");
+  }
 
   lk->cpu = 0;
 
@@ -81,18 +83,22 @@ void push_off(void) {
   int old = intr_get();
 
   intr_off();
-  if (mycpu()->noff == 0)
+  if (mycpu()->noff == 0) {
     mycpu()->intena = old;
+  }
   mycpu()->noff += 1;
 }
 
 void pop_off(void) {
   struct cpu* c = mycpu();
-  if (intr_get())
+  if (intr_get()) {
     panic("pop_off - interruptible");
-  if (c->noff < 1)
+  }
+  if (c->noff < 1) {
     panic("pop_off");
+  }
   c->noff -= 1;
-  if (c->noff == 0 && c->intena)
+  if (c->noff == 0 && c->intena) {
     intr_on();
+  }
 }

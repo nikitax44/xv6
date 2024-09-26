@@ -16,10 +16,12 @@ void forktest(void) {
 
   for (n = 0; n < N; n++) {
     pid = _fork();
-    if (pid < 0)
+    if (pid < 0) {
       break;
-    if (pid == 0)
+    }
+    if (pid == 0) {
       _exit(0);
+    }
   }
 
   if (n == N) {

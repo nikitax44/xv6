@@ -139,8 +139,9 @@ void copyinstr1(char* s) {
 void copyinstr2(char* s) {
   char b[MAXPATH + 1];
 
-  for (int i = 0; i < MAXPATH; i++)
+  for (int i = 0; i < MAXPATH; i++) {
     b[i] = 'x';
+  }
   b[MAXPATH] = '\0';
 
   int ret = _unlink(b);
@@ -175,8 +176,9 @@ void copyinstr2(char* s) {
   }
   if (pid == 0) {
     static char big[PGSIZE + 1];
-    for (int i = 0; i < PGSIZE; i++)
+    for (int i = 0; i < PGSIZE; i++) {
       big[i] = 'x';
+    }
     big[PGSIZE]   = '\0';
     char* args2[] = {big, big, big, 0};
     ret           = _exec("echo", args2);
@@ -680,8 +682,9 @@ void exectest(char* s) {
   if (_wait(&xstatus) != pid) {
     printf("%s: wait failed!\n", s);
   }
-  if (xstatus != 0)
+  if (xstatus != 0) {
     _exit(xstatus);
+  }
 
   fd = _open("echo-ok", O_RDONLY);
   if (fd < 0) {
@@ -693,9 +696,9 @@ void exectest(char* s) {
     _exit(1);
   }
   _unlink("echo-ok");
-  if (buf[0] == 'O' && buf[1] == 'K')
+  if (buf[0] == 'O' && buf[1] == 'K') {
     _exit(0);
-  else {
+  } else {
     printf("%s: wrong output\n", s);
     _exit(1);
   }
@@ -717,8 +720,9 @@ void pipe1(char* s) {
   if (pid == 0) {
     _close(fds[0]);
     for (n = 0; n < N; n++) {
-      for (i = 0; i < SZ; i++)
+      for (i = 0; i < SZ; i++) {
         buf[i] = seq++;
+      }
       if (_write(fds[1], buf, SZ) != SZ) {
         printf("%s: pipe1 oops 1\n", s);
         _exit(1);
@@ -738,8 +742,9 @@ void pipe1(char* s) {
       }
       total += n;
       cc = cc * 2;
-      if (cc > sizeof(buf))
+      if (cc > sizeof(buf)) {
         cc = sizeof(buf);
+      }
     }
     if (total != N * SZ) {
       printf("%s: pipe1 oops 3 total %d\n", s, total);
@@ -791,18 +796,20 @@ void preempt(char* s) {
     printf("%s: fork failed", s);
     _exit(1);
   }
-  if (pid1 == 0)
+  if (pid1 == 0) {
     for (;;)
       ;
+  }
 
   pid2 = _fork();
   if (pid2 < 0) {
     printf("%s: fork failed\n", s);
     _exit(1);
   }
-  if (pid2 == 0)
+  if (pid2 == 0) {
     for (;;)
       ;
+  }
 
   _pipe(pfds);
   pid3 = _fork();
@@ -812,8 +819,9 @@ void preempt(char* s) {
   }
   if (pid3 == 0) {
     _close(pfds[0]);
-    if (_write(pfds[1], "x", 1) != 1)
+    if (_write(pfds[1], "x", 1) != 1) {
       printf("%s: preempt write error", s);
+    }
     _close(pfds[1]);
     for (;;)
       ;
@@ -1064,8 +1072,9 @@ void sharedfd(char* s) {
   } else {
     int xstatus;
     _wait(&xstatus);
-    if (xstatus != 0)
+    if (xstatus != 0) {
       _exit(xstatus);
+    }
   }
 
   _close(fd);
@@ -1077,10 +1086,12 @@ void sharedfd(char* s) {
   nc = np = 0;
   while ((n = _read(fd, buf, sizeof(buf))) > 0) {
     for (i = 0; i < sizeof(buf); i++) {
-      if (buf[i] == 'c')
+      if (buf[i] == 'c') {
         nc++;
-      if (buf[i] == 'p')
+      }
+      if (buf[i] == 'p') {
         np++;
+      }
     }
   }
   _close(fd);
@@ -1132,8 +1143,9 @@ void fourfiles(char* s) {
   int xstatus;
   for (pi = 0; pi < NCHILD; pi++) {
     _wait(&xstatus);
-    if (xstatus != 0)
+    if (xstatus != 0) {
       _exit(xstatus);
+    }
   }
 
   for (i = 0; i < NCHILD; i++) {
@@ -1197,8 +1209,9 @@ void createdelete(char* s) {
   int xstatus;
   for (pi = 0; pi < NCHILD; pi++) {
     _wait(&xstatus);
-    if (xstatus != 0)
+    if (xstatus != 0) {
       _exit(1);
+    }
   }
 
   name[0] = name[1] = name[2] = 0;
@@ -1214,8 +1227,9 @@ void createdelete(char* s) {
         printf("%s: oops createdelete %s did exist\n", s, name);
         _exit(1);
       }
-      if (fd >= 0)
+      if (fd >= 0) {
         _close(fd);
+      }
     }
   }
 
@@ -1362,8 +1376,9 @@ void concreate(char* s) {
     } else {
       int xstatus;
       _wait(&xstatus);
-      if (xstatus != 0)
+      if (xstatus != 0) {
         _exit(1);
+      }
     }
   }
 
@@ -1371,8 +1386,9 @@ void concreate(char* s) {
   fd = _open(".", 0);
   n  = 0;
   while (_read(fd, &de, sizeof(de)) > 0) {
-    if (de.inum == 0)
+    if (de.inum == 0) {
       continue;
+    }
     if (de.name[0] == 'C' && de.name[2] == '\0') {
       i = de.name[1] - '0';
       if (i < 0 || i >= sizeof(fa)) {
@@ -1416,10 +1432,11 @@ void concreate(char* s) {
       _unlink(file);
       _unlink(file);
     }
-    if (pid == 0)
+    if (pid == 0) {
       _exit(0);
-    else
+    } else {
       _wait(0);
+    }
   }
 }
 
@@ -1447,10 +1464,11 @@ void linkunlink(char* s) {
     }
   }
 
-  if (pid)
+  if (pid) {
     _wait(0);
-  else
+  } else {
     _exit(0);
+  }
 }
 
 void subdir(char* s) {
@@ -1685,8 +1703,9 @@ void bigfile(char* s) {
       printf("%s: read bigfile failed\n", s);
       _exit(1);
     }
-    if (cc == 0)
+    if (cc == 0) {
       break;
+    }
     if (cc != SZ / 2) {
       printf("%s: short read bigfile\n", s);
       _exit(1);
@@ -1857,11 +1876,13 @@ void iref(char* s) {
     _mkdir("");
     _link("README", "");
     fd = _open("", O_CREATE);
-    if (fd >= 0)
+    if (fd >= 0) {
       _close(fd);
+    }
     fd = _open("xx", O_CREATE);
-    if (fd >= 0)
+    if (fd >= 0) {
       _close(fd);
+    }
     _unlink("xx");
   }
 
@@ -1883,10 +1904,12 @@ void forktest(char* s) {
 
   for (n = 0; n < N; n++) {
     pid = _fork();
-    if (pid < 0)
+    if (pid < 0) {
       break;
-    if (pid == 0)
+    }
+    if (pid == 0) {
       _exit(0);
+    }
   }
 
   if (n == 0) {
@@ -1968,8 +1991,9 @@ void sbrkbasic(char* s) {
     printf("%s: sbrk test failed post-fork\n", s);
     _exit(1);
   }
-  if (pid == 0)
+  if (pid == 0) {
     _exit(0);
+  }
   _wait(&xstatus);
   _exit(xstatus);
 }
@@ -1993,8 +2017,9 @@ void sbrkmuch(char* s) {
 
   // touch each page to make sure it exists.
   char* eee = _sbrk(0);
-  for (char* pp = a; pp < eee; pp += 4096)
+  for (char* pp = a; pp < eee; pp += 4096) {
     *pp = 1;
+  }
 
   lastaddr  = (char*)(BIG - 1);
   *lastaddr = 99;
@@ -2051,8 +2076,9 @@ void kernmem(char* s) {
     }
     int xstatus;
     _wait(&xstatus);
-    if (xstatus != -1) // did kernel kill child?
+    if (xstatus != -1) { // did kernel kill child?
       _exit(1);
+    }
   }
 }
 
@@ -2073,8 +2099,9 @@ void MAXVAplus(char* s) {
     }
     int xstatus;
     _wait(&xstatus);
-    if (xstatus != -1) // did kernel kill child?
+    if (xstatus != -1) { // did kernel kill child?
       _exit(1);
+    }
   }
 }
 
@@ -2099,19 +2126,22 @@ void sbrkfail(char* s) {
       _sbrk(BIG - (uint64)_sbrk(0));
       _write(fds[1], "x", 1);
       // sit around until killed
-      for (;;)
+      for (;;) {
         _sleep(1000);
+      }
     }
-    if (pids[i] != -1)
+    if (pids[i] != -1) {
       _read(fds[0], &scratch, 1);
+    }
   }
 
   // if those failed allocations freed up the pages they did allocate,
   // we'll be able to allocate here
   c = _sbrk(PGSIZE);
   for (i = 0; i < sizeof(pids) / sizeof(pids[0]); i++) {
-    if (pids[i] == -1)
+    if (pids[i] == -1) {
       continue;
+    }
     _kill(pids[i]);
     _wait(0);
   }
@@ -2142,8 +2172,9 @@ void sbrkfail(char* s) {
     _exit(1);
   }
   _wait(&xstatus);
-  if (xstatus != -1 && xstatus != 2)
+  if (xstatus != -1 && xstatus != 2) {
     _exit(1);
+  }
 }
 
 // test reads/writes from/to allocated memory
@@ -2213,8 +2244,9 @@ void bigargtest(char* s) {
     char         big[(USERSTACK * PGSIZE) / (MAXARG - 1) + 2];
     memset(big, ' ', sizeof(big));
     big[sizeof(big) - 1] = '\0';
-    for (i = 0; i < MAXARG - 1; i++)
+    for (i = 0; i < MAXARG - 1; i++) {
       args[i] = big;
+    }
     args[MAXARG - 1] = 0;
     // this _exec() should fail (and return) because the
     // arguments are too large.
@@ -2228,8 +2260,9 @@ void bigargtest(char* s) {
   }
 
   _wait(&xstatus);
-  if (xstatus != 0)
+  if (xstatus != 0) {
     _exit(xstatus);
+  }
   fd = _open("bigarg-ok", 0);
   if (fd < 0) {
     printf("%s: bigarg test failed!\n", s);
@@ -2263,15 +2296,17 @@ void fsfull() {
     int total = 0;
     while (1) {
       int cc = _write(fd, buf, BSIZE);
-      if (cc < BSIZE)
+      if (cc < BSIZE) {
         break;
+      }
       total += cc;
       fsblocks++;
     }
     printf("wrote %d bytes\n", total);
     _close(fd);
-    if (total == 0)
+    if (total == 0) {
       break;
+    }
   }
 
   while (nfiles >= 0) {
@@ -2318,10 +2353,11 @@ void stacktest(char* s) {
     _exit(1);
   }
   _wait(&xstatus);
-  if (xstatus == -1) // kernel killed child?
+  if (xstatus == -1) { // kernel killed child?
     _exit(0);
-  else
+  } else {
     _exit(xstatus);
+  }
 }
 
 // check that writes to a few forbidden addresses
@@ -2430,8 +2466,9 @@ void sbrkbugs(char* s) {
 // still copyin() from addresses in the last page?
 void sbrklast(char* s) {
   uint64 top = (uint64)_sbrk(0);
-  if ((top % 4096) != 0)
+  if ((top % 4096) != 0) {
     _sbrk(4096 - (top % 4096));
+  }
   _sbrk(4096);
   _sbrk(10);
   _sbrk(-20);
@@ -2445,8 +2482,9 @@ void sbrklast(char* s) {
   fd   = _open(p, O_RDWR);
   p[0] = '\0';
   _read(fd, p, 1);
-  if (p[0] != 'x')
+  if (p[0] != 'x') {
     _exit(1);
+  }
 }
 
 // does sbrk handle signed int32 wrap-around with
@@ -2627,8 +2665,9 @@ void manywrites(char* s) {
   for (int ci = 0; ci < nchildren; ci++) {
     int st = 0;
     _wait(&st);
-    if (st != 0)
+    if (st != 0) {
       _exit(st);
+    }
   }
   _exit(0);
 }
@@ -2681,15 +2720,17 @@ void execout(char* s) {
       // allocate all of memory.
       while (1) {
         uint64 a = (uint64)_sbrk(4096);
-        if (a == 0xffffffffffffffffLL)
+        if (a == 0xffffffffffffffffLL) {
           break;
+        }
         *(char*)(a + 4096 - 1) = 1;
       }
 
       // free a few pages, in order to let _exec() make some
       // progress.
-      for (int i = 0; i < avail; i++)
+      for (int i = 0; i < avail; i++) {
         _sbrk(-4096);
+      }
 
       _close(1);
       char* args[] = {"echo", "x", 0};
@@ -2750,14 +2791,16 @@ void diskfull(char* s) {
     name[4] = '\0';
     _unlink(name);
     int fd = _open(name, O_CREATE | O_RDWR | O_TRUNC);
-    if (fd < 0)
+    if (fd < 0) {
       break;
+    }
     _close(fd);
   }
 
   // this _mkdir() is expected to fail.
-  if (_mkdir("diskfulldir") == 0)
+  if (_mkdir("diskfulldir") == 0) {
     printf("%s: _mkdir(diskfulldir) unexpectedly succeeded!\n", s);
+  }
 
   _unlink("diskfulldir");
 
@@ -2842,10 +2885,11 @@ int run(void f(char*), char* s) {
     _exit(0);
   } else {
     _wait(&xstatus);
-    if (xstatus != 0)
+    if (xstatus != 0) {
       printf("FAILED\n");
-    else
+    } else {
       printf("OK\n");
+    }
     return xstatus == 0;
   }
 }
@@ -2917,8 +2961,9 @@ int countfree() {
       printf("_read() failed in countfree()\n");
       _exit(1);
     }
-    if (cc == 0)
+    if (cc == 0) {
       break;
+    }
     n += 1;
   }
 
@@ -2939,8 +2984,9 @@ int drivetests(int quick, int continuous, char* justone) {
       }
     }
     if (!quick) {
-      if (justone == 0)
+      if (justone == 0) {
         printf("usertests slow tests starting\n");
+      }
       if (runtests(slowtests, justone, continuous)) {
         if (continuous != 2) {
           return 1;

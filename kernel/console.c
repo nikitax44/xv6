@@ -60,8 +60,9 @@ int consolewrite(int user_src, uint64 src, uint n) {
 
   for (i = 0; i < n; i++) {
     char c;
-    if (either_copyin(&c, user_src, src + i, 1) == -1)
+    if (either_copyin(&c, user_src, src + i, 1) == -1) {
       break;
+    }
     uartputc(c);
   }
 
@@ -105,8 +106,9 @@ int consoleread(int user_dst, uint64 dst, uint n) {
 
     // copy the input byte to the user-space buffer.
     cbuf = c;
-    if (either_copyout(user_dst, dst, &cbuf, 1) == -1)
+    if (either_copyout(user_dst, dst, &cbuf, 1) == -1) {
       break;
+    }
 
     dst++;
     --n;

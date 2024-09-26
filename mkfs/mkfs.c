@@ -83,8 +83,9 @@ int main(int argc, char* argv[]) {
   assert((BSIZE % sizeof(struct dirent)) == 0);
 
   fsfd = open(argv[1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-  if (fsfd < 0)
+  if (fsfd < 0) {
     die(argv[1]);
+  }
 
   // 1 fs block = 1 disk sector
   nmeta   = 2 + nlog + ninodeblocks + nbitmap;
@@ -105,8 +106,9 @@ int main(int argc, char* argv[]) {
 
   freeblock = nmeta; // the first free block that we can allocate
 
-  for (i = 0; i < FSSIZE; i++)
+  for (i = 0; i < FSSIZE; i++) {
     wsect(i, zeroes);
+  }
 
   memset(buf, 0, sizeof(buf));
   memmove(buf, &sb, sizeof(sb));
@@ -128,21 +130,25 @@ int main(int argc, char* argv[]) {
   for (i = 2; i < argc; i++) {
     // get rid of "user/(ports/)?"
     char* shortname = argv[i];
-    if (strncmp(shortname, "user/", 5) == 0)
+    if (strncmp(shortname, "user/", 5) == 0) {
       shortname += 5;
-    if (strncmp(shortname, "ports/", 6) == 0)
+    }
+    if (strncmp(shortname, "ports/", 6) == 0) {
       shortname += 6;
+    }
     assert(index(shortname, '/') == 0);
 
-    if ((fd = open(argv[i], 0)) < 0)
+    if ((fd = open(argv[i], 0)) < 0) {
       die(argv[i]);
+    }
 
     // Skip leading _ in name when writing to file system.
     // The binaries are named _rm, _cat, etc. to keep the
     // build operating system from trying to execute them
     // in place of system binaries like rm and cat.
-    if (shortname[0] == '_')
+    if (shortname[0] == '_') {
       shortname += 1;
+    }
 
     assert(strlen(shortname) <= DIRSIZ);
 
@@ -154,8 +160,9 @@ int main(int argc, char* argv[]) {
     strncpy(de.name, shortname, DIRSIZ);
     iappend(rootino, &de, sizeof(de));
 
-    while ((cc = read(fd, buf, sizeof(buf))) > 0)
+    while ((cc = read(fd, buf, sizeof(buf))) > 0) {
       iappend(inum, buf, cc);
+    }
 
     close(fd);
   }
@@ -173,10 +180,12 @@ int main(int argc, char* argv[]) {
 }
 
 void wsect(uint sec, void* buf) {
-  if (lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE)
+  if (lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE) {
     die("lseek");
-  if (write(fsfd, buf, BSIZE) != BSIZE)
+  }
+  if (write(fsfd, buf, BSIZE) != BSIZE) {
     die("write");
+  }
 }
 
 void winode(uint inum, struct dinode* ip) {
@@ -203,10 +212,12 @@ void rinode(uint inum, struct dinode* ip) {
 }
 
 void rsect(uint sec, void* buf) {
-  if (lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE)
+  if (lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE) {
     die("lseek");
-  if (read(fsfd, buf, BSIZE) != BSIZE)
+  }
+  if (read(fsfd, buf, BSIZE) != BSIZE) {
     die("read");
+  }
 }
 
 uint ialloc(ushort type) {

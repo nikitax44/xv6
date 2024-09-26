@@ -166,8 +166,9 @@ void uartintr(void) {
   // read and process incoming characters.
   while (1) {
     int c = uartgetc();
-    if (c == -1)
+    if (c == -1) {
       break;
+    }
     consoleintr(c);
   }
 

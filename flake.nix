@@ -54,6 +54,7 @@
         TOOLPREFIX = "${platform}-";
         EXTRA_CFLAGS = "-I${newlib}/${platform}/include  --specs=${libnewlib}/nano.specs -static";
         EXTRA_LDFLAGS = "${libnewlib}/libc.a -static";
+        nativeBuildInputs = [pkgs.stdenv.cc pkgs.perl pkgs.unixtools.xxd];
         buildInputs = [newlib];
         busybox = pkgs.pkgsCross.riscv64.busybox.override {
           enableStatic = true;
@@ -71,13 +72,11 @@
           packages = [
             config.treefmt.build.wrapper
             # pkgs.pkgsCross.riscv64.stdenv.cc # not tpkg.stdenv.cc
-            pkgs.stdenv.cc
-            pkgs.perl
             pkgs.gnumake
             pkgs.clang-tools
             (pkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
           ];
-          inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs;
+          inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs nativeBuildInputs;
         };
 
         packages.default = tpkg.stdenv.mkDerivation {
@@ -89,8 +88,7 @@
             cp ${busybox}/bin/busybox ./_busybox
           '';
           buildFlags = ["kernel/kernel fs.img"];
-          nativeBuildInputs = [pkgs.stdenv.cc pkgs.perl];
-          inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs;
+          inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs nativeBuildInputs;
           installPhase = ''
             mkdir $out
             cp kernel/kernel $out/

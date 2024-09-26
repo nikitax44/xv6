@@ -86,16 +86,18 @@ LDFLAGS = -z max-page-size=4096
 
 all: $K/kernel fs.img
 
-$K/kernel: $(OBJS) $K/kernel.ld $U/initcode
+$K/proc.o: $U/_initcode.h
+
+$K/kernel: $(OBJS) $K/kernel.ld
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
-$U/initcode: $U/initcode.S
-	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Ikernel -c $U/initcode.S -o $U/initcode.o
+$U/_initcode.h: $U/initcode.S
+	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -c $U/initcode.S -o $U/initcode.o
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
 	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
-	$(OBJDUMP) -S $U/initcode.o > $U/initcode.asm
+	xxd -i -n initcode $U/initcode > $@
 
 tags: $(OBJS) _init
 	etags *.S *.c
@@ -172,7 +174,7 @@ clean:
 	*.asm *.sym \
 	*/*.o */*.d */*.asm */*.sym \
 	*/*/*.o */*/*.d */*/*.asm */*/*.sym \
-	$U/initcode $U/initcode.out $K/kernel fs.img \
+	$U/initcode $U/initcode.out $U/_initcode.h $K/kernel fs.img \
 	mkfs/mkfs .gdbinit \
         $U/usys.S \
 	$(UPROGS) \

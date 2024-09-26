@@ -138,7 +138,7 @@ void vprintf(int fd, const char* fmt, va_list ap) {
   }
 }
 
-void fprintf(int fd, const char* fmt, ...) {
+void fdprintf(int fd, const char* fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);

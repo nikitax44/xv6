@@ -7,6 +7,7 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "types.h"
+#include <string.h>
 
 static int    loadseg(pde_t*, uint64, struct inode*, uint, uint);
 static int    loaddata(pde_t*, uint64, struct inode*, uint, uint);

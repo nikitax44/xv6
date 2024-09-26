@@ -8,6 +8,7 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "types.h"
+#include <string.h>
 
 void freerange(void* pa_start, void* pa_end);
 

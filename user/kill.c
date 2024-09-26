@@ -6,7 +6,7 @@ int main(int argc, char** argv) {
   int i;
 
   if (argc < 2) {
-    fprintf(2, "usage: kill pid...\n");
+    fdprintf(stderr, "usage: kill pid...\n");
     _exit(1);
   }
   for (i = 1; i < argc; i++) {

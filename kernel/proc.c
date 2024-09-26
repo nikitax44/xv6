@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "types.h"
 #include "user/_initcode.h"
+#include <string.h>
 
 struct cpu cpus[NCPU];
 

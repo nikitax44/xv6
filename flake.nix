@@ -49,11 +49,9 @@
             -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0   \
             -kernel "$KERNEL"
         '';
-        libnewlib = "${newlib}/${platform}/lib";
 
         TOOLPREFIX = "${platform}-";
-        EXTRA_CFLAGS = "-I${newlib}/${platform}/include  --specs=${libnewlib}/nano.specs -static";
-        EXTRA_LDFLAGS = "${libnewlib}/libc.a -static";
+        NEWLIB = "${newlib}/${platform}";
         nativeBuildInputs = [pkgs.stdenv.cc pkgs.perl pkgs.unixtools.xxd];
         buildInputs = [newlib];
         busybox = pkgs.pkgsCross.riscv64.busybox.override {
@@ -76,7 +74,7 @@
             pkgs.clang-tools
             (pkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
           ];
-          inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs nativeBuildInputs;
+          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
         };
 
         packages.default = tpkg.stdenv.mkDerivation {
@@ -88,7 +86,7 @@
             cp ${busybox}/bin/busybox ./_busybox
           '';
           buildFlags = ["kernel/kernel fs.img"];
-          inherit EXTRA_LDFLAGS EXTRA_CFLAGS TOOLPREFIX buildInputs nativeBuildInputs;
+          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
           installPhase = ''
             mkdir $out
             cp kernel/kernel $out/

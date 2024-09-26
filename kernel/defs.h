@@ -132,13 +132,7 @@ int  holdingsleep(struct sleeplock*);
 void initsleeplock(struct sleeplock*, char*);
 
 // string.c
-int    memcmp(const void*, const void*, uint64);
-void*  memmove(void*, const void*, uint64);
-void*  memset(void*, int, uint64);
-char*  safestrcpy(char*, const char*, int);
-uint64 strlen(const char*);
-int    strncmp(const char*, const char*, uint64);
-char*  strncpy(char*, const char*, uint64);
+char* safestrcpy(char*, const char*, int);
 
 // syscall.c
 void argint(int, int*);

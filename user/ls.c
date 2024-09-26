@@ -29,12 +29,12 @@ void ls(char* path) {
   struct stat   st;
 
   if ((fd = _open(path, O_RDONLY)) < 0) {
-    fprintf(2, "ls: cannot open %s\n", path);
+    fdprintf(stderr, "ls: cannot open %s\n", path);
     return;
   }
 
   if (_fstat(fd, &st) < 0) {
-    fprintf(2, "ls: cannot stat %s\n", path);
+    fdprintf(stderr, "ls: cannot stat %s\n", path);
     _close(fd);
     return;
   }

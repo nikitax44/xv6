@@ -221,11 +221,11 @@ void go(int which_child) {
       // echo hi | cat
       int aa[2], bb[2];
       if (_pipe(aa) < 0) {
-        fprintf(2, "grind: pipe failed\n");
+        fdprintf(stderr, "grind: pipe failed\n");
         _exit(1);
       }
       if (_pipe(bb) < 0) {
-        fprintf(2, "grind: pipe failed\n");
+        fdprintf(stderr, "grind: pipe failed\n");
         _exit(1);
       }
       int pid1 = _fork();
@@ -235,16 +235,16 @@ void go(int which_child) {
         _close(aa[0]);
         _close(1);
         if (_dup(aa[1]) != 1) {
-          fprintf(2, "grind: dup failed\n");
+          fdprintf(stderr, "grind: dup failed\n");
           _exit(1);
         }
         _close(aa[1]);
         char* args[3] = {"echo", "hi", 0};
         _exec("grindir/../echo", args);
-        fprintf(2, "grind: echo: not found\n");
+        fdprintf(stderr, "grind: echo: not found\n");
         _exit(2);
       } else if (pid1 < 0) {
-        fprintf(2, "grind: fork failed\n");
+        fdprintf(stderr, "grind: fork failed\n");
         _exit(3);
       }
       int pid2 = _fork();
@@ -253,22 +253,22 @@ void go(int which_child) {
         _close(bb[0]);
         _close(0);
         if (_dup(aa[0]) != 0) {
-          fprintf(2, "grind: dup failed\n");
+          fdprintf(stderr, "grind: dup failed\n");
           _exit(4);
         }
         _close(aa[0]);
         _close(1);
         if (_dup(bb[1]) != 1) {
-          fprintf(2, "grind: dup failed\n");
+          fdprintf(stderr, "grind: dup failed\n");
           _exit(5);
         }
         _close(bb[1]);
         char* args[2] = {"cat", 0};
         _exec("/cat", args);
-        fprintf(2, "grind: cat: not found\n");
+        fdprintf(stderr, "grind: cat: not found\n");
         _exit(6);
       } else if (pid2 < 0) {
-        fprintf(2, "grind: fork failed\n");
+        fdprintf(stderr, "grind: fork failed\n");
         _exit(7);
       }
       _close(aa[0]);

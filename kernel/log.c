@@ -6,6 +6,7 @@
 #include "sleeplock.h"
 #include "spinlock.h"
 #include "types.h"
+#include <string.h>
 
 // Simple logging that allows concurrent FS system calls.
 //

@@ -61,18 +61,17 @@ OBJDUMP ?= $(TOOLPREFIX)objdump
 CFLAGS  = -Wall -Werror -Wpedantic -Wextra
 CFLAGS += -O -fno-omit-frame-pointer -ggdb -gdwarf-2
 CFLAGS += -MD
-CFLAGS += -mcmodel=medany
+CFLAGS += -mcmodel=medany -march=rv64g -static
 # CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -fno-common -nostdlib
-CFLAGS += -fno-builtin-strncpy -fno-builtin-strncmp -fno-builtin-strlen -fno-builtin-memset
-CFLAGS += -fno-builtin-memmove -fno-builtin-memcmp -fno-builtin-log -fno-builtin-bzero
-CFLAGS += -fno-builtin-strchr -fno-builtin-exit -fno-builtin-malloc -fno-builtin-putc
-CFLAGS += -fno-builtin-free
-CFLAGS += -fno-builtin-memcpy -Wno-main
-CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
-CFLAGS += -I.
+# CFLAGS += -fno-builtin-strncpy -fno-builtin-strncmp -fno-builtin-strlen -fno-builtin-memset
+# CFLAGS += -fno-builtin-memmove -fno-builtin-memcmp -fno-builtin-bzero -fno-builtin-memcpy
+# CFLAGS += -fno-builtin-strchr -fno-builtin-exit
+CFLAGS += -fno-builtin-free -fno-builtin-malloc
+CFLAGS += -Wno-main -fno-builtin-log
+CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf -fno-builtin-putc
+CFLAGS += -I. -I $(NEWLIB)/include --specs=$(NEWLIB)/lib/nano.specs
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
-CFLAGS += $(EXTRA_CFLAGS)
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
@@ -89,12 +88,12 @@ all: $K/kernel fs.img
 $K/proc.o: $U/_initcode.h
 
 $K/kernel: $(OBJS) $K/kernel.ld
-	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
+	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) $(NEWLIB)/lib/libc.a
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
 $U/_initcode.h: $U/initcode.S
-	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -c $U/initcode.S -o $U/initcode.o
+	$(CC) $(CFLAGS) -nostdinc -c $U/initcode.S -o $U/initcode.o
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
 	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
 	xxd -i -n initcode $U/initcode > $@
@@ -105,12 +104,12 @@ tags: $(OBJS) _init
 ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
 
 $U/_%: $U/%.o $(ULIB)
-	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^ $(NEWLIB)/lib/libc.a
 	$(OBJDUMP) -S $@ > $U/$*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
 
 $P/_%: $P/%.o $U/usys.o $P/fixes.o $P/app.ld
-	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $(filter %.o,$^) $(EXTRA_LDFLAGS)
+	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $(filter %.o,$^) $(NEWLIB)/lib/libc.a
 	$(OBJDUMP) -S $@ > $P/$*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $P/$*.sym
 
@@ -124,7 +123,7 @@ $U/usys.o : $U/usys.S
 $U/_forktest: $U/forktest.o $(ULIB)
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o $(NEWLIB)/lib/libc.a
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
 _exp: $P/dump.c

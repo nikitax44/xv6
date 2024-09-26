@@ -58,13 +58,13 @@ void        runcmd(struct cmd*) __attribute__((noreturn));
 void print_error(const char* name, int errno) {
   switch (errno) {
   case ENOENT:
-    fprintf(2, "%s: command not found\n", name);
+    fdprintf(stderr, "%s: command not found\n", name);
     break;
   case ENOEXEC:
-    fprintf(2, "%s: exec format error\n", name);
+    fdprintf(stderr, "%s: exec format error\n", name);
     break;
   default:
-    fprintf(2, "exec %s failed: %d\n", name, errno);
+    fdprintf(stderr, "exec %s failed: %d\n", name, errno);
   }
 }
 
@@ -98,7 +98,7 @@ void runcmd(struct cmd* cmd) {
     rcmd = (struct redircmd*)cmd;
     _close(rcmd->fd);
     if (_open(rcmd->file, rcmd->mode) < 0) {
-      fprintf(2, "open %s failed\n", rcmd->file);
+      fdprintf(stderr, "open %s failed\n", rcmd->file);
       _exit(1);
     }
     runcmd(rcmd->cmd);
@@ -176,7 +176,7 @@ int main(void) {
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf) - 1] = 0; // chop \n
       if (_chdir(buf + 3) < 0) {
-        fprintf(2, "cannot cd %s\n", buf + 3);
+        fdprintf(stderr, "cannot cd %s\n", buf + 3);
       }
       continue;
     }
@@ -190,7 +190,7 @@ int main(void) {
 
 void panic(char* s) __attribute__((noreturn));
 void panic(char* s) {
-  fprintf(2, "%s\n", s);
+  fdprintf(stderr, "%s\n", s);
   _exit(1);
 }
 
@@ -340,7 +340,7 @@ struct cmd* parsecmd(char* s) {
   cmd = parseline(&s, es);
   peek(&s, es, "");
   if (s != es) {
-    fprintf(2, "leftovers: %s\n", s);
+    fdprintf(stderr, "leftovers: %s\n", s);
     panic("syntax");
   }
   nulterminate(cmd);

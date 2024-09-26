@@ -5,6 +5,7 @@
 #include "param.h"
 #include "riscv.h"
 #include "types.h"
+#include <string.h>
 
 /*
  * the kernel's page table.

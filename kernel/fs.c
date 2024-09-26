@@ -20,6 +20,7 @@
 #include "spinlock.h"
 #include "stat.h"
 #include "types.h"
+#include <string.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 // there should be one superblock per disk device, but we run with
@@ -45,7 +46,7 @@ void fsinit(int dev) {
 }
 
 // Zero a block.
-static void bzero(int dev, int bno) {
+static void bclear(int dev, int bno) {
   struct buf* bp;
 
   bp = bread(dev, bno);
@@ -71,7 +72,7 @@ static uint balloc(uint dev) {
         bp->data[bi / 8] |= m;           // Mark block in use.
         log_write(bp);
         brelse(bp);
-        bzero(dev, b + bi);
+        bclear(dev, b + bi);
         return b + bi;
       }
     }

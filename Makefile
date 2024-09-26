@@ -128,6 +128,9 @@ $U/_forktest: $U/forktest.o $(ULIB)
 _exp: $P/dump.c
 	$(CC) -o $@ $^
 
+_busybox:
+	get-busybox
+
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 	gcc -Werror -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
 

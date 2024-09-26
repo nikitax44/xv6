@@ -568,6 +568,23 @@ int kill(int pid) {
   return -1;
 }
 
+// Kill all the user processed except for init
+void kill_all(void) {
+  struct proc* p;
+
+  for (p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if (p->pid > 1) { // all except for init
+      p->killed = 1;
+      if (p->state == SLEEPING) {
+        // Wake process from sleep().
+        p->state = RUNNABLE;
+      }
+    }
+    release(&p->lock);
+  }
+}
+
 void setkilled(struct proc* p) {
   acquire(&p->lock);
   p->killed = 1;

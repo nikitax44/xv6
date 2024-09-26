@@ -30,7 +30,7 @@ char* gets(char* buf, int max) {
   return buf;
 }
 
-int stat(const char* n, struct stat* st) {
+int stat(str n, struct stat* st) {
   int fd;
   int r;
 
@@ -43,7 +43,7 @@ int stat(const char* n, struct stat* st) {
   return r;
 }
 
-int atoi(const char* s) {
+int atoi(str s) {
   int n;
 
   n = 0;
@@ -53,8 +53,6 @@ int atoi(const char* s) {
   return n;
 }
 
-int _execve(const char* path, char** argv, char** envp);
+int _execve(str path, char** argv, char** envp);
 
-int _exec(const char* path, char** argv) {
-  return _execve(path, argv, (char**)0);
-}
+int _exec(str path, char** argv) { return _execve(path, argv, (char**)0); }

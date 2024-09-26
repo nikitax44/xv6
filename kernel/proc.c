@@ -39,8 +39,8 @@ void proc_mapstacks(pagetable_t kpgtbl) {
     if (pa == 0) {
       panic("kalloc");
     }
-    uint64 va = KSTACK((int)(p - proc));
-    kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+    u64 va = KSTACK((int)(p - proc));
+    kvmmap(kpgtbl, va, (u64)pa, PGSIZE, PTE_R | PTE_W);
   }
 }
 
@@ -132,7 +132,7 @@ found:
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
+  p->context.ra = (u64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
   return p;
@@ -175,15 +175,15 @@ pagetable_t proc_pagetable(struct proc* p) {
   // at the highest user virtual address.
   // only the supervisor uses it, on the way
   // to/from user space, so not PTE_U.
-  if (mappages(pagetable, TRAMPOLINE, PGSIZE, (uint64)trampoline,
-               PTE_R | PTE_X) < 0) {
+  if (mappages(pagetable, TRAMPOLINE, PGSIZE, (u64)trampoline, PTE_R | PTE_X) <
+      0) {
     uvmfree(pagetable, 0);
     return 0;
   }
 
   // map the trapframe page just below the trampoline page, for
   // trampoline.S.
-  if (mappages(pagetable, TRAPFRAME, PGSIZE, (uint64)(p->trapframe),
+  if (mappages(pagetable, TRAPFRAME, PGSIZE, (u64)(p->trapframe),
                PTE_R | PTE_W) < 0) {
     uvmunmap(pagetable, TRAMPOLINE, 1, 0);
     uvmfree(pagetable, 0);
@@ -195,7 +195,7 @@ pagetable_t proc_pagetable(struct proc* p) {
 
 // Free a process's page table, and free the
 // physical memory it refers to.
-void proc_freepagetable(pagetable_t pagetable, uint64 sz) {
+void proc_freepagetable(pagetable_t pagetable, u64 sz) {
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
@@ -228,7 +228,7 @@ void userinit(void) {
 // Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
 int growproc(int n) {
-  uint64       sz;
+  u64          sz;
   struct proc* p = myproc();
 
   sz = p->sz;
@@ -353,7 +353,7 @@ void exit(int status) {
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
-int wait(uint64 addr) {
+int wait(u64 addr) {
   struct proc* pp;
   int          havekids, pid;
   struct proc* p = myproc();
@@ -372,7 +372,7 @@ int wait(uint64 addr) {
         if (pp->state == ZOMBIE) {
           // Found one.
           pid = pp->pid;
-          if (addr != 0 && copyout(p->pagetable, addr, (char*)&pp->xstate,
+          if (addr != 0 && copyout(p->pagetable, addr, (const u8*)&pp->xstate,
                                    sizeof(pp->xstate)) < 0) {
             release(&pp->lock);
             release(&wait_lock);
@@ -604,7 +604,7 @@ int killed(struct proc* p) {
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
-int either_copyout(int user_dst, uint64 dst, void* src, uint64 len) {
+int either_copyout(int user_dst, u64 dst, void* src, u64 len) {
   struct proc* p = myproc();
   if (user_dst) {
     return copyout(p->pagetable, dst, src, len);
@@ -617,7 +617,7 @@ int either_copyout(int user_dst, uint64 dst, void* src, uint64 len) {
 // Copy from either a user address, or kernel address,
 // depending on usr_src.
 // Returns 0 on success, -1 on error.
-int either_copyin(void* dst, int user_src, uint64 src, uint64 len) {
+int either_copyin(void* dst, int user_src, u64 src, u64 len) {
   struct proc* p = myproc();
   if (user_src) {
     return copyin(p->pagetable, dst, src, len);

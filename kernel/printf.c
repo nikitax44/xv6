@@ -25,10 +25,10 @@ static struct {
 
 static char digits[] = "0123456789abcdef";
 
-static void printint(long long xx, int base, int sign) {
-  char               buf[16];
-  int                i;
-  unsigned long long x;
+static void printint(i64 xx, int base, int sign) {
+  char buf[16];
+  int  i;
+  u64  x;
 
   if (sign && (sign = (xx < 0))) {
     x = -xx;
@@ -50,17 +50,17 @@ static void printint(long long xx, int base, int sign) {
   }
 }
 
-static void printptr(uint64 x) {
-  uint i;
+static void printptr(u64 x) {
+  u32 i;
   consputc('0');
   consputc('x');
-  for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4) {
-    consputc(digits[x >> (sizeof(uint64) * 8 - 4)]);
+  for (i = 0; i < (sizeof(u64) * 2); i++, x <<= 4) {
+    consputc(digits[x >> (sizeof(u64) * 8 - 4)]);
   }
 }
 
 // Print to the console.
-int printf(const char* fmt, ...) {
+int printf(str fmt, ...) {
   va_list ap;
   int     i, cx, c0, c1, c2, locking;
   char*   s;
@@ -88,29 +88,29 @@ int printf(const char* fmt, ...) {
     if (c0 == 'd') {
       printint(va_arg(ap, int), 10, 1);
     } else if (c0 == 'l' && c1 == 'd') {
-      printint(va_arg(ap, uint64), 10, 1);
+      printint(va_arg(ap, u64), 10, 1);
       i += 1;
     } else if (c0 == 'l' && c1 == 'l' && c2 == 'd') {
-      printint(va_arg(ap, uint64), 10, 1);
+      printint(va_arg(ap, u64), 10, 1);
       i += 2;
     } else if (c0 == 'u') {
       printint(va_arg(ap, int), 10, 0);
     } else if (c0 == 'l' && c1 == 'u') {
-      printint(va_arg(ap, uint64), 10, 0);
+      printint(va_arg(ap, u64), 10, 0);
       i += 1;
     } else if (c0 == 'l' && c1 == 'l' && c2 == 'u') {
-      printint(va_arg(ap, uint64), 10, 0);
+      printint(va_arg(ap, u64), 10, 0);
       i += 2;
     } else if (c0 == 'x') {
       printint(va_arg(ap, int), 16, 0);
     } else if (c0 == 'l' && c1 == 'x') {
-      printint(va_arg(ap, uint64), 16, 0);
+      printint(va_arg(ap, u64), 16, 0);
       i += 1;
     } else if (c0 == 'l' && c1 == 'l' && c2 == 'x') {
-      printint(va_arg(ap, uint64), 16, 0);
+      printint(va_arg(ap, u64), 16, 0);
       i += 2;
     } else if (c0 == 'p') {
-      printptr(va_arg(ap, uint64));
+      printptr(va_arg(ap, u64));
     } else if (c0 == 's') {
       if ((s = va_arg(ap, char*)) == 0) {
         s = "(null)";
@@ -137,7 +137,7 @@ int printf(const char* fmt, ...) {
       printint(va_arg(ap, int), 16, 1);
       break;
     case 'p':
-      printptr(va_arg(ap, uint64));
+      printptr(va_arg(ap, u64));
       break;
     case 's':
       if((s = va_arg(ap, char*)) == 0)

@@ -6,12 +6,12 @@
 // Memory allocator by Kernighan and Ritchie,
 // The C programming Language, 2nd ed.  Section 8.7.
 
-typedef long Align;
+typedef usize Align;
 
 union header {
   struct {
     union header* ptr;
-    uint          size;
+    u32           size;
   } s;
   Align x;
 };
@@ -45,7 +45,7 @@ void free(void* ap) {
   freep = p;
 }
 
-static Header* morecore(uint nu) {
+static Header* morecore(u32 nu) {
   char*   p;
   Header* hp;
 
@@ -62,9 +62,9 @@ static Header* morecore(uint nu) {
   return freep;
 }
 
-void* malloc(uint nbytes) {
+void* malloc(u32 nbytes) {
   Header *p, *prevp;
-  uint    nunits;
+  u32     nunits;
 
   nunits = (nbytes + sizeof(Header) - 1) / sizeof(Header) + 1;
   if ((prevp = freep) == 0) {

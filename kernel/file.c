@@ -76,7 +76,7 @@ void fileclose(struct file* f) {
 
 // Get metadata about file f.
 // addr is a user virtual address, pointing to a struct stat.
-int filestat(struct file* f, uint64 addr) {
+int filestat(struct file* f, u64 addr) {
   struct proc* p = myproc();
   struct stat  st;
 
@@ -84,7 +84,7 @@ int filestat(struct file* f, uint64 addr) {
     ilock(f->ip);
     stati(f->ip, &st);
     iunlock(f->ip);
-    if (copyout(p->pagetable, addr, (char*)&st, sizeof(st)) < 0) {
+    if (copyout(p->pagetable, addr, (const u8*)&st, sizeof(st)) < 0) {
       return -1;
     }
     return 0;
@@ -94,7 +94,7 @@ int filestat(struct file* f, uint64 addr) {
 
 // Read from file f.
 // addr is a user virtual address.
-int fileread(struct file* f, uint64 addr, int n) {
+int fileread(struct file* f, u64 addr, int n) {
   int r = 0;
 
   if (f->readable == 0) {
@@ -121,7 +121,7 @@ int fileread(struct file* f, uint64 addr, int n) {
   return r;
 }
 
-int fileseek(struct file* f, uint64 offset, WHENCE whence) {
+int fileseek(struct file* f, u64 offset, WHENCE whence) {
   int r = -1;
 
   if (f->type == FD_INODE) {
@@ -154,7 +154,7 @@ int fileseek(struct file* f, uint64 offset, WHENCE whence) {
 
 // Write to file f.
 // addr is a user virtual address.
-int filewrite(struct file* f, uint64 addr, int n) {
+int filewrite(struct file* f, u64 addr, int n) {
   int r, ret = 0;
 
   if (f->writable == 0) {

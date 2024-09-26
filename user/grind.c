@@ -13,7 +13,7 @@
 #include "user/user.h"
 
 // from FreeBSD.
-int do_rand(unsigned long* ctx) {
+int do_rand(u64* ctx) {
   /*
    * Compute x = (7^5 * x) mod (2^31 - 1)
    * without overflowing 31 bits:
@@ -22,7 +22,7 @@ int do_rand(unsigned long* ctx) {
    * Park and Miller, Communications of the ACM, vol. 31, no. 10,
    * October 1988, p. 1195.
    */
-  long hi, lo, x;
+  i64 hi, lo, x;
 
   /* Transform to [1, 0x7ffffffe] range. */
   x  = (*ctx % 0x7ffffffe) + 1;
@@ -38,7 +38,7 @@ int do_rand(unsigned long* ctx) {
   return (x);
 }
 
-unsigned long rand_next = 1;
+u64 rand_next = 1;
 
 int rand(void) { return (do_rand(&rand_next)); }
 
@@ -46,7 +46,7 @@ void go(int which_child) {
   int         fd = -1;
   static char buf[999];
   char*       break0 = _sbrk(0);
-  uint64      iters  = 0;
+  u64         iters  = 0;
 
   _mkdir("grindir");
   if (_chdir("grindir") != 0) {

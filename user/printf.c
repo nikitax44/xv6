@@ -11,7 +11,7 @@ static void putc(int fd, char c) { _write(fd, &c, 1); }
 static void printint(int fd, int xx, int base, int sgn) {
   char buf[16];
   int  i, neg;
-  uint x;
+  u32  x;
 
   neg = 0;
   if (sgn && xx < 0) {
@@ -34,17 +34,17 @@ static void printint(int fd, int xx, int base, int sgn) {
   }
 }
 
-static void printptr(int fd, uint64 x) {
-  uint64 i;
+static void printptr(int fd, u64 x) {
+  u64 i;
   putc(fd, '0');
   putc(fd, 'x');
-  for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4) {
-    putc(fd, digits[x >> (sizeof(uint64) * 8 - 4)]);
+  for (i = 0; i < (sizeof(u64) * 2); i++, x <<= 4) {
+    putc(fd, digits[x >> (sizeof(u64) * 8 - 4)]);
   }
 }
 
 // Print to the given fd. Only understands %d, %x, %p, %s.
-void vprintf(int fd, const char* fmt, va_list ap) {
+void vprintf(int fd, str fmt, va_list ap) {
   char* s;
   int   c0, c1, c2, i, state;
 
@@ -68,29 +68,29 @@ void vprintf(int fd, const char* fmt, va_list ap) {
       if (c0 == 'd') {
         printint(fd, va_arg(ap, int), 10, 1);
       } else if (c0 == 'l' && c1 == 'd') {
-        printint(fd, va_arg(ap, uint64), 10, 1);
+        printint(fd, va_arg(ap, u64), 10, 1);
         i += 1;
       } else if (c0 == 'l' && c1 == 'l' && c2 == 'd') {
-        printint(fd, va_arg(ap, uint64), 10, 1);
+        printint(fd, va_arg(ap, u64), 10, 1);
         i += 2;
       } else if (c0 == 'u') {
         printint(fd, va_arg(ap, int), 10, 0);
       } else if (c0 == 'l' && c1 == 'u') {
-        printint(fd, va_arg(ap, uint64), 10, 0);
+        printint(fd, va_arg(ap, u64), 10, 0);
         i += 1;
       } else if (c0 == 'l' && c1 == 'l' && c2 == 'u') {
-        printint(fd, va_arg(ap, uint64), 10, 0);
+        printint(fd, va_arg(ap, u64), 10, 0);
         i += 2;
       } else if (c0 == 'x') {
         printint(fd, va_arg(ap, int), 16, 0);
       } else if (c0 == 'l' && c1 == 'x') {
-        printint(fd, va_arg(ap, uint64), 16, 0);
+        printint(fd, va_arg(ap, u64), 16, 0);
         i += 1;
       } else if (c0 == 'l' && c1 == 'l' && c2 == 'x') {
-        printint(fd, va_arg(ap, uint64), 16, 0);
+        printint(fd, va_arg(ap, u64), 16, 0);
         i += 2;
       } else if (c0 == 'p') {
-        printptr(fd, va_arg(ap, uint64));
+        printptr(fd, va_arg(ap, u64));
       } else if (c0 == 's') {
         if ((s = va_arg(ap, char*)) == 0) {
           s = "(null)";
@@ -110,11 +110,11 @@ void vprintf(int fd, const char* fmt, va_list ap) {
       if(c == 'd'){
         printint(fd, va_arg(ap, int), 10, 1);
       } else if(c == 'l') {
-        printint(fd, va_arg(ap, uint64), 10, 0);
+        printint(fd, va_arg(ap, u64), 10, 0);
       } else if(c == 'x') {
         printint(fd, va_arg(ap, int), 16, 0);
       } else if(c == 'p') {
-        printptr(fd, va_arg(ap, uint64));
+        printptr(fd, va_arg(ap, u64));
       } else if(c == 's'){
         s = va_arg(ap, char*);
         if(s == 0)
@@ -124,7 +124,7 @@ void vprintf(int fd, const char* fmt, va_list ap) {
           s++;
         }
       } else if(c == 'c'){
-        putc(fd, va_arg(ap, uint));
+        putc(fd, va_arg(ap, u32));
       } else if(c == '%'){
         putc(fd, c);
       } else {
@@ -138,14 +138,14 @@ void vprintf(int fd, const char* fmt, va_list ap) {
   }
 }
 
-void fdprintf(int fd, const char* fmt, ...) {
+void fdprintf(int fd, str fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);
   vprintf(fd, fmt, ap);
 }
 
-void printf(const char* fmt, ...) {
+void printf(str fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);

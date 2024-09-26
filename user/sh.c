@@ -55,7 +55,7 @@ void        panic(char*);
 struct cmd* parsecmd(char*);
 void        runcmd(struct cmd*) __attribute__((noreturn));
 
-void print_error(const char* name, int errno) {
+void print_error(str name, int errno) {
   switch (errno) {
   case ENOENT:
     fdprintf(stderr, "%s: command not found\n", name);

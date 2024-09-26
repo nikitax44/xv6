@@ -13,20 +13,20 @@
 // mkfs computes the super block and builds an initial file system. The
 // super block describes the disk layout:
 struct superblock {
-  uint magic;      // Must be FSMAGIC
-  uint size;       // Size of file system image (blocks)
-  uint nblocks;    // Number of data blocks
-  uint ninodes;    // Number of inodes.
-  uint nlog;       // Number of log blocks
-  uint logstart;   // Block number of first log block
-  uint inodestart; // Block number of first inode block
-  uint bmapstart;  // Block number of first free map block
+  u32 magic;      // Must be FSMAGIC
+  u32 size;       // Size of file system image (blocks)
+  u32 nblocks;    // Number of data blocks
+  u32 ninodes;    // Number of inodes.
+  u32 nlog;       // Number of log blocks
+  u32 logstart;   // Block number of first log block
+  u32 inodestart; // Block number of first inode block
+  u32 bmapstart;  // Block number of first free map block
 };
 
 #define FSMAGIC 0x10203040
 
 #define NDIRECT   28
-#define NINDIRECT (BSIZE / sizeof(uint))
+#define NINDIRECT (BSIZE / sizeof(u32))
 #define MAXFILE   (NDIRECT + NINDIRECT)
 
 // On-disk inode structure
@@ -35,8 +35,8 @@ struct dinode {
   short major;              // Major device number (T_DEVICE only)
   short minor;              // Minor device number (T_DEVICE only)
   short nlink;              // Number of links to inode in file system
-  uint  size;               // Size of file (bytes)
-  uint  addrs[NDIRECT + 1]; // Data block addresses
+  u32   size;               // Size of file (bytes)
+  u32   addrs[NDIRECT + 1]; // Data block addresses
 };
 
 // Inodes per block.
@@ -58,6 +58,6 @@ struct dinode {
 #define DIRSIZ 14
 
 struct dirent {
-  ushort inum;
-  char   name[DIRSIZ];
+  u16  inum;
+  char name[DIRSIZ];
 };

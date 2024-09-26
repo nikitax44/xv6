@@ -9,10 +9,10 @@
 #include "types.h"
 #include <string.h>
 
-static int    loadseg(pde_t*, uint64, struct inode*, uint, uint);
-static int    loaddata(pde_t*, uint64, struct inode*, uint, uint);
-static uint64 putargs(pde_t*, char* const* argv, uint64* sp, uint64 stackbase,
-                      uint64* ustack, uint64* base);
+static int loadseg(pde_t*, u64, struct inode*, u32, u32);
+static int loaddata(pde_t*, u64, struct inode*, u32, u32);
+static u64 putargs(pde_t*, str* argv, u64* sp, u64 stackbase, u64* ustack,
+                   u64* base);
 
 int flags2perm(int flags) {
   int perm = 0;
@@ -25,10 +25,10 @@ int flags2perm(int flags) {
   return perm;
 }
 
-int execve(const char* path, char* const* argv, char* const* envp) {
+int execve(str path, str* argv, str* envp) {
   const char *   s, *last;
   int            i, off;
-  uint64         argc, envc, sz = 0, sp, ustack[MAXARG], stackbase, base;
+  u64            argc, envc, sz = 0, sp, ustack[MAXARG], stackbase, base;
   struct elfhdr  elf;
   struct inode*  ip;
   struct proghdr ph;
@@ -45,7 +45,7 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   ilock(ip);
 
   // Check ELF header
-  if (readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf)) {
+  if (readi(ip, 0, (u64)&elf, 0, sizeof(elf)) != sizeof(elf)) {
     ret = ENOEXEC;
     goto bad;
   }
@@ -62,7 +62,7 @@ int execve(const char* path, char* const* argv, char* const* envp) {
 
   // Load program into memory.
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-    if (readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph)) {
+    if (readi(ip, 0, (u64)&ph, off, sizeof(ph)) != sizeof(ph)) {
       ret = ENOEXEC;
       goto bad;
     }
@@ -77,7 +77,7 @@ int execve(const char* path, char* const* argv, char* const* envp) {
       ret = ENOEXEC;
       goto bad;
     }
-    uint64 sz1;
+    u64 sz1;
     if ((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,
                         flags2perm(ph.flags))) == 0) {
       ret = ENOMEM;
@@ -92,14 +92,14 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   end_op();
   ip = 0;
 
-  p            = myproc();
-  uint64 oldsz = p->sz;
+  p         = myproc();
+  u64 oldsz = p->sz;
 
   // Allocate some pages at the next page boundary.
   // Make the first inaccessible as a stack guard.
   // Use the rest as the user stack.
   sz = PGROUNDUP(sz);
-  uint64 sz1;
+  u64 sz1;
   if ((sz1 = uvmalloc(pagetable, sz, sz + (USERSTACK + 1) * PGSIZE, PTE_W)) ==
       0) {
     ret = ENOMEM;
@@ -111,22 +111,22 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   stackbase = sp - USERSTACK * PGSIZE;
 
   base = 1;
-  sp -= sizeof(uint64);
+  sp -= sizeof(u64);
 
   argc = putargs(pagetable, argv, &sp, stackbase, ustack, &base);
-  if (argc == (uint64)-1) {
+  if (argc == (u64)-1) {
     ret = E2BIG;
     goto bad;
   }
 
   envc = putargs(pagetable, envp, &sp, stackbase, ustack, &base);
-  if (envc == (uint64)-1) {
+  if (envc == (u64)-1) {
     ret = E2BIG;
     goto bad;
   }
 
   // push the arrays of argv[] and envp[] pointers.
-  sp -= base * sizeof(uint64);
+  sp -= base * sizeof(u64);
   sp -= sp % 16;
   if (sp < stackbase) {
     ret = E2BIG;
@@ -135,7 +135,7 @@ int execve(const char* path, char* const* argv, char* const* envp) {
 
   ustack[0] = argc;
 
-  if (copyout(pagetable, sp, (char*)ustack, base * sizeof(uint64)) < 0) {
+  if (copyout(pagetable, sp, (const u8*)ustack, base * sizeof(u64)) < 0) {
     ret = -1;
     goto bad;
   }
@@ -143,8 +143,8 @@ int execve(const char* path, char* const* argv, char* const* envp) {
   // arguments to user main(argc, argv, envp)
   // argc is returned via the system call return
   // value, which goes in a0.
-  p->trapframe->a1 = sp + sizeof(uint64);
-  p->trapframe->a2 = sp + (1 + argc + 1) * sizeof(uint64);
+  p->trapframe->a1 = sp + sizeof(u64);
+  p->trapframe->a2 = sp + (1 + argc + 1) * sizeof(u64);
 
   // Save program name for debugging.
   for (last = s = path; *s; s++) {
@@ -177,14 +177,14 @@ bad:
 }
 
 // allows unaligned loading
-static int loaddata(pagetable_t pagetable, uint64 va, struct inode* ip,
-                    uint offset, uint sz) {
-  uint64 bt = PGROUNDUP(va);
+static int loaddata(pagetable_t pagetable, u64 va, struct inode* ip, u32 offset,
+                    u32 sz) {
+  u64 bt = PGROUNDUP(va);
 
-  uint64 diff = bt - va; // >=0
+  u64 diff = bt - va; // >=0
   if (diff != 0) {
-    uint   n;
-    uint64 pa = walkaddr(pagetable, PGROUNDDOWN(va));
+    u32 n;
+    u64 pa = walkaddr(pagetable, PGROUNDDOWN(va));
     if (pa == 0) {
       panic("loaddata: address should exist");
     }
@@ -193,7 +193,7 @@ static int loaddata(pagetable_t pagetable, uint64 va, struct inode* ip,
     } else {
       n = sz;
     }
-    if (readi(ip, 0, (uint64)pa + (va % PGSIZE), offset, n) != n) {
+    if (readi(ip, 0, (u64)pa + (va % PGSIZE), offset, n) != n) {
       return ENOEXEC;
     }
   }
@@ -208,10 +208,10 @@ static int loaddata(pagetable_t pagetable, uint64 va, struct inode* ip,
 // va must be page-aligned
 // and the pages from va to va+sz must already be mapped.
 // Returns 0 on success, -1 on failure.
-static int loadseg(pagetable_t pagetable, uint64 va, struct inode* ip,
-                   uint offset, uint sz) {
-  uint   i, n;
-  uint64 pa;
+static int loadseg(pagetable_t pagetable, u64 va, struct inode* ip, u32 offset,
+                   u32 sz) {
+  u32 i, n;
+  u64 pa;
 
   for (i = 0; i < sz; i += PGSIZE) {
     pa = walkaddr(pagetable, va + i);
@@ -223,7 +223,7 @@ static int loadseg(pagetable_t pagetable, uint64 va, struct inode* ip,
     } else {
       n = PGSIZE;
     }
-    if (readi(ip, 0, (uint64)pa, offset + i, n) != n) {
+    if (readi(ip, 0, (u64)pa, offset + i, n) != n) {
       return ENOEXEC;
     }
   }
@@ -231,9 +231,9 @@ static int loadseg(pagetable_t pagetable, uint64 va, struct inode* ip,
   return 0;
 }
 
-static uint64 putargs(pagetable_t pagetable, char* const* argv, uint64* sp,
-                      uint64 stackbase, uint64* ustack, uint64* base) {
-  uint64 argc;
+static u64 putargs(pagetable_t pagetable, str* argv, u64* sp, u64 stackbase,
+                   u64* ustack, u64* base) {
+  u64 argc;
   // Push argument strings, prepare rest of stack in ustack.
   for (argc = 0; argv[argc]; argc++) {
     if (*base + argc >= MAXARG) {
@@ -244,7 +244,8 @@ static uint64 putargs(pagetable_t pagetable, char* const* argv, uint64* sp,
     if (*sp < stackbase) {
       return -1;
     }
-    if (copyout(pagetable, *sp, argv[argc], strlen(argv[argc]) + 1) < 0) {
+    if (copyout(pagetable, *sp, (const u8*)argv[argc], strlen(argv[argc]) + 1) <
+        0) {
       return -1;
     }
     ustack[*base + argc] = *sp;

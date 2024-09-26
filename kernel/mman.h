@@ -25,7 +25,7 @@
 /*
  * Failed flag from 'mmap'.
  */
-#define MAP_FAILED_EADDR ((unsigned long long)(-1LL))
+#define MAP_FAILED_EADDR ((u64)(-1LL))
 /*
  * Flags to 'mremap'.
  */

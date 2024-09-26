@@ -34,11 +34,11 @@ char buf[BUFSZ];
 // what if you pass ridiculous pointers to system calls
 // that read user memory with copyin?
 void copyin(char* s) {
-  uint64 addrs[] = {0x80000000LL, 0x3fffffe000, 0x3ffffff000, 0x4000000000,
-                    0xffffffffffffffff};
+  u64 addrs[] = {0x80000000LL, 0x3fffffe000, 0x3ffffff000, 0x4000000000,
+                 0xffffffffffffffff};
 
   for (int ai = 0; ai < sizeof(addrs) / sizeof(addrs[0]); ai++) {
-    uint64 addr = addrs[ai];
+    u64 addr = addrs[ai];
 
     int fd = _open("copyin1", O_CREATE | O_WRONLY);
     if (fd < 0) {
@@ -78,11 +78,11 @@ void copyin(char* s) {
 // what if you pass ridiculous pointers to system calls
 // that write user memory with copyout?
 void copyout(char* s) {
-  uint64 addrs[] = {0LL,          0x80000000LL, 0x3fffffe000,
-                    0x3ffffff000, 0x4000000000, 0xffffffffffffffff};
+  u64 addrs[] = {0LL,          0x80000000LL, 0x3fffffe000,
+                 0x3ffffff000, 0x4000000000, 0xffffffffffffffff};
 
   for (int ai = 0; ai < sizeof(addrs) / sizeof(addrs[0]); ai++) {
-    uint64 addr = addrs[ai];
+    u64 addr = addrs[ai];
 
     int fd = _open("README", 0);
     if (fd < 0) {
@@ -119,11 +119,11 @@ void copyout(char* s) {
 
 // what if you pass ridiculous string pointers to system calls?
 void copyinstr1(char* s) {
-  uint64 addrs[] = {0x80000000LL, 0x3fffffe000, 0x3ffffff000, 0x4000000000,
-                    0xffffffffffffffff};
+  u64 addrs[] = {0x80000000LL, 0x3fffffe000, 0x3ffffff000, 0x4000000000,
+                 0xffffffffffffffff};
 
   for (int ai = 0; ai < sizeof(addrs) / sizeof(addrs[0]); ai++) {
-    uint64 addr = addrs[ai];
+    u64 addr = addrs[ai];
 
     int fd = _open((char*)addr, O_CREATE | O_WRONLY);
     if (fd >= 0) {
@@ -200,11 +200,11 @@ void copyinstr2(char* s) {
 // what if a string argument crosses over the end of last user page?
 void copyinstr3(char* s) {
   _sbrk(8192);
-  uint64 top = (uint64)_sbrk(0);
+  u64 top = (u64)_sbrk(0);
   if ((top % PGSIZE) != 0) {
     _sbrk(PGSIZE - (top % PGSIZE));
   }
-  top = (uint64)_sbrk(0);
+  top = (u64)_sbrk(0);
   if (top % PGSIZE) {
     printf("oops\n");
     _exit(1);
@@ -244,14 +244,14 @@ void copyinstr3(char* s) {
 void rwsbrk() {
   int fd, n;
 
-  uint64 a = (uint64)_sbrk(8192);
+  u64 a = (u64)_sbrk(8192);
 
   if (a == 0xffffffffffffffffLL) {
     printf("_sbrk(rwsbrk) failed\n");
     _exit(1);
   }
 
-  if ((uint64)_sbrk(-8192) == 0xffffffffffffffffLL) {
+  if ((u64)_sbrk(-8192) == 0xffffffffffffffffLL) {
     printf("_sbrk(rwsbrk) shrink failed\n");
     _exit(1);
   }
@@ -1349,8 +1349,8 @@ void concreate(char* s) {
   int  i, pid, n, fd;
   char fa[N];
   struct {
-    ushort inum;
-    char   name[DIRSIZ];
+    u16  inum;
+    char name[DIRSIZ];
   } de;
 
   file[0] = 'C';
@@ -2000,14 +2000,14 @@ void sbrkbasic(char* s) {
 
 void sbrkmuch(char* s) {
   enum { BIG = 100 * 1024 * 1024 };
-  char * c, *oldbrk, *a, *lastaddr, *p;
-  uint64 amt;
+  char *c, *oldbrk, *a, *lastaddr, *p;
+  u64   amt;
 
   oldbrk = _sbrk(0);
 
   // can one grow address space to something big?
   a   = _sbrk(0);
-  amt = BIG - (uint64)a;
+  amt = BIG - (u64)a;
   p   = _sbrk(amt);
   if (p != a) {
     printf("%s: sbrk test failed to grow big address space; enough phys mem?\n",
@@ -2084,7 +2084,7 @@ void kernmem(char* s) {
 
 // user code should not be able to write to addresses above MAXVA.
 void MAXVAplus(char* s) {
-  volatile uint64 a = MAXVA;
+  volatile u64 a = MAXVA;
   for (; a != 0; a <<= 1) {
     int pid;
     pid = _fork();
@@ -2123,7 +2123,7 @@ void sbrkfail(char* s) {
   for (i = 0; i < sizeof(pids) / sizeof(pids[0]); i++) {
     if ((pids[i] = _fork()) == 0) {
       // allocate a lot of memory
-      _sbrk(BIG - (uint64)_sbrk(0));
+      _sbrk(BIG - (u64)_sbrk(0));
       _write(fds[1], "x", 1);
       // sit around until killed
       for (;;) {
@@ -2204,11 +2204,11 @@ void sbrkarg(char* s) {
 }
 
 void validatetest(char* s) {
-  int    hi;
-  uint64 p;
+  int hi;
+  u64 p;
 
   hi = 1100 * 1024;
-  for (p = 0; p <= (uint)hi; p += PGSIZE) {
+  for (p = 0; p <= (u32)hi; p += PGSIZE) {
     // try to crash the kernel by passing in a bad string pointer
     if (_link("nosuchfile", (char*)p) != -1) {
       printf("%s: link should not succeed\n", s);
@@ -2363,14 +2363,14 @@ void stacktest(char* s) {
 // check that writes to a few forbidden addresses
 // cause a fault, e.g. process's text and TRAMPOLINE.
 void nowrite(char* s) {
-  int    pid;
-  int    xstatus;
-  uint64 addrs[] = {0,
-                    0x80000000LL,
-                    0x3fffffe000,
-                    0x3ffffff000,
-                    0x4000000000,
-                    0xffffffffffffffff};
+  int pid;
+  int xstatus;
+  u64 addrs[] = {0,
+                 0x80000000LL,
+                 0x3fffffe000,
+                 0x3ffffff000,
+                 0x4000000000,
+                 0xffffffffffffffff};
 
   for (int ai = 0; ai < sizeof(addrs) / sizeof(addrs[0]); ai++) {
     pid = _fork();
@@ -2393,7 +2393,7 @@ void nowrite(char* s) {
 }
 
 // regression test. copyin(), copyout(), and copyinstr() used to cast
-// the virtual page address to uint, which (with certain wild system
+// the virtual page address to u32, which (with certain wild system
 // call arguments) resulted in a kernel page faults.
 void* big = (void*)0xeaeb0b5b00002f5e;
 void  pgbug(char* s) {
@@ -2415,7 +2415,7 @@ void sbrkbugs(char* s) {
     _exit(1);
   }
   if (pid == 0) {
-    int sz = (uint64)_sbrk(0);
+    int sz = (u64)_sbrk(0);
     // free all user memory; there used to be a bug that
     // would not adjust p->sz correctly in this case,
     // causing _exit() to panic.
@@ -2431,7 +2431,7 @@ void sbrkbugs(char* s) {
     _exit(1);
   }
   if (pid == 0) {
-    int sz = (uint64)_sbrk(0);
+    int sz = (u64)_sbrk(0);
     // set the break to somewhere in the very first
     // page; there used to be a bug that would incorrectly
     // free the first page.
@@ -2447,7 +2447,7 @@ void sbrkbugs(char* s) {
   }
   if (pid == 0) {
     // set the break in the middle of a page.
-    _sbrk((10 * 4096 + 2048) - (uint64)_sbrk(0));
+    _sbrk((10 * 4096 + 2048) - (u64)_sbrk(0));
 
     // reduce the break a bit, but not enough to
     // cause a page to be freed. this used to cause
@@ -2465,14 +2465,14 @@ void sbrkbugs(char* s) {
 // shrunk to be somewhat less than that page boundary, can the kernel
 // still copyin() from addresses in the last page?
 void sbrklast(char* s) {
-  uint64 top = (uint64)_sbrk(0);
+  u64 top = (u64)_sbrk(0);
   if ((top % 4096) != 0) {
     _sbrk(4096 - (top % 4096));
   }
   _sbrk(4096);
   _sbrk(10);
   _sbrk(-20);
-  top     = (uint64)_sbrk(0);
+  top     = (u64)_sbrk(0);
   char* p = (char*)(top - 64);
   p[0]    = 'x';
   p[1]    = '\0';
@@ -2719,7 +2719,7 @@ void execout(char* s) {
     } else if (pid == 0) {
       // allocate all of memory.
       while (1) {
-        uint64 a = (uint64)_sbrk(4096);
+        u64 a = (u64)_sbrk(4096);
         if (a == 0xffffffffffffffffLL) {
           break;
         }
@@ -2933,7 +2933,7 @@ int countfree() {
     _close(fds[0]);
 
     while (1) {
-      uint64 a = (uint64)_sbrk(4096);
+      u64 a = (u64)_sbrk(4096);
       if (a == 0xffffffffffffffff) {
         break;
       }

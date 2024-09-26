@@ -44,24 +44,24 @@ void rinode(uint inum, struct dinode* ip);
 void rsect(uint sec, void* buf);
 uint ialloc(ushort type);
 void iappend(uint inum, void* p, int n);
-void die(const char*);
+void die(str);
 
 // convert to riscv byte order
 ushort xshort(ushort x) {
   ushort y;
-  uchar* a = (uchar*)&y;
+  u8*    a = (u8*)&y;
   a[0]     = x;
   a[1]     = x >> 8;
   return y;
 }
 
 uint xint(uint x) {
-  uint   y;
-  uchar* a = (uchar*)&y;
-  a[0]     = x;
-  a[1]     = x >> 8;
-  a[2]     = x >> 16;
-  a[3]     = x >> 24;
+  uint y;
+  u8*  a = (u8*)&y;
+  a[0]   = x;
+  a[1]   = x >> 8;
+  a[2]   = x >> 16;
+  a[3]   = x >> 24;
   return y;
 }
 
@@ -233,8 +233,8 @@ uint ialloc(ushort type) {
 }
 
 void balloc(int used) {
-  uchar buf[BSIZE];
-  int   i;
+  u8  buf[BSIZE];
+  int i;
 
   printf("balloc: first %d blocks have been allocated\n", used);
   assert(used < BPB);
@@ -290,7 +290,7 @@ void iappend(uint inum, void* xp, int n) {
   winode(inum, &din);
 }
 
-void die(const char* s) {
+void die(str s) {
   perror(s);
   exit(1);
 }

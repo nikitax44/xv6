@@ -34,8 +34,8 @@
 // Contents of the header block, used for both the on-disk header block
 // and to keep track in memory of logged block# before commit.
 struct logheader {
-  int  n;
-  uint block[LOGSIZE];
+  int n;
+  u32 block[LOGSIZE];
 };
 
 struct log {

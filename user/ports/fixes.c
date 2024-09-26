@@ -1,7 +1,7 @@
 #include "user/user.h"
 #include <unistd.h>
 
-long _lseek(int __fildes, long __offset, int __whence) {
+isize _lseek(int __fildes, isize __offset, int __whence) {
   return _seek(__fildes, __offset, __whence);
 }
 

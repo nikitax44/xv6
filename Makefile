@@ -171,8 +171,8 @@ fs.img: mkfs/mkfs README $(UPROGS) $(PORTS) _exp _busybox
 clean:
 	fd  -e tex -e dvi -e idx -e aux -e log -e o \
 		-e ind -e ilg -e asm -e sym -e out \
-			-u -x rm -f
-	fd '^_' -u -x rm -f
+			-I -x rm -f
+	fd '^_' -I -x rm -f
 	rm -f $U/initcode $K/kernel fs.img mkfs/mkfs .gdbinit
 
 nofs:

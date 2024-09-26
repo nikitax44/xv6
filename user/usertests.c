@@ -231,8 +231,8 @@ void copyinstr3(char* s) {
 
   char* args[] = {"xx", 0};
   ret          = _exec(b, args);
-  if (ret != EFAULT) {
-    printf("_exec(%s) returned %d, not EFAULT\n", b, fd);
+  if (ret != E2BIG) {
+    printf("_exec returned %d, not E2BIG\n", ret);
     _exit(1);
   }
 }
@@ -671,7 +671,7 @@ void exectest(char* s) {
       printf("%s: wrong fd\n", s);
       _exit(1);
     }
-    if (_exec("echo", echoargv) < 0) {
+    if (_exec("echo", echoargv) != 0) {
       printf("%s: exec echo failed\n", s);
       _exit(1);
     }

@@ -9,6 +9,7 @@
 #include "fcntl.h"
 #include "file.h"
 #include "fs.h"
+#include "mman.h"
 #include "param.h"
 #include "proc.h"
 #include "riscv.h"
@@ -504,6 +505,41 @@ end:
   }
 
   return err;
+}
+
+uint64 sys_mmap(void) {
+  uint64 va, sz, size, offset;
+  int    prot, flags, fd;
+  argaddr(0, &va);
+  argaddr(1, &size);
+  argint(2, &prot);
+  argint(3, &flags);
+  argfd(4, &fd, 0);
+  argaddr(1, &offset);
+
+  printf("va=0x%lx size=0x%lx offset=0x%lx prot=0x%x flags=0x%x fd=%d\n", va,
+         size, offset, prot, flags, fd);
+  if (flags != (MAP_ANON | MAP_PRIVATE)) {
+    return MAP_FAILED_EADDR;
+  }
+  if (prot != (PROT_READ | PROT_WRITE)) {
+    return MAP_FAILED_EADDR;
+  }
+  // so MAP_FIXED is not set
+
+  struct proc* proc = myproc();
+
+  sz = va = proc->sz;
+  if (va + size < va) {
+    return MAP_FAILED_EADDR;
+  }
+
+  if ((sz = uvmalloc(proc->pagetable, sz, sz + size, PTE_W)) == 0) {
+    return -1;
+  }
+  proc->sz = sz;
+
+  return va;
 }
 
 uint64 sys_pipe(void) {

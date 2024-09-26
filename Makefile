@@ -68,7 +68,7 @@ CFLAGS += -fno-common -nostdlib
 # CFLAGS += -fno-builtin-memmove -fno-builtin-memcmp -fno-builtin-bzero -fno-builtin-memcpy
 # CFLAGS += -fno-builtin-strchr -fno-builtin-exit
 CFLAGS += -fno-builtin-free -fno-builtin-malloc
-CFLAGS += -Wno-main -fno-builtin-log
+CFLAGS += -fno-builtin-log
 CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf -fno-builtin-putc
 CFLAGS += -I. -I $(NEWLIB)/include --specs=$(NEWLIB)/lib/nano.specs
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
@@ -114,11 +114,11 @@ $P/_%: $P/%.o $U/usys.o $P/fixes.o $P/app.ld
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $P/$*.sym
 
 
-$U/usys.S : $U/usys.pl
-	perl $U/usys.pl > $U/usys.S
+$U/_usys.S : $U/usys.pl
+	perl $U/usys.pl > $U/_usys.S
 
-$U/usys.o : $U/usys.S
-	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
+$U/usys.o : $U/_usys.S
+	$(CC) $(CFLAGS) -c -o $U/usys.o $U/_usys.S
 
 $U/_forktest: $U/forktest.o $(ULIB)
 	# forktest has less library code linked in - needs to be small
@@ -168,16 +168,12 @@ fs.img: mkfs/mkfs README $(UPROGS) $(PORTS) _exp _busybox
 
 -include kernel/*.d user/*.d
 
-clean: 
-	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*.asm *.sym \
-	*/*.o */*.d */*.asm */*.sym \
-	*/*/*.o */*/*.d */*/*.asm */*/*.sym \
-	$U/initcode $U/initcode.out $U/_initcode.h $K/kernel fs.img \
-	mkfs/mkfs .gdbinit \
-        $U/usys.S \
-	$(UPROGS) \
-	$(PORTS)
+clean:
+	fd  -e tex -e dvi -e idx -e aux -e log -e o \
+		-e ind -e ilg -e asm -e sym -e out \
+			-u -x rm -f
+	fd '^_' -u -x rm -f
+	rm -f $U/initcode $K/kernel fs.img mkfs/mkfs .gdbinit
 
 nofs:
 	rm -f fs.img

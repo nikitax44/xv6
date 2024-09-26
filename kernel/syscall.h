@@ -23,4 +23,5 @@
 #define SYS_kill   129
 #define SYS_sbrk   214
 #define SYS_execve 221
+#define SYS_mmap   222
 #define SYS_open   430

@@ -52,7 +52,13 @@
 
         TOOLPREFIX = "${platform}-";
         NEWLIB = "${newlib}/${platform}";
-        nativeBuildInputs = [pkgs.stdenv.cc pkgs.perl pkgs.unixtools.xxd];
+        nativeBuildInputs = [
+          pkgs.stdenv.cc
+          pkgs.perl
+          pkgs.fd
+          pkgs.unixtools.xxd
+          (pkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
+        ];
         buildInputs = [newlib];
         busybox = pkgs.pkgsCross.riscv64.busybox.override {
           enableStatic = true;
@@ -72,7 +78,6 @@
             # pkgs.pkgsCross.riscv64.stdenv.cc # not tpkg.stdenv.cc
             pkgs.gnumake
             pkgs.clang-tools
-            (pkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
           ];
           inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
         };
@@ -83,7 +88,6 @@
           version = "none";
           preBuild = ''
             make clean
-            cp ${busybox}/bin/busybox ./_busybox
           '';
           buildFlags = ["kernel/kernel fs.img"];
           inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;

@@ -35,7 +35,3 @@ void  fdprintf(int, str, ...) __attribute__((format(printf, 2, 3)));
 void  printf(str, ...) __attribute__((format(printf, 1, 2)));
 char* gets(char*, int max);
 int   atoi(str);
-
-// umalloc.c
-void* malloc(u32);
-void  free(void*);

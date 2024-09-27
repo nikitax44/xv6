@@ -34,40 +34,40 @@ int nblocks; // Number of data blocks
 int               fsfd;
 struct superblock sb;
 char              zeroes[BSIZE];
-uint              freeinode = 1;
-uint              freeblock;
+u32               freeinode = 1;
+u32               freeblock;
 
 void balloc(int);
-void wsect(uint, void*);
-void winode(uint, struct dinode*);
-void rinode(uint inum, struct dinode* ip);
-void rsect(uint sec, void* buf);
-uint ialloc(ushort type);
-void iappend(uint inum, void* p, int n);
+void wsect(u32, void*);
+void winode(u32, struct dinode*);
+void rinode(u32 inum, struct dinode* ip);
+void rsect(u32 sec, void* buf);
+u32  ialloc(u16 type);
+void iappend(u32 inum, void* p, int n);
 void die(str);
 
 // convert to riscv byte order
-ushort xshort(ushort x) {
-  ushort y;
-  u8*    a = (u8*)&y;
-  a[0]     = x;
-  a[1]     = x >> 8;
+u16 xshort(u16 x) {
+  u16 y;
+  u8* a = (u8*)&y;
+  a[0]  = x;
+  a[1]  = x >> 8;
   return y;
 }
 
-uint xint(uint x) {
-  uint y;
-  u8*  a = (u8*)&y;
-  a[0]   = x;
-  a[1]   = x >> 8;
-  a[2]   = x >> 16;
-  a[3]   = x >> 24;
+u32 xint(u32 x) {
+  u32 y;
+  u8* a = (u8*)&y;
+  a[0]  = x;
+  a[1]  = x >> 8;
+  a[2]  = x >> 16;
+  a[3]  = x >> 24;
   return y;
 }
 
 int main(int argc, char* argv[]) {
   int           i, cc, fd;
-  uint          rootino, inum, off;
+  u32           rootino, inum, off;
   struct dirent de;
   char          buf[BSIZE];
   struct dinode din;
@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
   exit(0);
 }
 
-void wsect(uint sec, void* buf) {
+void wsect(u32 sec, void* buf) {
   if (lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE) {
     die("lseek");
   }
@@ -188,9 +188,9 @@ void wsect(uint sec, void* buf) {
   }
 }
 
-void winode(uint inum, struct dinode* ip) {
+void winode(u32 inum, struct dinode* ip) {
   char           buf[BSIZE];
-  uint           bn;
+  u32            bn;
   struct dinode* dip;
 
   bn = IBLOCK(inum, sb);
@@ -200,9 +200,9 @@ void winode(uint inum, struct dinode* ip) {
   wsect(bn, buf);
 }
 
-void rinode(uint inum, struct dinode* ip) {
+void rinode(u32 inum, struct dinode* ip) {
   char           buf[BSIZE];
-  uint           bn;
+  u32            bn;
   struct dinode* dip;
 
   bn = IBLOCK(inum, sb);
@@ -211,7 +211,7 @@ void rinode(uint inum, struct dinode* ip) {
   *ip = *dip;
 }
 
-void rsect(uint sec, void* buf) {
+void rsect(u32 sec, void* buf) {
   if (lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE) {
     die("lseek");
   }
@@ -220,8 +220,8 @@ void rsect(uint sec, void* buf) {
   }
 }
 
-uint ialloc(ushort type) {
-  uint          inum = freeinode++;
+u32 ialloc(u16 type) {
+  u32           inum = freeinode++;
   struct dinode din;
 
   bzero(&din, sizeof(din));
@@ -248,13 +248,13 @@ void balloc(int used) {
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-void iappend(uint inum, void* xp, int n) {
+void iappend(u32 inum, void* xp, int n) {
   char*         p = (char*)xp;
-  uint          fbn, off, n1;
+  u32           fbn, off, n1;
   struct dinode din;
   char          buf[BSIZE];
-  uint          indirect[NINDIRECT];
-  uint          x;
+  u32           indirect[NINDIRECT];
+  u32           x;
 
   rinode(inum, &din);
   off = xint(din.size);

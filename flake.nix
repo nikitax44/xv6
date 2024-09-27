@@ -75,7 +75,7 @@
         devShells.default = tpkg.mkShell {
           packages = [
             config.treefmt.build.wrapper
-            # pkgs.pkgsCross.riscv64.stdenv.cc # not tpkg.stdenv.cc
+            pkgs.pkgsCross.riscv64.stdenv.cc # not tpkg.stdenv.cc
             pkgs.gnumake
             pkgs.clang-tools
           ];

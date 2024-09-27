@@ -58,20 +58,14 @@ LD ?= $(TOOLPREFIX)ld
 OBJCOPY ?= $(TOOLPREFIX)objcopy
 OBJDUMP ?= $(TOOLPREFIX)objdump
 
-CFLAGS  = -Wall -Werror -Wpedantic -Wextra
-CFLAGS += -O -fno-omit-frame-pointer -ggdb -gdwarf-2
-CFLAGS += -MD
-CFLAGS += -mcmodel=medany -march=rv64g -static
+CFLAGS  = -Wall -Werror -Wpedantic -Wextra # enable all warnings and make them errors
+CFLAGS += -O -fno-omit-frame-pointer -ggdb -gdwarf-2 # debugging stuff
+CFLAGS += -MD # generate .d files
+CFLAGS += -mcmodel=medany -march=rv64g -static # required to properly function
 # CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
-CFLAGS += -fno-common -nostdlib
-# CFLAGS += -fno-builtin-strncpy -fno-builtin-strncmp -fno-builtin-strlen -fno-builtin-memset
-# CFLAGS += -fno-builtin-memmove -fno-builtin-memcmp -fno-builtin-bzero -fno-builtin-memcpy
-# CFLAGS += -fno-builtin-strchr -fno-builtin-exit
-CFLAGS += -fno-builtin-free -fno-builtin-malloc
-CFLAGS += -fno-builtin-log
-CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf -fno-builtin-putc
-CFLAGS += -I. -I $(NEWLIB)/include --specs=$(NEWLIB)/lib/nano.specs
-CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+CFLAGS += -fno-builtin-log -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf -fno-builtin-putc # name clashes
+CFLAGS += -I. -I $(NEWLIB)/include --specs=$(NEWLIB)/lib/nano.specs # includes and default options
+# CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
@@ -81,14 +75,14 @@ ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
 CFLAGS += -fno-pie -nopie
 endif
 
-LDFLAGS = -z max-page-size=4096
+LDFLAGS = -z max-page-size=4096 -L $(NEWLIB)/lib -nostdlib
 
 all: $K/kernel fs.img
 
 $K/proc.o: $U/_initcode.h
 
 $K/kernel: $(OBJS) $K/kernel.ld
-	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) $(NEWLIB)/lib/libc.a
+	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) -lc
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
@@ -101,30 +95,23 @@ $U/_initcode.h: $U/initcode.S
 tags: $(OBJS) _init
 	etags *.S *.c
 
-ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
+ULIB = $U/ulib.o $U/usys.o $U/printf.o
 
 $U/_%: $U/%.o $(ULIB)
-	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^ $(NEWLIB)/lib/libc.a
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^ -lc
 	$(OBJDUMP) -S $@ > $U/$*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
 
-$P/_%: $P/%.o $U/usys.o $P/fixes.o $P/app.ld
-	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $(filter %.o,$^) $(NEWLIB)/lib/libc.a
+$P/_%: $P/%.o $U/usys.o $P/fixes.o
+	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $(filter %.o,$^) -lc
 	$(OBJDUMP) -S $@ > $P/$*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $P/$*.sym
-
 
 $U/_usys.S : $U/usys.pl
 	perl $U/usys.pl > $U/_usys.S
 
 $U/usys.o : $U/_usys.S
 	$(CC) $(CFLAGS) -c -o $U/usys.o $U/_usys.S
-
-$U/_forktest: $U/forktest.o $(ULIB)
-	# forktest has less library code linked in - needs to be small
-	# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o $(NEWLIB)/lib/libc.a
-	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
 _exp: $P/dump.c
 	$(CC) -o $@ $^
@@ -170,7 +157,7 @@ fs.img: mkfs/mkfs README $(UPROGS) $(PORTS) _exp _busybox
 
 clean:
 	fd  -e tex -e dvi -e idx -e aux -e log -e o \
-		-e ind -e ilg -e asm -e sym -e out \
+		-e ind -e ilg -e asm -e sym -e out -e d \
 			-I -x rm -f
 	fd '^_' -I -x rm -f
 	rm -f $U/initcode $K/kernel fs.img mkfs/mkfs .gdbinit

@@ -89,7 +89,6 @@
           preBuild = ''
             make clean
           '';
-          buildFlags = ["kernel/kernel fs.img"];
           inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
           installPhase = ''
             mkdir $out

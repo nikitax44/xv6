@@ -1,117 +1,62 @@
+R=$(realpath .)
+K=$R/kernel
+U=$R/user
+P=$U/ports
 
-K=kernel
-U=user
-P=user/ports
+export R K U P
 
-OBJS = \
-  $K/entry.o \
-  $K/start.o \
-  $K/console.o \
-  $K/printf.o \
-  $K/uart.o \
-  $K/kalloc.o \
-  $K/spinlock.o \
-  $K/string.o \
-  $K/main.o \
-  $K/vm.o \
-  $K/proc.o \
-  $K/swtch.o \
-  $K/trampoline.o \
-  $K/trap.o \
-  $K/syscall.o \
-  $K/sysproc.o \
-  $K/bio.o \
-  $K/fs.o \
-  $K/log.o \
-  $K/sleeplock.o \
-  $K/file.o \
-  $K/pipe.o \
-  $K/exec.o \
-  $K/sysfile.o \
-  $K/kernelvec.o \
-  $K/plic.o \
-  $K/virtio_disk.o
+QEMU ?= qemu-system-riscv64
 
-# riscv64-unknown-elf- or riscv64-linux-gnu-
-# perhaps in /opt/riscv/bin
-#TOOLPREFIX = 
-
-# Try to infer the correct TOOLPREFIX if not set
-ifndef TOOLPREFIX
-TOOLPREFIX := $(shell if riscv64-unknown-elf-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
-	then echo 'riscv64-unknown-elf-'; \
-	elif riscv64-linux-gnu-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
-	then echo 'riscv64-linux-gnu-'; \
-	elif riscv64-unknown-linux-gnu-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
-	then echo 'riscv64-unknown-linux-gnu-'; \
-	else echo "***" 1>&2; \
-	echo "*** Error: Couldn't find a riscv64 version of GCC/binutils." 1>&2; \
-	echo "*** To turn off this error, run 'gmake TOOLPREFIX= ...'." 1>&2; \
-	echo "***" 1>&2; exit 1; fi)
+ifeq ($(origin TOOLPREFIX),undefined)
+	TOOLPREFIX = $(error either TOOLPREFIX or all of CC, LD, OBJCOPY, OBJDUMP must be set and exported by shell)
 endif
 
-QEMU = qemu-system-riscv64
+ifeq ($(origin NEWLIB),undefined)
+	NEWLIB := $(error NEWLIB must be set and exported by shell)
+endif
 
-CC ?= $(TOOLPREFIX)gcc
-AS ?= $(TOOLPREFIX)gas
-LD ?= $(TOOLPREFIX)ld
-OBJCOPY ?= $(TOOLPREFIX)objcopy
-OBJDUMP ?= $(TOOLPREFIX)objdump
 
-CFLAGS  = -Wall -Werror -Wpedantic -Wextra # enable all warnings and make them errors
+ifeq ($(origin CC),default)
+	CC := $(TOOLPREFIX)gcc
+endif
+ifeq ($(origin LD),default)
+	LD := $(TOOLPREFIX)ld
+endif
+ifeq ($(origin OBJCOPY),default)
+	OBJCOPY := $(TOOLPREFIX)objcopy
+endif
+ifeq ($(origin OBJDUMP),default)
+	OBJDUMP := $(TOOLPREFIX)objdump
+endif
+
+CFLAGS :=
+CFLAGS += -Wall -Werror -Wpedantic -Wextra # enable all warnings and make them errors
 CFLAGS += -O -fno-omit-frame-pointer -ggdb -gdwarf-2 # debugging stuff
-CFLAGS += -MD # generate .d files
+CFLAGS += -MD # generate .d files for dependency resolution
 CFLAGS += -mcmodel=medany -march=rv64g -static # required to properly function
-# CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
-CFLAGS += -fno-builtin-log -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf -fno-builtin-putc # name clashes
-CFLAGS += -I. -I $(NEWLIB)/include --specs=$(NEWLIB)/lib/nano.specs # includes and default options
+CFLAGS += -I $R -I $(NEWLIB)/include --specs=$(NEWLIB)/lib/nano.specs # includes and default options
 # CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
-CFLAGS += -fno-pie -no-pie
+	CFLAGS += -fno-pie -no-pie
 endif
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
-CFLAGS += -fno-pie -nopie
+	CFLAGS += -fno-pie -nopie
 endif
 
 LDFLAGS = -z max-page-size=4096 -L $(NEWLIB)/lib -nostdlib
 
+export CC AS LD OBJCOPY OBJDUMP CFLAGS LDFLAGS
+
+
+
 all: $K/kernel fs.img
-
-$K/proc.o: $U/_initcode.h
-
-$K/kernel: $(OBJS) $K/kernel.ld
-	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) -lc
-	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
-	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
-
-$U/_initcode.h: $U/initcode.S
-	$(CC) $(CFLAGS) -nostdinc -c $U/initcode.S -o $U/initcode.o
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
-	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
-	xxd -i -n initcode $U/initcode > $@
-
-tags: $(OBJS) _init
-	etags *.S *.c
-
-ULIB = $U/ulib.o $U/usys.o $U/printf.o
-
-$U/_%: $U/%.o $(ULIB)
-	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $^ -lc
-	$(OBJDUMP) -S $@ > $U/$*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $U/$*.sym
 
 $P/_%: $P/%.o $U/usys.o $P/fixes.o
 	$(LD) $(LDFLAGS) -T $P/app.ld -o $@ $(filter %.o,$^) -lc
 	$(OBJDUMP) -S $@ > $P/$*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $P/$*.sym
-
-$U/_usys.S : $U/usys.pl
-	perl $U/usys.pl > $U/_usys.S
-
-$U/usys.o : $U/_usys.S
-	$(CC) $(CFLAGS) -c -o $U/usys.o $U/_usys.S
 
 _exp: $P/dump.c
 	$(CC) -o $@ $^
@@ -121,12 +66,6 @@ _busybox:
 
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 	gcc -Werror -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
-
-# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
-# that disk image changes after first build are persistent until clean.  More
-# details:
-# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
-.PRECIOUS: %.o
 
 UPROGS=\
 	$U/_cat\
@@ -150,20 +89,24 @@ PORTS=\
 	$P/_test\
 	$P/_dump\
 
+export UPROGS PORTS
+
+$K/kernel: $U/_initcode.h
+	@$(MAKE) -C kernel
+
+$U/%:
+	@$(MAKE) -C user $(patsubst $U/%,%,$@)
+
+
+fs.img: R=.
+
 fs.img: mkfs/mkfs README $(UPROGS) $(PORTS) _exp _busybox
 	mkfs/mkfs $@ README $(UPROGS) $(PORTS) _exp _busybox
 
--include kernel/*.d user/*.d
-
 clean:
-	fd  -e tex -e dvi -e idx -e aux -e log -e o \
-		-e ind -e ilg -e asm -e sym -e out -e d \
-			-I -x rm -f
-	fd '^_' -I -x rm -f
-	rm -f $U/initcode $K/kernel fs.img mkfs/mkfs .gdbinit
-
-nofs:
-	rm -f fs.img
+	@$(MAKE) -C kernel clean
+	@$(MAKE) -C user   clean
+	rm -f fs.img mkfs/mkfs .gdbinit
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
@@ -171,9 +114,8 @@ GDBPORT = $(shell expr `id -u` % 5000 + 25000)
 QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
-ifndef CPUS
-CPUS := 3
-endif
+
+CPUS ?= 3
 
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -global virtio-mmio.force-legacy=false

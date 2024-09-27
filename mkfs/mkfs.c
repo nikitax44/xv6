@@ -130,6 +130,9 @@ int main(int argc, char* argv[]) {
   for (i = 2; i < argc; i++) {
     // get rid of "user/(ports/)?"
     char* shortname = argv[i];
+    if (strncmp(shortname, "./", 2) == 0) {
+      shortname += 2;
+    }
     if (strncmp(shortname, "user/", 5) == 0) {
       shortname += 5;
     }

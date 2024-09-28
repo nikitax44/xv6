@@ -12,13 +12,13 @@ add_custom_command(
     COMMENT "Generating _usys.S from usys.pl"
 )
 
-add_library(libu STATIC
+add_library(u STATIC
     ulib.c
     _usys.S
     printf.c
 )
 
-add_library(libf STATIC
+add_library(f STATIC
     ports/fixes.c
 )
 
@@ -27,7 +27,7 @@ add_library(libf STATIC
 foreach(PROG ${UPROGS})
     string(REGEX REPLACE "^_" "" BASENAME "${PROG}")
     add_executable(${PROG} ${BASENAME}.c )
-    target_link_libraries(${PROG} libu -lc)
+    target_link_libraries(${PROG} u -lc)
     target_link_options(${PROG} PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/user.ld")
 endforeach()
 
@@ -35,6 +35,6 @@ endforeach()
 foreach(PROG ${PORTS})
     string(REGEX REPLACE "^_" "" BASENAME "${PROG}")
     add_executable(${PROG} ports/${BASENAME}.c)
-    target_link_libraries(${PROG} libf libu -lc)
+    target_link_libraries(${PROG} f u -lc)
     target_link_options(${PROG} PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/ports/app.ld")
 endforeach()

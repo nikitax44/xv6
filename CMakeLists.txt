@@ -56,8 +56,8 @@ list(APPEND PORTS
 separate_arguments(C_WARNINGS)
 # Add the mkfs target
 add_custom_command(
-    OUTPUT mkfs
-    COMMAND gcc ${C_WARNINGS} -o mkfs ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT mkfs.elf
+    COMMAND gcc ${C_WARNINGS} -o mkfs.elf ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS mkfs/mkfs.c kernel/fs.h kernel/param.h
     COMMENT "Building mkfs with host compiler"
 )
@@ -74,8 +74,8 @@ list(TRANSFORM PPORTS PREPEND "user/")
 # Add the filesystem image target
 add_custom_command(
     OUTPUT fs.img
-    COMMAND ./mkfs fs.img ${UUPROGS} ${PPORTS} "${CMAKE_CURRENT_SOURCE_DIR}/README"
-    DEPENDS mkfs ${UUPROGS} ${PPORTS} "README"
+    COMMAND ./mkfs.elf fs.img ${UUPROGS} ${PPORTS} "${CMAKE_CURRENT_SOURCE_DIR}/README"
+    DEPENDS mkfs.elf ${UUPROGS} ${PPORTS} "README"
 )
 
 add_custom_target(image ALL

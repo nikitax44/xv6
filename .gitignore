@@ -1,20 +1,25 @@
+# backups
 *~
+
+# build artefacts
 _*
 *.o
+*.out
 *.d
 *.asm
 *.sym
 *.img
-vectors.S
-bootblock
-entryother
-initcode
-initcode.out
-kernelmemfs
-mkfs/mkfs
+*.a
+*.elf
+
 kernel/kernel
-user/usys.S
 .gdbinit
 /result
 /.direnv
+
+# cmake
 /build/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake

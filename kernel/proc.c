@@ -1,11 +1,11 @@
 #include "proc.h"
+#include "_initcode.h"
 #include "defs.h"
 #include "memlayout.h"
 #include "param.h"
 #include "riscv.h"
 #include "spinlock.h"
 #include "types.h"
-#include "user/_initcode.h"
 #include <string.h>
 
 struct cpu cpus[NCPU];

@@ -50,7 +50,7 @@
             -kernel "$KERNEL"
         '';
 
-        TOOLPREFIX = "${platform}-";
+        TOOLPREFIX = "${tpkg.stdenv.cc}/bin/${platform}-";
         NEWLIB = "${newlib}/${platform}";
         nativeBuildInputs = [
           pkgs.stdenv.cc
@@ -73,6 +73,7 @@
         };
 
         devShells.default = tpkg.mkShell {
+          NL = "${pkgs.pkgsCross.riscv64.newlib}/${pkgs.pkgsCross.riscv64.stdenv.hostPlatform.config}";
           packages = [
             config.treefmt.build.wrapper
             pkgs.pkgsCross.riscv64.stdenv.cc # not tpkg.stdenv.cc
@@ -86,10 +87,8 @@
           src = ./.;
           pname = "xv6";
           version = "none";
-          preBuild = ''
-            make clean
-          '';
-          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
+          inherit NEWLIB TOOLPREFIX buildInputs;
+          nativeBuildInputs = nativeBuildInputs ++ [pkgs.cmake];
           installPhase = ''
             mkdir $out
             cp kernel/kernel $out/

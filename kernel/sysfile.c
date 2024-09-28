@@ -509,7 +509,7 @@ end:
 
 u64 sys_mmap(void) {
   u64 va, sz, size, offset;
-  int prot, flags, fd;
+  int prot, flags, fd = -1;
   argaddr(0, &va);
   argaddr(1, &size);
   argint(2, &prot);

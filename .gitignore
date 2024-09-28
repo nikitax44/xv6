@@ -17,3 +17,4 @@ user/usys.S
 .gdbinit
 /result
 /.direnv
+/build/

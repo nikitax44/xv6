@@ -43,7 +43,7 @@ void winode(u32, struct dinode*);
 void rinode(u32 inum, struct dinode* ip);
 void rsect(u32 sec, void* buf);
 u32  ialloc(u16 type);
-void iappend(u32 inum, void* p, int n);
+void iappend(u32 inum, void* p, u32 n);
 void die(str);
 
 // convert to riscv byte order
@@ -128,17 +128,13 @@ int main(int argc, char* argv[]) {
   iappend(rootino, &de, sizeof(de));
 
   for (i = 2; i < argc; i++) {
-    // get rid of "user/(ports/)?"
-    char* shortname = argv[i];
-    if (strncmp(shortname, "./", 2) == 0) {
-      shortname += 2;
+    str shortname, s;
+    for (shortname = s = argv[i]; *s; s++) {
+      if (*s == '/') {
+        shortname = s + 1;
+      }
     }
-    if (strncmp(shortname, "user/", 5) == 0) {
-      shortname += 5;
-    }
-    if (strncmp(shortname, "ports/", 6) == 0) {
-      shortname += 6;
-    }
+
     assert(index(shortname, '/') == 0);
 
     if ((fd = open(argv[i], 0)) < 0) {
@@ -251,7 +247,7 @@ void balloc(int used) {
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
-void iappend(u32 inum, void* xp, int n) {
+void iappend(u32 inum, void* xp, u32 n) {
   char*         p = (char*)xp;
   u32           fbn, off, n1;
   struct dinode din;

@@ -158,8 +158,30 @@ void kerneltrap() {
 
   if ((which_dev = devintr()) == 0) {
     // interrupt or trap from an unknown source
-    printf("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, r_sepc(),
-           r_stval());
+    switch (scause) {
+    case 2:
+      printf("Illegal Instruction: opcode=0x%lx sepc=0x%lx\n", r_stval(),
+             r_sepc());
+      break;
+    case 9:
+      printf("Environment call: stval=0x%lx sepc=0x%lx\n", r_stval(), r_sepc());
+      break;
+    case 12:
+      printf("Instruction page fault: mepc=0x%lx sepc=0x%lx\n", r_stval(),
+             r_sepc());
+      break;
+    case 13:
+      printf("Load page fault: page=0x%lx sepc=0x%lx\n", r_stval(), r_sepc());
+      break;
+    case 15:
+      printf("Store/AMO page fault: page=0x%lx sepc=0x%lx\n", r_stval(),
+             r_sepc());
+      break;
+    default:
+      printf("unexpected scause 0x%lx: sepc=0x%lx stval=0x%lx\n", scause,
+             r_sepc(), r_stval());
+    }
+
     panic("kerneltrap");
   }
 

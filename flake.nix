@@ -56,6 +56,7 @@
           pkgs.stdenv.cc
           pkgs.perl
           pkgs.fd
+          pkgs.cmake
           pkgs.unixtools.xxd
           (pkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
         ];
@@ -87,8 +88,7 @@
           src = ./.;
           pname = "xv6";
           version = "none";
-          inherit NEWLIB TOOLPREFIX buildInputs;
-          nativeBuildInputs = nativeBuildInputs ++ [pkgs.cmake];
+          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
           installPhase = ''
             mkdir $out
             cp kernel/kernel $out/

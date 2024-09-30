@@ -114,6 +114,16 @@ static inline void w_mideleg(u64 x) {
   asm volatile("csrw mideleg, %0" : : "r"(x));
 }
 
+// Machine Trap-Vector Base Address
+// low two bits are mode.
+static inline void w_mtvec(u64 x) { asm volatile("csrw mtvec, %0" : : "r"(x)); }
+
+static inline u64 r_mtvec() {
+  u64 x;
+  asm volatile("csrr %0, mtvec" : "=r"(x));
+  return x;
+}
+
 // Supervisor Trap-Vector Base Address
 // low two bits are mode.
 static inline void w_stvec(u64 x) { asm volatile("csrw stvec, %0" : : "r"(x)); }

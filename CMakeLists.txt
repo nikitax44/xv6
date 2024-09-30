@@ -15,7 +15,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer") # -ggdb -gdwarf-2
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64g -static")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${CMAKE_CURRENT_SOURCE_DIR} -I ${NEWLIB}/include --specs=${NEWLIB}/lib/nano.specs")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -MD")
-set(CMAKE_ASM_FLAGS ${CMAKE_C_FLAGS})
+set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
 
 # Disable PIE if possible
 execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpspecs OUTPUT_VARIABLE DUMPSPECS)

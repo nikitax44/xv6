@@ -18,15 +18,10 @@ add_library(u STATIC
     printf.c
 )
 
-add_library(f STATIC
-    ports/fixes.c
-)
-
-
 # Add the executable targets for user programs
 foreach(PROG ${UPROGS})
     string(REGEX REPLACE "^_" "" BASENAME "${PROG}")
-    add_executable(${PROG} ${BASENAME}.c )
+    add_executable(${PROG} start.c ${BASENAME}.c )
     target_link_libraries(${PROG} u -lc)
     target_link_options(${PROG} PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/user.ld")
 endforeach()
@@ -34,7 +29,7 @@ endforeach()
 # Add the executable targets for user programs
 foreach(PROG ${PORTS})
     string(REGEX REPLACE "^_" "" BASENAME "${PROG}")
-    add_executable(${PROG} ports/${BASENAME}.c)
-    target_link_libraries(${PROG} f u -lc)
+    add_executable(${PROG} ports/fixes.c ports/${BASENAME}.c)
+    target_link_libraries(${PROG} u -lc)
     target_link_options(${PROG} PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/ports/app.ld")
 endforeach()

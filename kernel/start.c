@@ -4,8 +4,21 @@
 #include "riscv.h"
 #include "types.h"
 
+#define WARL_R (1 << 0)
+#define WARL_W (1 << 1)
+#define WARL_X (1 << 2)
+
+#define WARL_LOCK (1 << 7)
+
+#define WARL_OFF   (0x00 << 3)
+#define WARL_TOR   (0x01 << 3)
+#define WARL_NA4   (0x10 << 3)
+#define WARL_NAPOT (0x11 << 3)
+
 void main();
 void timerinit();
+
+void _shutdown() { *(volatile u32*)0x100000 = 0x5555; }
 
 // entry.S needs one stack per CPU.
 __attribute__((aligned(16))) char stack0[4096 * NCPU];
@@ -26,14 +39,16 @@ void start() {
   w_satp(0);
 
   // delegate all interrupts and exceptions to supervisor mode.
-  w_medeleg(0xffff);
+  // Except for ecall from S-mode. It will trigger shutdown
+  w_medeleg(0xffff & ~(1 << 9));
   w_mideleg(0xffff);
   w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
+  w_mtvec((u64)_shutdown);
 
   // configure Physical Memory Protection to give supervisor mode
   // access to all of physical memory.
   w_pmpaddr0(0x3fffffffffffffull);
-  w_pmpcfg0(0xf);
+  w_pmpcfg0(WARL_TOR | WARL_R | WARL_W | WARL_X);
 
   // ask for clock interrupts.
   timerinit();

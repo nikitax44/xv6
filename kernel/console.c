@@ -137,6 +137,10 @@ void consoleintr(int c) {
   case C('P'): // Print process list.
     procdump();
     break;
+  case C('Q'):
+    printf("ctrl+Q: shutdown");
+    shutdown();
+    break;
   case C('C'): // Kill process
     kill_all();
     // fallthrough

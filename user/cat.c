@@ -24,16 +24,16 @@ int main(int argc, char* argv[]) {
 
   if (argc <= 1) {
     cat(0);
-    _exit(0);
+    return 0;
   }
 
   for (i = 1; i < argc; i++) {
     if ((fd = _open(argv[i], O_RDONLY)) < 0) {
       fdprintf(stderr, "cat: cannot open %s\n", argv[i]);
-      _exit(1);
+      return 1;
     }
     cat(fd);
     _close(fd);
   }
-  _exit(0);
+  return 0;
 }

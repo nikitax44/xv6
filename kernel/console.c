@@ -138,8 +138,12 @@ void consoleintr(int c) {
     procdump();
     break;
   case C('Q'):
-    printf("ctrl+Q: shutdown");
+    printf("\nctrl+Q: shutdown\n");
     shutdown();
+    break;
+  case C('R'):
+    printf("\nctrl+R: reboot\n");
+    reboot();
     break;
   case C('C'): // Kill process
     kill_all();

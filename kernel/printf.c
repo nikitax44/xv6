@@ -174,8 +174,13 @@ void panic(char* s) {
 }
 
 void shutdown() {
-  // Currently bound to shutdown. TODO: rewrite to something less stupid
-  asm volatile("ecall");
+  *(volatile u32*)TEST0 = TEST0_SHUTDOWN;
+  for (;;)
+    ;
+}
+
+void reboot() {
+  *(volatile u32*)TEST0 = TEST0_REBOOT;
   for (;;)
     ;
 }

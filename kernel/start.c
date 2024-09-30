@@ -18,8 +18,6 @@
 void main();
 void timerinit();
 
-void _shutdown() { *(volatile u32*)0x100000 = 0x5555; }
-
 // entry.S needs one stack per CPU.
 __attribute__((aligned(16))) char stack0[4096 * NCPU];
 
@@ -40,10 +38,9 @@ void start() {
 
   // delegate all interrupts and exceptions to supervisor mode.
   // Except for ecall from S-mode. It will trigger shutdown
-  w_medeleg(0xffff & ~(1 << 9));
+  w_medeleg(0xffff);
   w_mideleg(0xffff);
   w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
-  w_mtvec((u64)_shutdown);
 
   // configure Physical Memory Protection to give supervisor mode
   // access to all of physical memory.

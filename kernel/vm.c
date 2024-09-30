@@ -26,6 +26,9 @@ pagetable_t kvmmake(void) {
   // uart registers
   kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
+  // sifive test0/test1
+  kvmmap(kpgtbl, TEST0, TEST0, 0x1000, PTE_R | PTE_W);
+
   // virtio mmio disk interface
   kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 

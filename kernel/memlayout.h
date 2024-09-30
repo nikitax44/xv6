@@ -18,6 +18,10 @@
 // end -- start of kernel page allocation area
 // PHYSTOP -- end RAM used by the kernel
 
+#define TEST0          0x100000L
+#define TEST0_SHUTDOWN 0x5555
+#define TEST0_REBOOT   0x7777
+
 // qemu puts UART registers here in physical memory.
 #define UART0     0x10000000L
 #define UART0_IRQ 10

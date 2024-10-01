@@ -85,7 +85,9 @@ int printf(str fmt, ...) {
     if (c1) {
       c2 = fmt[i + 2] & 0xff;
     }
-    if (c0 == 'd') {
+    if (c0 == 'c') {
+      consputc((char)va_arg(ap, int));
+    } else if (c0 == 'd') {
       printint(va_arg(ap, int), 10, 1);
     } else if (c0 == 'l' && c1 == 'd') {
       printint(va_arg(ap, u64), 10, 1);

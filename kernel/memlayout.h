@@ -19,8 +19,18 @@
 // PHYSTOP -- end RAM used by the kernel
 
 #define TEST0          0x100000L
-#define TEST0_SHUTDOWN 0x5555
-#define TEST0_REBOOT   0x7777
+#define TEST0_SHUTDOWN 0x00005555
+#define TEST0_REBOOT   0x00007777
+
+#define FW_CFG           0x10100000L
+#define FW_CFG_SEL       (FW_CFG + 0x08)
+#define FW_CFG_DAT       (FW_CFG + 0x00)
+#define FW_CFG_DMA       (FW_CFG + 0x10)
+#define FW_CFG_MAGIC     0x554d4551         // "QEMU"
+#define FW_CFG_DMA_MAGIC 0x47464320554d4551 // "QEMU CFG"
+#define FW_CFG_SIGNATURE 0x0000
+#define FW_CFG_ID        0x0001
+#define FW_CFG_FILE_DIR  0x0019
 
 // qemu puts UART registers here in physical memory.
 #define UART0     0x10000000L

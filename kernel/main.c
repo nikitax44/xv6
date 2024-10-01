@@ -1,4 +1,5 @@
 #include "defs.h"
+#include "dtb.h"
 #include "memlayout.h"
 #include "param.h"
 #include "riscv.h"
@@ -26,6 +27,7 @@ int main() {
     iinit();            // inode table
     fileinit();         // file table
     virtio_disk_init(); // emulated hard disk
+    dtbinit();          // read fw_cfg
     userinit();         // first user process
     __sync_synchronize();
     started = 1;

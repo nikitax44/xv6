@@ -160,8 +160,8 @@ int execve(str path, str* argv, str* envp) {
   p->trapframe->sp  = sp;        // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
-  return (int)argc; // this ends up in a0, the first argument to main(argc, argv,
-               // envp)
+  return (int)argc; // this ends up in a0, the first argument to main(argc,
+                    // argv, envp)
 
 bad:
   if (pagetable) {

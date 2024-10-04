@@ -11,7 +11,7 @@
 #include "kernel/param.h"
 #include "kernel/types.h"
 
-#define FSSIZE      2000              // size of file system in blocks
+#define FSSIZE 2000 // size of file system in blocks
 
 #ifndef static_assert
 #define static_assert(a, b)                                                    \

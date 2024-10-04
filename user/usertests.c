@@ -2030,8 +2030,8 @@ void sbrkmuch(char* s) {
   }
   c = _sbrk(0);
   if (c != a - PGSIZE) {
-    printf("%s: sbrk deallocation produced wrong address, a %p c %p\n", s, (void*)a,
-           (void*)c);
+    printf("%s: sbrk deallocation produced wrong address, a %p c %p\n", s,
+           (void*)a, (void*)c);
     _exit(1);
   }
 

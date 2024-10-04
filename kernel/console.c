@@ -9,7 +9,6 @@
 //   control-p -- print process list
 //
 
-
 #include "defs.h"
 #include "file/file.h"
 #include "proc.h"

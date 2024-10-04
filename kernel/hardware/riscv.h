@@ -44,7 +44,6 @@ static inline u64 r_sie(void) {
 
 static inline void w_sie(u64 x) { asm volatile("csrw sie, %0" : : "r"(x)); }
 
-
 // supervisor exception program counter, holds the
 // instruction address to which a return from
 // exception will go.
@@ -55,8 +54,6 @@ static inline u64 r_sepc(void) {
   asm volatile("csrr %0, sepc" : "=r"(x));
   return x;
 }
-
-
 
 // Supervisor Trap-Vector Base Address
 // low two bits are mode.
@@ -80,7 +77,6 @@ static inline void w_stimecmp(u64 x) {
   // asm volatile("csrw stimecmp, %0" : : "r" (x));
   asm volatile("csrw 0x14d, %0" : : "r"(x));
 }
-
 
 // use riscv's sv39 page table scheme.
 #define SATP_SV39 (8L << 60)
@@ -110,7 +106,6 @@ static inline u64 r_stval(void) {
   asm volatile("csrr %0, stval" : "=r"(x));
   return x;
 }
-
 
 // machine-mode cycle counter
 static inline u64 r_time(void) {

@@ -12,9 +12,9 @@ u32             ticks;
 extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
-void kernelvec();
+void kernelvec(void);
 
-extern int devintr();
+extern int devintr(void);
 
 void trapinit(void) { initlock(&tickslock, "time"); }
 
@@ -143,7 +143,7 @@ void usertrapret(void) {
 
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.
-void kerneltrap() {
+void kerneltrap(void) {
   int which_dev = 0;
   u64 sepc      = r_sepc();
   u64 sstatus   = r_sstatus();
@@ -196,7 +196,9 @@ void kerneltrap() {
   w_sstatus(sstatus);
 }
 
-void clockintr() {
+void timerinithart(void) { sbi_set_timer(r_time() + 1000000); }
+
+void clockintr(void) {
   if (cpuid() == 0) {
     acquire(&tickslock);
     ticks++;
@@ -207,7 +209,7 @@ void clockintr() {
   // ask for the next timer interrupt. this also clears
   // the interrupt request. 1000000 is about a tenth
   // of a second.
-  w_stimecmp(r_time() + 1000000);
+  timerinithart();
 }
 
 // check if it's an external interrupt or software interrupt,
@@ -215,7 +217,7 @@ void clockintr() {
 // returns 2 if timer interrupt,
 // 1 if other device,
 // 0 if not recognized.
-int devintr() {
+int devintr(void) {
   u64 scause = r_scause();
 
   if (scause == 0x8000000000000009L) {

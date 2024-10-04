@@ -153,6 +153,7 @@ void syscall();
 extern u32             ticks;
 void                   trapinit(void);
 void                   trapinithart(void);
+void                   timerinithart(void);
 extern struct spinlock tickslock;
 void                   usertrapret(void);
 

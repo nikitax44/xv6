@@ -21,9 +21,6 @@ void start_boot(struct fdt_header* dtb) {
   // enable interrupts
   w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
 
-  // init timer
-  sbi_set_timer(r_time() + 1000000);
-
   // needs to be parsed before kvm init. TODO: map me
   u32 hrts = harts(dtb);
 

@@ -15,6 +15,7 @@ void init_boot() {
   procinit();         // process table
   trapinit();         // trap vectors
   trapinithart();     // install kernel trap vector
+  timerinithart();    // request timer interrupts
   plicinit();         // set up interrupt controller
   plicinithart();     // ask PLIC for device interrupts
   binit();            // buffer cache
@@ -26,7 +27,8 @@ void init_boot() {
 
 void init_other() {
   printf("hart %d starting\n", cpuid());
-  kvminithart();  // turn on paging
-  trapinithart(); // install kernel trap vector
-  plicinithart(); // ask PLIC for device interrupts
+  kvminithart();   // turn on paging
+  trapinithart();  // install kernel trap vector
+  timerinithart(); // request timer interrupts
+  plicinithart();  // ask PLIC for device interrupts
 }

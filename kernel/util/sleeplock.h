@@ -1,6 +1,6 @@
 #pragma once
+#include "kernel/types.h"
 #include "spinlock.h"
-#include "types.h"
 
 // Long-term locks for processes
 struct sleeplock {

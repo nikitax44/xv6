@@ -1,9 +1,9 @@
 #include "defs.h"
 #include "elf.h"
-#include "fs.h"
-#include "memlayout.h"
+#include "file/fs.h"
+#include "hardware/memlayout.h"
+#include "hardware/riscv.h"
 #include "param.h"
-#include "riscv.h"
 #include "types.h"
 #include <string.h>
 

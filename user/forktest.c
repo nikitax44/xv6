@@ -1,7 +1,7 @@
 // Test that fork fails gracefully.
 // Tiny executable so that the limit can be filling the proc table.
 
-#include "kernel/stat.h"
+#include "kernel/file/stat.h"
 #include "kernel/types.h"
 #include "user/user.h"
 

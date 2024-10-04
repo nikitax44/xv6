@@ -1,10 +1,10 @@
-#include "defs.h"
-#include "memlayout.h"
-#include "param.h"
-#include "proc.h"
-#include "riscv.h"
-#include "spinlock.h"
-#include "types.h"
+#include "kernel/defs.h"
+#include "kernel/hardware/memlayout.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/param.h"
+#include "kernel/proc.h"
+#include "kernel/types.h"
+#include "kernel/util/spinlock.h"
 
 u64 sys_exit(void) {
   int n;

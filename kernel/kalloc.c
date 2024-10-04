@@ -3,11 +3,11 @@
 // and pipe buffers. Allocates whole 4096-byte pages.
 
 #include "defs.h"
-#include "memlayout.h"
+#include "hardware/memlayout.h"
+#include "hardware/riscv.h"
 #include "param.h"
-#include "riscv.h"
-#include "spinlock.h"
 #include "types.h"
+#include "util/spinlock.h"
 #include <string.h>
 
 void freerange(void* pa_start, void* pa_end);

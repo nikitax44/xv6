@@ -6,35 +6,40 @@ set(CMAKE_C_STANDARD 11)
 
 # Define the source files (object files)
 set(OBJS
-    entry.S
-    start.c
+    boot/entry.S
+    boot/start.c
+    boot/main.c
+    boot/dtb.c
+
+    file/fs.c
+    file/file.c
+
+    uapi/syscall.c
+    uapi/sysproc.c
+    uapi/sysfile.c
+
+    hardware/uart.c
+    hardware/virtio_disk.c
+    hardware/plic.c
+
+    util/spinlock.c
+    util/sleeplock.c
+    util/printf.c
+    util/string.c
+
     console.c
-    printf.c
-    uart.c
     kalloc.c
-    spinlock.c
-    string.c
-    main.c
     vm.c
     proc.c
-    swtch.S
-    trampoline.S
     trap.c
-    syscall.c
-    sysproc.c
     bio.c
-    fs.c
     log.c
-    sleeplock.c
-    file.c
     pipe.c
     exec.c
-    sysfile.c
+
+    swtch.S
+    trampoline.S
     kernelvec.S
-    plic.c
-    virtio_disk.c
-    fwcfg.c
-    dtb.c
 )
 
 # Set compiler flags

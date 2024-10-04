@@ -10,16 +10,16 @@
 // are in sysfile.c.
 
 #include "fs.h"
-#include "buf.h"
-#include "defs.h"
 #include "file.h"
-#include "param.h"
-#include "proc.h"
-#include "riscv.h"
-#include "sleeplock.h"
-#include "spinlock.h"
+#include "kernel/buf.h"
+#include "kernel/defs.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/param.h"
+#include "kernel/proc.h"
+#include "kernel/types.h"
+#include "kernel/util/sleeplock.h"
+#include "kernel/util/spinlock.h"
 #include "stat.h"
-#include "types.h"
 #include <string.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))

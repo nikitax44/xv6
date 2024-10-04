@@ -1,7 +1,7 @@
 // Simple grep.  Only supports ^ . * $ operators.
 
 #include "kernel/fcntl.h"
-#include "kernel/stat.h"
+#include "kernel/file/stat.h"
 #include "kernel/types.h"
 #include "user/user.h"
 

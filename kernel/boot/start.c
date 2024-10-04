@@ -1,8 +1,8 @@
-#include "defs.h"
 #include "dtb.h"
-#include "param.h"
-#include "riscv.h"
-#include "types.h"
+#include "kernel/defs.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/param.h"
+#include "kernel/types.h"
 
 // main.c
 void kernel_main();

@@ -1,5 +1,5 @@
 #pragma once
-#include "riscv.h"
+#include "hardware/riscv.h"
 #include "types.h"
 
 struct buf;

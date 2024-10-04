@@ -1,12 +1,12 @@
 #include "defs.h"
 #include "elf.h"
 #include "errno.h"
-#include "memlayout.h"
+#include "hardware/memlayout.h"
+#include "hardware/riscv.h"
 #include "param.h"
 #include "proc.h"
-#include "riscv.h"
-#include "spinlock.h"
 #include "types.h"
+#include "util/spinlock.h"
 #include <string.h>
 
 static int loadseg(pde_t*, u64, struct inode*, u32, u32);

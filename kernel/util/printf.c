@@ -4,16 +4,16 @@
 
 #include <stdarg.h>
 
-#include "defs.h"
-#include "file.h"
-#include "fs.h"
-#include "memlayout.h"
-#include "param.h"
-#include "proc.h"
-#include "riscv.h"
-#include "sleeplock.h"
-#include "spinlock.h"
-#include "types.h"
+#include "kernel/defs.h"
+#include "kernel/file/file.h"
+#include "kernel/file/fs.h"
+#include "kernel/hardware/memlayout.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/param.h"
+#include "kernel/proc.h"
+#include "kernel/types.h"
+#include "kernel/util/sleeplock.h"
+#include "kernel/util/spinlock.h"
 
 volatile int panicked = 0;
 

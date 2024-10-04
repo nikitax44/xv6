@@ -1,7 +1,7 @@
 #include "dtb.h"
-#include "defs.h"
+#include "kernel/defs.h"
+#include "kernel/types.h"
 #include "string.h"
-#include "types.h"
 
 #define FDT_BEGIN_NODE        0x01000000
 #define FDT_END_NODE          0x02000000

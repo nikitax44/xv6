@@ -1,7 +1,7 @@
 #pragma once
 #include "fs.h"
-#include "sleeplock.h"
-#include "types.h"
+#include "kernel/types.h"
+#include "kernel/util/sleeplock.h"
 
 struct file {
   enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE } type;

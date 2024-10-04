@@ -2,7 +2,7 @@
         # OpenSBI causes boot hart (i.e. CPU) to jump there in S-mode.
         # kernel.ld causes the following code to
         # be placed at 0x80200000.
-#include "riscv.h"
+#include "kernel/hardware/riscv.h"
 .section .entry
 .global _entry
 .global _entry_other
@@ -10,7 +10,7 @@ _entry:
         mv tp, a0
         # set up a stack for C.
         # stack0 is declared in start.c,
-        # with a PGSIZE-byte stack per HART.
+        # with a PGSIZE-byte stack for boot HART.
         # sp = stack0 + PGSIZE
         la sp, stack0
         li t0, PGSIZE

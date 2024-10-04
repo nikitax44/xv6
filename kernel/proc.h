@@ -1,8 +1,8 @@
 #pragma once
+#include "hardware/riscv.h"
 #include "param.h"
-#include "riscv.h"
-#include "spinlock.h"
 #include "types.h"
+#include "util/spinlock.h"
 
 // Saved registers for kernel context switches.
 struct context {

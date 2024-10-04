@@ -1,12 +1,12 @@
 #include "kernel/errno.h"
 #include "kernel/fcntl.h"
-#include "kernel/fs.h"
-#include "kernel/memlayout.h"
+#include "kernel/file/fs.h"
+#include "kernel/file/stat.h"
+#include "kernel/hardware/memlayout.h"
+#include "kernel/hardware/riscv.h"
 #include "kernel/param.h"
-#include "kernel/riscv.h"
-#include "kernel/stat.h"
-#include "kernel/syscall.h"
 #include "kernel/types.h"
+#include "kernel/uapi/syscall.h"
 #include "user/user.h"
 #include <stdlib.h>
 

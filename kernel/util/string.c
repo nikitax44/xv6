@@ -1,4 +1,4 @@
-#include "types.h"
+#include "kernel/types.h"
 
 // Like strncpy but guaranteed to NUL-terminate.
 char* safestrcpy(char* s, str t, int n) {

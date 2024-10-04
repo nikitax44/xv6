@@ -1,6 +1,6 @@
 #pragma once
 #ifndef __ASSEMBLER__
-#include "types.h"
+#include "kernel/types.h"
 
 // which hart (core) is this?
 static inline u64 r_mhartid() {

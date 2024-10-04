@@ -4,19 +4,19 @@
 // user code, and calls into file.c and fs.c.
 //
 
-#include "defs.h"
 #include "errno.h"
-#include "fcntl.h"
-#include "file.h"
-#include "fs.h"
-#include "mman.h"
-#include "param.h"
-#include "proc.h"
-#include "riscv.h"
-#include "sleeplock.h"
-#include "spinlock.h"
-#include "stat.h"
-#include "types.h"
+#include "kernel/defs.h"
+#include "kernel/fcntl.h"
+#include "kernel/file/file.h"
+#include "kernel/file/fs.h"
+#include "kernel/file/stat.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/mman.h"
+#include "kernel/param.h"
+#include "kernel/proc.h"
+#include "kernel/types.h"
+#include "kernel/util/sleeplock.h"
+#include "kernel/util/spinlock.h"
 #include <string.h>
 
 // Fetch the nth word-sized system call argument as a file descriptor

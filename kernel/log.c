@@ -1,11 +1,11 @@
 #include "buf.h"
 #include "defs.h"
-#include "fs.h"
+#include "file/fs.h"
+#include "hardware/riscv.h"
 #include "param.h"
-#include "riscv.h"
-#include "sleeplock.h"
-#include "spinlock.h"
 #include "types.h"
+#include "util/sleeplock.h"
+#include "util/spinlock.h"
 #include <string.h>
 
 // Simple logging that allows concurrent FS system calls.

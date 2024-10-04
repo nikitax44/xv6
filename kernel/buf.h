@@ -1,7 +1,7 @@
 #pragma once
-#include "fs.h"
-#include "sleeplock.h"
+#include "file/fs.h"
 #include "types.h"
+#include "util/sleeplock.h"
 
 struct buf {
   int              valid; // has data been read from disk?

@@ -1,10 +1,10 @@
 #include "defs.h"
-#include "memlayout.h"
+#include "hardware/memlayout.h"
+#include "hardware/riscv.h"
 #include "param.h"
 #include "proc.h"
-#include "riscv.h"
-#include "spinlock.h"
 #include "types.h"
+#include "util/spinlock.h"
 
 struct spinlock tickslock;
 u32             ticks;

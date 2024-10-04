@@ -64,7 +64,7 @@ separate_arguments(C_WARNINGS)
 add_custom_command(
     OUTPUT mkfs.elf
     COMMAND gcc ${C_WARNINGS} -o mkfs.elf ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS mkfs/mkfs.c kernel/fs.h kernel/param.h
+    DEPENDS mkfs/mkfs.c kernel/file/fs.h kernel/file/stat.h kernel/param.h kernel/types.h
     COMMENT "Building mkfs with host compiler"
 )
 

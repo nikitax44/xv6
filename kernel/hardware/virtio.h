@@ -1,5 +1,5 @@
 #pragma once
-#include "types.h"
+#include "kernel/types.h"
 
 //
 // virtio device definitions.

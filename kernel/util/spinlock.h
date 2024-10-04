@@ -1,5 +1,5 @@
 #pragma once
-#include "types.h"
+#include "kernel/types.h"
 
 // Mutual exclusion lock.
 struct spinlock {

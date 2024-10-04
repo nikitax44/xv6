@@ -1,5 +1,4 @@
-#include "defs.h"
-#include "fwcfg.h"
+#include "kernel/defs.h"
 
 // start() jumps here in supervisor mode on all CPUs.
 void kernel_main() { scheduler(); }
@@ -22,7 +21,6 @@ void init_boot() {
   iinit();            // inode table
   fileinit();         // file table
   virtio_disk_init(); // emulated hard disk
-  fw_dump();          // read fw_cfg
   userinit();         // first user process
 }
 

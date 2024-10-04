@@ -6,15 +6,15 @@
 // virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 //
 
-#include "buf.h"
-#include "defs.h"
-#include "fs.h"
+#include "kernel/buf.h"
+#include "kernel/defs.h"
+#include "kernel/file/fs.h"
+#include "kernel/param.h"
+#include "kernel/types.h"
+#include "kernel/util/sleeplock.h"
+#include "kernel/util/spinlock.h"
 #include "memlayout.h"
-#include "param.h"
 #include "riscv.h"
-#include "sleeplock.h"
-#include "spinlock.h"
-#include "types.h"
 #include "virtio.h"
 #include <string.h>
 

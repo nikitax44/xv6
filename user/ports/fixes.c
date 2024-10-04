@@ -1,5 +1,5 @@
 #include "user/user.h"
-int _isatty() { return 1; }
+int _isatty(void) { return 1; }
 
 int main(int argc, char** argv, char** envp);
 

@@ -13,7 +13,7 @@ if(NOT DEFINED NEWLIB)
 endif()
 
 # Set compiler flags
-set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra")
+set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra -Wold-style-definition")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_WARNINGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -ggdb -gdwarf-2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64g -static")

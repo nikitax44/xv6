@@ -1,12 +1,10 @@
 #include "kernel/errno.h"
 #include "kernel/fcntl.h"
 #include "kernel/file/fs.h"
-#include "kernel/file/stat.h"
 #include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
 #include "kernel/param.h"
 #include "kernel/types.h"
-#include "kernel/uapi/syscall.h"
 #include "user/user.h"
 #include <stdlib.h>
 
@@ -242,7 +240,7 @@ void copyinstr3(char* s) {
 
 // See if the kernel refuses to read/write user memory that the
 // application doesn't have anymore, because it returned it.
-void rwsbrk() {
+void rwsbrk(char* s) {
   int fd, n;
 
   u64 a = (u64)_sbrk(8192);
@@ -287,7 +285,7 @@ void rwsbrk() {
 
 // test O_TRUNC.
 void truncate1(char* s) {
-  char buf[32];
+  char current_buf[32];
 
   _unlink("truncfile");
   int fd1 = _open("truncfile", O_CREATE | O_WRONLY | O_TRUNC);
@@ -295,7 +293,7 @@ void truncate1(char* s) {
   _close(fd1);
 
   int fd2 = _open("truncfile", O_RDONLY);
-  int n   = _read(fd2, buf, sizeof(buf));
+  int n   = _read(fd2, current_buf, sizeof(current_buf));
   if (n != 4) {
     printf("%s: read %d bytes, wanted 4\n", s, n);
     _exit(1);
@@ -304,14 +302,14 @@ void truncate1(char* s) {
   fd1 = _open("truncfile", O_WRONLY | O_TRUNC);
 
   int fd3 = _open("truncfile", O_RDONLY);
-  n       = _read(fd3, buf, sizeof(buf));
+  n       = _read(fd3, current_buf, sizeof(current_buf));
   if (n != 0) {
     printf("aaa fd3=%d\n", fd3);
     printf("%s: read %d bytes, wanted 0\n", s, n);
     _exit(1);
   }
 
-  n = _read(fd2, buf, sizeof(buf));
+  n = _read(fd2, current_buf, sizeof(current_buf));
   if (n != 0) {
     printf("bbb fd2=%d\n", fd2);
     printf("%s: read %d bytes, wanted 0\n", s, n);
@@ -320,13 +318,13 @@ void truncate1(char* s) {
 
   _write(fd1, "abcdef", 6);
 
-  n = _read(fd3, buf, sizeof(buf));
+  n = _read(fd3, current_buf, sizeof(current_buf));
   if (n != 6) {
     printf("%s: read %d bytes, wanted 6\n", s, n);
     _exit(1);
   }
 
-  n = _read(fd2, buf, sizeof(buf));
+  n = _read(fd2, current_buf, sizeof(current_buf));
   if (n != 2) {
     printf("%s: read %d bytes, wanted 2\n", s, n);
     _exit(1);
@@ -375,7 +373,7 @@ void truncate3(char* s) {
 
   if (pid == 0) {
     for (int i = 0; i < 100; i++) {
-      char buf[32];
+      char current_buf[32];
       int  fd = _open("truncfile", O_WRONLY);
       if (fd < 0) {
         printf("%s: open failed\n", s);
@@ -388,7 +386,7 @@ void truncate3(char* s) {
       }
       _close(fd);
       fd = _open("truncfile", O_RDONLY);
-      _read(fd, buf, sizeof(buf));
+      _read(fd, current_buf, sizeof(current_buf));
       _close(fd);
     }
     _exit(0);
@@ -655,7 +653,7 @@ void dirtest(char* s) {
 void exectest(char* s) {
   int   fd, xstatus, pid;
   char* echoargv[] = {"echo", "OK", 0};
-  char  buf[3];
+  char  current_buf[3];
 
   _unlink("echo-ok");
   pid = _fork();
@@ -692,12 +690,12 @@ void exectest(char* s) {
     printf("%s: open failed\n", s);
     _exit(1);
   }
-  if (_read(fd, buf, 2) != 2) {
+  if (_read(fd, current_buf, 2) != 2) {
     printf("%s: read failed\n", s);
     _exit(1);
   }
   _unlink("echo-ok");
-  if (buf[0] == 'O' && buf[1] == 'K') {
+  if (current_buf[0] == 'O' && current_buf[1] == 'K') {
     _exit(0);
   } else {
     printf("%s: wrong output\n", s);
@@ -1052,7 +1050,7 @@ void mem(char* s) {
 void sharedfd(char* s) {
   int fd, pid, i, n, nc, np;
   enum { N = 1000, SZ = 10 };
-  char buf[SZ];
+  char current_buf[SZ];
 
   _unlink("sharedfd");
   fd = _open("sharedfd", O_CREATE | O_RDWR);
@@ -1061,9 +1059,9 @@ void sharedfd(char* s) {
     _exit(1);
   }
   pid = _fork();
-  memset(buf, pid == 0 ? 'c' : 'p', sizeof(buf));
+  memset(current_buf, pid == 0 ? 'c' : 'p', sizeof(current_buf));
   for (i = 0; i < N; i++) {
-    if (_write(fd, buf, sizeof(buf)) != sizeof(buf)) {
+    if (_write(fd, current_buf, sizeof(current_buf)) != sizeof(current_buf)) {
       printf("%s: write sharedfd failed\n", s);
       _exit(1);
     }
@@ -1085,12 +1083,12 @@ void sharedfd(char* s) {
     _exit(1);
   }
   nc = np = 0;
-  while ((n = _read(fd, buf, sizeof(buf))) > 0) {
-    for (i = 0; i < sizeof(buf); i++) {
-      if (buf[i] == 'c') {
+  while ((n = _read(fd, current_buf, sizeof(current_buf))) > 0) {
+    for (i = 0; i < sizeof(current_buf); i++) {
+      if (current_buf[i] == 'c') {
         nc++;
       }
-      if (buf[i] == 'p') {
+      if (current_buf[i] == 'p') {
         np++;
       }
     }
@@ -1360,9 +1358,7 @@ void concreate(char* s) {
     file[1] = '0' + i;
     _unlink(file);
     pid = _fork();
-    if (pid && (i % 3) == 1) {
-      _link("C0", file);
-    } else if (pid == 0 && (i % 5) == 1) {
+    if ((pid && (i % 3) == 1) || (pid == 0 && (i % 5) == 1)) {
       _link("C0", file);
     } else {
       fd = _open(file, O_CREATE | O_RDWR);
@@ -1975,7 +1971,7 @@ void sbrkbasic(char* s) {
   for (i = 0; i < 5000; i++) {
     b = _sbrk(1);
     if (b != a) {
-      printf("%s: sbrk test failed %d %p %p\n", s, i, a, b);
+      printf("%s: sbrk test failed %d %p %p\n", s, i, (void*)a, (void*)b);
       _exit(1);
     }
     *b = 1;
@@ -2009,7 +2005,7 @@ void sbrkmuch(char* s) {
   // can one grow address space to something big?
   a   = _sbrk(0);
   amt = BIG - (u64)a;
-  p   = _sbrk(amt);
+  p   = _sbrk((int)amt);
   if (p != a) {
     printf("%s: sbrk test failed to grow big address space; enough phys mem?\n",
            s);
@@ -2034,8 +2030,8 @@ void sbrkmuch(char* s) {
   }
   c = _sbrk(0);
   if (c != a - PGSIZE) {
-    printf("%s: sbrk deallocation produced wrong address, a %p c %p\n", s, a,
-           c);
+    printf("%s: sbrk deallocation produced wrong address, a %p c %p\n", s, (void*)a,
+           (void*)c);
     _exit(1);
   }
 
@@ -2043,7 +2039,7 @@ void sbrkmuch(char* s) {
   a = _sbrk(0);
   c = _sbrk(PGSIZE);
   if (c != a || _sbrk(0) != a + PGSIZE) {
-    printf("%s: sbrk re-allocation failed, a %p c %p\n", s, a, c);
+    printf("%s: sbrk re-allocation failed, a %p c %p\n", s, (void*)a, (void*)c);
     _exit(1);
   }
   if (*lastaddr == 99) {
@@ -2053,9 +2049,9 @@ void sbrkmuch(char* s) {
   }
 
   a = _sbrk(0);
-  c = _sbrk(-(_sbrk(0) - oldbrk));
+  c = _sbrk(-(int)(_sbrk(0) - oldbrk));
   if (c != a) {
-    printf("%s: sbrk downsize failed, a %p c %p\n", s, a, c);
+    printf("%s: sbrk downsize failed, a %p c %p\n", s, (void*)a, (void*)c);
     _exit(1);
   }
 }
@@ -2072,7 +2068,7 @@ void kernmem(char* s) {
       _exit(1);
     }
     if (pid == 0) {
-      printf("%s: oops could read %p = %x\n", s, a, *a);
+      printf("%s: oops could read %p = %x\n", s, (void*)a, *a);
       _exit(1);
     }
     int xstatus;
@@ -2124,7 +2120,7 @@ void sbrkfail(char* s) {
   for (i = 0; i < sizeof(pids) / sizeof(pids[0]); i++) {
     if ((pids[i] = _fork()) == 0) {
       // allocate a lot of memory
-      _sbrk(BIG - (u64)_sbrk(0));
+      _sbrk((int)(BIG - (u64)_sbrk(0)));
       _write(fds[1], "x", 1);
       // sit around until killed
       for (;;) {
@@ -2274,9 +2270,8 @@ void bigargtest(char* s) {
 
 // what happens when the file system runs out of blocks?
 // answer: balloc panics, so this test is not useful.
-void fsfull() {
+void fsfull(void) {
   int nfiles;
-  int fsblocks = 0;
 
   printf("fsfull test\n");
 
@@ -2301,7 +2296,6 @@ void fsfull() {
         break;
       }
       total += cc;
-      fsblocks++;
     }
     printf("wrote %d bytes\n", total);
     _close(fd);
@@ -2416,7 +2410,7 @@ void sbrkbugs(char* s) {
     _exit(1);
   }
   if (pid == 0) {
-    int sz = (u64)_sbrk(0);
+    int sz = (int)(u64)_sbrk(0);
     // free all user memory; there used to be a bug that
     // would not adjust p->sz correctly in this case,
     // causing _exit() to panic.
@@ -2432,7 +2426,7 @@ void sbrkbugs(char* s) {
     _exit(1);
   }
   if (pid == 0) {
-    int sz = (u64)_sbrk(0);
+    int sz = (int)(u64)_sbrk(0);
     // set the break to somewhere in the very first
     // page; there used to be a bug that would incorrectly
     // free the first page.
@@ -2448,7 +2442,7 @@ void sbrkbugs(char* s) {
   }
   if (pid == 0) {
     // set the break in the middle of a page.
-    _sbrk((10 * 4096 + 2048) - (u64)_sbrk(0));
+    _sbrk((int)((10 * 4096 + 2048) - (u64)_sbrk(0)));
 
     // reduce the break a bit, but not enough to
     // cause a page to be freed. this used to cause
@@ -2468,7 +2462,7 @@ void sbrkbugs(char* s) {
 void sbrklast(char* s) {
   u64 top = (u64)_sbrk(0);
   if ((top % 4096) != 0) {
-    _sbrk(4096 - (top % 4096));
+    _sbrk(PGSIZE - (top % 4096));
   }
   _sbrk(4096);
   _sbrk(10);
@@ -2491,7 +2485,7 @@ void sbrklast(char* s) {
 // does sbrk handle signed int32 wrap-around with
 // negative arguments?
 void sbrk8000(char* s) {
-  _sbrk(0x80000004);
+  _sbrk((int)0x80000004);
   volatile char* top = _sbrk(0);
   *(top - 1)         = *(top - 1) + 1;
 }
@@ -2768,8 +2762,8 @@ void diskfull(char* s) {
       break;
     }
     for (int i = 0; i < MAXFILE; i++) {
-      char buf[BSIZE];
-      if (_write(fd, buf, BSIZE) != BSIZE) {
+      char current_buf[BSIZE];
+      if (_write(fd, current_buf, BSIZE) != BSIZE) {
         done = 1;
         _close(fd);
         break;
@@ -2915,7 +2909,7 @@ int runtests(struct test* tests, char* justone, int continuous) {
 // because out of memory with lazy allocation results in the process
 // taking a fault and being killed, fork and report back.
 //
-int countfree() {
+int countfree(void) {
   int fds[2];
 
   if (_pipe(fds) < 0) {

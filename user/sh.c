@@ -189,8 +189,7 @@ int main(void) {
   _exit(0);
 }
 
-void panic(char* s) __attribute__((noreturn));
-void panic(char* s) {
+void __attribute__((noreturn)) panic(char* s) {
   fdprintf(stderr, "%s\n", s);
   _exit(1);
 }
@@ -269,7 +268,7 @@ struct cmd* backcmd(struct cmd* subcmd) {
 char whitespace[] = " \t\r\n\v";
 char symbols[]    = "<|>&;()";
 
-int gettoken(char** ps, char* es, char** q, char** eq) {
+int gettoken(char** ps, const char* es, char** q, char** eq) {
   char* s;
   int   ret;
 
@@ -317,7 +316,7 @@ int gettoken(char** ps, char* es, char** q, char** eq) {
   return ret;
 }
 
-int peek(char** ps, char* es, char* toks) {
+int peek(char** ps, const char* es, char* toks) {
   char* s;
 
   s = *ps;

@@ -9,17 +9,11 @@
 //   control-p -- print process list
 //
 
-#include <stdarg.h>
 
 #include "defs.h"
 #include "file/file.h"
-#include "file/fs.h"
-#include "hardware/memlayout.h"
-#include "hardware/riscv.h"
-#include "param.h"
 #include "proc.h"
 #include "types.h"
-#include "util/sleeplock.h"
 #include "util/spinlock.h"
 
 #define BACKSPACE 0x100

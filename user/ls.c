@@ -1,7 +1,6 @@
 #include "kernel/fcntl.h"
 #include "kernel/file/fs.h"
 #include "kernel/file/stat.h"
-#include "kernel/types.h"
 #include "user/user.h"
 
 char* fmtname(char* path) {

@@ -3,12 +3,10 @@
 //
 
 #include "kernel/defs.h"
-#include "kernel/param.h"
 #include "kernel/proc.h"
 #include "kernel/types.h"
 #include "kernel/util/spinlock.h"
 #include "memlayout.h"
-#include "riscv.h"
 
 // the UART control registers are memory-mapped
 // at address UART0. this macro returns the
@@ -47,7 +45,7 @@ u64  uart_tx_r; // read next from uart_tx_buf[uart_tx_r % UART_TX_BUF_SIZE]
 
 extern volatile int panicked; // from printf.c
 
-void uartstart();
+void uartstart(void);
 
 void uartinit(void) {
   // disable interrupts.
@@ -123,7 +121,7 @@ void uartputc_sync(int c) {
 // in the transmit buffer, send it.
 // caller must hold uart_tx_lock.
 // called from both the top- and bottom-half.
-void uartstart() {
+void uartstart(void) {
   while (1) {
     if (uart_tx_w == uart_tx_r) {
       // transmit buffer is empty.

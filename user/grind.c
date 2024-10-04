@@ -3,13 +3,8 @@
 //
 
 #include "kernel/fcntl.h"
-#include "kernel/file/fs.h"
 #include "kernel/file/stat.h"
-#include "kernel/hardware/memlayout.h"
-#include "kernel/hardware/riscv.h"
-#include "kernel/param.h"
 #include "kernel/types.h"
-#include "kernel/uapi/syscall.h"
 #include "user/user.h"
 
 // from FreeBSD.
@@ -25,7 +20,7 @@ int do_rand(u64* ctx) {
   i64 hi, lo, x;
 
   /* Transform to [1, 0x7ffffffe] range. */
-  x  = (*ctx % 0x7ffffffe) + 1;
+  x  = (i64)(*ctx % 0x7ffffffe) + 1;
   hi = x / 127773;
   lo = x % 127773;
   x  = 16807 * lo - 2836 * hi;
@@ -35,7 +30,7 @@ int do_rand(u64* ctx) {
   /* Transform to [0, 0x7ffffffd] range. */
   x--;
   *ctx = x;
-  return (x);
+  return (int)(x);
 }
 
 u64 rand_next = 1;
@@ -122,7 +117,7 @@ void go(int which_child) {
       _sbrk(6011);
     } else if (what == 16) {
       if (_sbrk(0) > break0) {
-        _sbrk(-(_sbrk(0) - break0));
+        _sbrk(-(int)(_sbrk(0) - break0));
       }
     } else if (what == 17) {
       int pid = _fork();
@@ -181,7 +176,7 @@ void go(int which_child) {
         _mkdir("a");
         _chdir("a");
         _unlink("../a");
-        fd = _open("x", O_CREATE | O_RDWR);
+        _open("x", O_CREATE | O_RDWR);
         _unlink("x");
         _exit(0);
       } else if (pid < 0) {
@@ -274,23 +269,24 @@ void go(int which_child) {
       _close(aa[0]);
       _close(aa[1]);
       _close(bb[1]);
-      char buf[4] = {0, 0, 0, 0};
-      _read(bb[0], buf + 0, 1);
-      _read(bb[0], buf + 1, 1);
-      _read(bb[0], buf + 2, 1);
+      char current_buf[4] = {0, 0, 0, 0};
+      _read(bb[0], current_buf + 0, 1);
+      _read(bb[0], current_buf + 1, 1);
+      _read(bb[0], current_buf + 2, 1);
       _close(bb[0]);
       int st1, st2;
       _wait(&st1);
       _wait(&st2);
-      if (st1 != 0 || st2 != 0 || strcmp(buf, "hi\n") != 0) {
-        printf("grind: exec pipeline failed %d %d \"%s\"\n", st1, st2, buf);
+      if (st1 != 0 || st2 != 0 || strcmp(current_buf, "hi\n") != 0) {
+        printf("grind: exec pipeline failed %d %d \"%s\"\n", st1, st2,
+               current_buf);
         _exit(1);
       }
     }
   }
 }
 
-void iter() {
+void iter(void) {
   _unlink("a");
   _unlink("b");
 
@@ -328,7 +324,7 @@ void iter() {
   _exit(0);
 }
 
-int main() {
+int main(void) {
   while (1) {
     int pid = _fork();
     if (pid == 0) {

@@ -1,17 +1,18 @@
 #include "fwcfg.h"
-#include "dtb.h"
+#include "kernel/boot/dtb.h"
+#include "kernel/defs.h"
+#include "kernel/util/util.h"
 
 struct FWCfgFiles* fw_dir;
 
 #define FW_GET_DAT(bits) (bswap##bits(*(volatile u##bits*)FW_CFG_DAT))
-#define FW_GET_DMA(bits) (bswap##bits(*(volatile u##bits*)FW_CFG_DMA))
 
 static void fw_select(u16 key) {
   *(volatile u16*)FW_CFG_SEL = __builtin_bswap16(key);
 }
 
-static u64 fw_dat_raw() { return *(volatile u64*)FW_CFG_DAT; }
-static u64 fw_dma_raw() { return *(volatile u64*)FW_CFG_DMA; }
+static u64 fw_dat_raw(void) { return *(volatile u64*)FW_CFG_DAT; }
+static u64 fw_dma_raw(void) { return *(volatile u64*)FW_CFG_DMA; }
 
 static void fw_verify(void) {
   fw_select(0);

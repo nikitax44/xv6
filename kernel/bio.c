@@ -15,11 +15,8 @@
 
 #include "buf.h"
 #include "defs.h"
-#include "file/fs.h"
-#include "hardware/riscv.h"
 #include "param.h"
 #include "types.h"
-#include "util/sleeplock.h"
 #include "util/spinlock.h"
 
 struct {

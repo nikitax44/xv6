@@ -1,7 +1,5 @@
 #include "kernel/defs.h"
 #include "kernel/hardware/memlayout.h"
-#include "kernel/hardware/riscv.h"
-#include "kernel/param.h"
 #include "kernel/types.h"
 
 //
@@ -15,7 +13,7 @@ void plicinit(void) {
 }
 
 void plicinithart(void) {
-  int hart = cpuid();
+  u32 hart = cpuid();
 
   // set enable bits for this hart's S-mode
   // for the uart and virtio disk.

@@ -16,6 +16,8 @@ kernel/kernel
 .gdbinit
 /result
 /.direnv
+/.idea
+.gitignore
 
 # cmake
 /build/
@@ -24,3 +26,6 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 compile_commands.json
+.cmake/
+Testing/
+cmake-build-debug/

@@ -44,6 +44,4 @@ int atoi(str s) {
   return n;
 }
 
-int _execve(str path, char** argv, char** envp);
-
 int _exec(str path, char** argv) { return _execve(path, argv, (char**)0); }

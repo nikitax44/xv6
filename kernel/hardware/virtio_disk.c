@@ -9,9 +9,7 @@
 #include "kernel/buf.h"
 #include "kernel/defs.h"
 #include "kernel/file/fs.h"
-#include "kernel/param.h"
 #include "kernel/types.h"
-#include "kernel/util/sleeplock.h"
 #include "kernel/util/spinlock.h"
 #include "memlayout.h"
 #include "riscv.h"
@@ -158,7 +156,7 @@ void virtio_disk_init(void) {
 }
 
 // find a free descriptor, mark it non-free, return its index.
-static int alloc_desc() {
+static int alloc_desc(void) {
   for (int i = 0; i < NUM; i++) {
     if (disk.free[i]) {
       disk.free[i] = 0;
@@ -292,7 +290,7 @@ void virtio_disk_rw(struct buf* b, int write) {
   release(&disk.vdisk_lock);
 }
 
-void virtio_disk_intr() {
+void virtio_disk_intr(void) {
   acquire(&disk.vdisk_lock);
 
   // the device won't raise another interrupt until we tell it
@@ -310,7 +308,7 @@ void virtio_disk_intr() {
 
   while (disk.used_idx != disk.used->idx) {
     __sync_synchronize();
-    int id = disk.used->ring[disk.used_idx % NUM].id;
+    u32 id = disk.used->ring[disk.used_idx % NUM].id;
 
     if (disk.info[id].status != 0) {
       panic("virtio_disk_intr status");

@@ -15,8 +15,6 @@
 #include "kernel/param.h"
 #include "kernel/proc.h"
 #include "kernel/types.h"
-#include "kernel/util/sleeplock.h"
-#include "kernel/util/spinlock.h"
 #include <string.h>
 
 // Fetch the nth word-sized system call argument as a file descriptor

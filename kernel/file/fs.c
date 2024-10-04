@@ -28,11 +28,11 @@
 struct superblock sb;
 
 // Read the super block.
-static void readsb(int dev, struct superblock* sb) {
+static void readsb(int dev, struct superblock* sb_ptr) {
   struct buf* bp;
 
   bp = bread(dev, 1);
-  memmove(sb, bp->data, sizeof(*sb));
+  memmove(sb_ptr, bp->data, sizeof(*sb_ptr));
   brelse(bp);
 }
 
@@ -172,7 +172,7 @@ struct {
   struct inode    inode[NINODE];
 } itable;
 
-void iinit() {
+void iinit(void) {
   int i = 0;
 
   initlock(&itable.lock, "itable");

@@ -60,15 +60,15 @@ void procinit(void) {
 // Must be called with interrupts disabled,
 // to prevent race with process being moved
 // to a different CPU.
-u32 cpuid() {
-  int id = r_tp();
+u32 cpuid(void) {
+  u64 id = r_tp();
   return id;
 }
 
 // Return this CPU's cpu struct.
 // Interrupts must be disabled.
 struct cpu* mycpu(void) {
-  int         id = cpuid();
+  u32         id = cpuid();
   struct cpu* c  = &cpus[id];
   return c;
 }
@@ -82,7 +82,7 @@ struct proc* myproc(void) {
   return p;
 }
 
-int allocpid() {
+int allocpid(void) {
   int pid;
 
   acquire(&pid_lock);

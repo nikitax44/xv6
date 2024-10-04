@@ -50,7 +50,7 @@ int           dirlink(struct inode*, char*, u32);
 struct inode* dirlookup(struct inode*, char*, u32*);
 struct inode* ialloc(u32, short);
 struct inode* idup(struct inode*);
-void          iinit();
+void          iinit(void);
 void          ilock(struct inode*);
 void          iput(struct inode*);
 void          iunlock(struct inode*);
@@ -63,11 +63,6 @@ u32           readi(struct inode*, int, u64, u32, u32);
 void          stati(struct inode*, struct stat*);
 u32           writei(struct inode*, int, u64, u32, u32);
 void          itrunc(struct inode*);
-
-// ramdisk.c
-void ramdiskinit(void);
-void ramdiskintr(void);
-void ramdiskrw(struct buf*);
 
 // kalloc.c
 void* kalloc(void);
@@ -107,8 +102,7 @@ void         kill_all(void);
 int          killed(struct proc*);
 void         setkilled(struct proc*);
 struct cpu*  mycpu(void);
-struct cpu*  getmycpu(void);
-struct proc* myproc();
+struct proc* myproc(void);
 void         procinit(void);
 void         scheduler(void) __attribute__((noreturn));
 void         sched(void);
@@ -147,7 +141,7 @@ int  argstr(int, char*, int);
 void argaddr(int, u64*);
 int  fetchstr(u64, char*, int);
 int  fetchaddr(u64, u64*);
-void syscall();
+void syscall(void);
 
 // trap.c
 extern u32             ticks;

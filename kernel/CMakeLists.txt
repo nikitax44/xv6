@@ -6,40 +6,42 @@ set(CMAKE_C_STANDARD 11)
 
 # Define the source files (object files)
 set(OBJS
-    boot/entry.S
-    boot/start.c
-    boot/main.c
-    boot/dtb.c
+        boot/entry.S
+        boot/start.c
+        boot/main.c
+        boot/dtb.c
 
-    file/fs.c
-    file/file.c
+        file/fs.c
+        file/pipe.c
+        file/file.c
 
-    uapi/syscall.c
-    uapi/sysproc.c
-    uapi/sysfile.c
+        uapi/syscall.c
+        uapi/sysproc.c
+        uapi/sysfile.c
 
-    hardware/uart.c
-    hardware/virtio_disk.c
-    hardware/plic.c
+        hardware/uart.c
+        hardware/virtio_disk.c
+        hardware/plic.c
+        hardware/fwcfg.c
 
-    util/spinlock.c
-    util/sleeplock.c
-    util/printf.c
-    util/string.c
+        util/spinlock.c
+        util/sleeplock.c
+        util/printf.c
+        util/string.c
+        util/util.c
 
-    console.c
-    kalloc.c
-    vm.c
-    proc.c
-    trap.c
-    bio.c
-    log.c
-    pipe.c
-    exec.c
+        console.c
+        kalloc.c
+        vm.c
+        proc.c
+        trap.c
+        bio.c
+        log.c
+        exec.c
 
-    swtch.S
-    trampoline.S
-    kernelvec.S
+        swtch.S
+        trampoline.S
+        kernelvec.S
 )
 
 # Set compiler flags
@@ -47,14 +49,14 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffreestanding")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-builtin-log -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf -fno-builtin-putc")
 
 add_custom_command(
-    OUTPUT _initcode.h
-    COMMAND ${CMAKE_ASM_COMPILER} -nostdinc -c ${CMAKE_CURRENT_SOURCE_DIR}/initcode.S -o initcode.o
-    COMMAND ${CMAKE_LINKER} -N -e start -Ttext 0 -o initcode.out initcode.o
-    COMMAND ${CMAKE_OBJCOPY} -S -O binary initcode.out initcode
-    COMMAND xxd -i -n initcode initcode > _initcode.h
-    COMMAND rm initcode.o initcode initcode.out
-    DEPENDS initcode.S
-    COMMENT "Generating _initcode.h from initcode.S"
+        OUTPUT _initcode.h
+        COMMAND ${CMAKE_ASM_COMPILER} -nostdinc -c ${CMAKE_CURRENT_SOURCE_DIR}/initcode.S -o initcode.o
+        COMMAND ${CMAKE_LINKER} -N -e start -Ttext 0 -o initcode.out initcode.o
+        COMMAND ${CMAKE_OBJCOPY} -S -O binary initcode.out initcode
+        COMMAND xxd -i -n initcode initcode > _initcode.h
+        COMMAND rm initcode.o initcode initcode.out
+        DEPENDS initcode.S
+        COMMENT "Generating _initcode.h from initcode.S"
 )
 
 add_custom_target(RebuildOnDependency ALL DEPENDS kernel.ld _initcode.h)

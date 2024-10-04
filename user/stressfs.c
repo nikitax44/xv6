@@ -8,12 +8,9 @@
 //      asm volatile("");
 
 #include "kernel/fcntl.h"
-#include "kernel/file/fs.h"
-#include "kernel/file/stat.h"
-#include "kernel/types.h"
 #include "user/user.h"
 
-int main() {
+int main(void) {
   int  fd, i;
   char path[] = "stressfs0";
   char data[512];

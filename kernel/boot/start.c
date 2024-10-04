@@ -1,13 +1,12 @@
 #include "dtb.h"
 #include "kernel/defs.h"
 #include "kernel/hardware/riscv.h"
-#include "kernel/param.h"
 #include "kernel/types.h"
 
 // main.c
-void kernel_main();
-void init_boot();
-void init_other();
+void kernel_main(void);
+void init_boot(void);
+void init_other(void);
 
 // entry.S
 void _entry_other(u64 hartid);
@@ -37,7 +36,7 @@ void start_boot(struct fdt_header* dtb) {
   panic("main exited on boot hart");
 }
 
-void start_other() {
+void start_other(void) {
   w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
 
   sbi_set_timer(r_time() + 1000000);

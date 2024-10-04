@@ -1,7 +1,4 @@
 #include "kernel/defs.h"
-#include "kernel/hardware/memlayout.h"
-#include "kernel/hardware/riscv.h"
-#include "kernel/param.h"
 #include "kernel/proc.h"
 #include "kernel/types.h"
 #include "kernel/util/spinlock.h"

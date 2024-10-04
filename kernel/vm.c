@@ -1,9 +1,6 @@
 #include "defs.h"
-#include "elf.h"
-#include "file/fs.h"
 #include "hardware/memlayout.h"
 #include "hardware/riscv.h"
-#include "param.h"
 #include "types.h"
 #include <string.h>
 
@@ -59,7 +56,7 @@ void kvminit(void) { kernel_pagetable = kvmmake(); }
 
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
-void kvminithart() {
+void kvminithart(void) {
   // wait for any previous writes to the page table memory to finish.
   sfence_vma();
 
@@ -206,7 +203,7 @@ void uvmunmap(pagetable_t pagetable, u64 va, u64 npages, int do_free) {
 
 // create an empty user page table.
 // returns 0 if out of memory.
-pagetable_t uvmcreate() {
+pagetable_t uvmcreate(void) {
   pagetable_t pagetable;
   pagetable = (pagetable_t)kalloc();
   if (pagetable == 0) {
@@ -268,7 +265,7 @@ u64 uvmdealloc(pagetable_t pagetable, u64 oldsz, u64 newsz) {
   }
 
   if (PGROUNDUP(newsz) < PGROUNDUP(oldsz)) {
-    int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
+    u64 npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
     uvmunmap(pagetable, PGROUNDUP(newsz), npages, 1);
   }
 
@@ -327,7 +324,7 @@ int uvmcopy(pagetable_t old, pagetable_t new, u64 sz) {
       goto err;
     }
     memmove(mem, (char*)pa, PGSIZE);
-    if (mappages(new, i, PGSIZE, (u64)mem, flags) != 0) {
+    if (mappages(new, i, PGSIZE, (u64)mem, (int)flags) != 0) {
       kfree(mem);
       goto err;
     }

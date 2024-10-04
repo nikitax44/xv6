@@ -22,14 +22,6 @@ struct fdt_reserve_entry {
   u64 size;
 };
 
-static inline u16 bswap16(u16 x) { return (x << 8) | (x >> 8); }
-static inline u32 bswap32(u32 x) {
-  return ((u32)bswap16(x & 0xffff) << 16) | bswap16(x >> 16);
-}
-static inline u64 bswap64(u64 x) {
-  return ((u64)bswap32(x & 0xffffffff) << 32) | bswap32(x >> 32);
-}
-
 u32 harts(struct fdt_header* dtb);
 
 #define DTB_READ(bits, ptr)                                                    \

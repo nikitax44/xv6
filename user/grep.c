@@ -1,8 +1,6 @@
 // Simple grep.  Only supports ^ . * $ operators.
 
 #include "kernel/fcntl.h"
-#include "kernel/file/stat.h"
-#include "kernel/types.h"
 #include "user/user.h"
 
 char buf[1024];
@@ -13,7 +11,7 @@ void grep(char* pattern, int fd) {
   char *p, *q;
 
   m = 0;
-  while ((n = _read(fd, buf + m, sizeof(buf) - m - 1)) > 0) {
+  while ((n = _read(fd, buf + m, (int)sizeof(buf) - m - 1)) > 0) {
     m += n;
     buf[m] = '\0';
     p      = buf;
@@ -21,12 +19,12 @@ void grep(char* pattern, int fd) {
       *q = 0;
       if (match(pattern, p)) {
         *q = '\n';
-        _write(1, p, q + 1 - p);
+        _write(1, p, (int)(q + 1 - p));
       }
       p = q + 1;
     }
     if (m > 0) {
-      m -= p - buf;
+      m -= (int)(p - buf);
       memmove(buf, p, m);
     }
   }

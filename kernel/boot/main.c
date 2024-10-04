@@ -1,9 +1,9 @@
 #include "kernel/defs.h"
 
 // start() jumps here in supervisor mode on all CPUs.
-void kernel_main() { scheduler(); }
+void kernel_main(void) { scheduler(); }
 
-void init_boot() {
+void init_boot(void) {
   consoleinit();
   printfinit();
   printf("\n");
@@ -25,7 +25,7 @@ void init_boot() {
   userinit();         // first user process
 }
 
-void init_other() {
+void init_other(void) {
   printf("hart %d starting\n", cpuid());
   kvminithart();   // turn on paging
   trapinithart();  // install kernel trap vector

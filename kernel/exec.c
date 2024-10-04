@@ -1,12 +1,10 @@
 #include "defs.h"
 #include "elf.h"
 #include "errno.h"
-#include "hardware/memlayout.h"
 #include "hardware/riscv.h"
 #include "param.h"
 #include "proc.h"
 #include "types.h"
-#include "util/spinlock.h"
 #include <string.h>
 
 static int loadseg(pde_t*, u64, struct inode*, u32, u32);
@@ -27,7 +25,7 @@ int flags2perm(int flags) {
 
 int execve(str path, str* argv, str* envp) {
   const char *   s, *last;
-  int            i, off;
+  u64            i, off;
   u64            argc, envc, sz = 0, sp, ustack[MAXARG], stackbase, base;
   struct elfhdr  elf;
   struct inode*  ip;
@@ -79,7 +77,7 @@ int execve(str path, str* argv, str* envp) {
     }
     u64 sz1;
     if ((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,
-                        flags2perm(ph.flags))) == 0) {
+                        flags2perm((int)ph.flags))) == 0) {
       ret = ENOMEM;
       goto bad;
     }
@@ -162,7 +160,7 @@ int execve(str path, str* argv, str* envp) {
   p->trapframe->sp  = sp;        // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
-  return argc; // this ends up in a0, the first argument to main(argc, argv,
+  return (int)argc; // this ends up in a0, the first argument to main(argc, argv,
                // envp)
 
 bad:

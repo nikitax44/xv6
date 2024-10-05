@@ -79,7 +79,7 @@ void uartinit(void) {
 // because it may block, it can't be called
 // from interrupts; it's only suitable for use
 // by write().
-void uartputc(int c) {
+void uartputc(char c) {
   acquire(&uart_tx_lock);
 
   if (panicked) {
@@ -101,7 +101,7 @@ void uartputc(int c) {
 // use interrupts, for use by kernel printf() and
 // to echo characters. it spins waiting for the uart's
 // output register to be empty.
-void uartputc_sync(int c) {
+void uartputc_sync(char c) {
   push_off();
 
   if (panicked) {

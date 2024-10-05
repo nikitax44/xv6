@@ -14,7 +14,7 @@ _*
 
 kernel/kernel
 .gdbinit
-/result
+result
 target/
 /.direnv
 /.idea

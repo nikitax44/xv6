@@ -33,7 +33,8 @@ impl fmt::Write for Console {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {{
-        let _console = $crate::printf::CONSOLE.lock();
+        use core::fmt::Write;
+        let mut _console = $crate::printf::CONSOLE.lock();
         write!(_console, $($arg)*).ok();
     }};
 }

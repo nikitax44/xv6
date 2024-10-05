@@ -1,7 +1,11 @@
 #include "kernel/defs.h"
+#include "kernel/errno.h"
+#include "kernel/hardware/memlayout.h"
 #include "kernel/proc.h"
+#include "kernel/sysinfo.h"
 #include "kernel/types.h"
 #include "kernel/util/spinlock.h"
+#include <sys/time.h>
 
 u64 sys_exit(void) {
   int n;
@@ -70,3 +74,43 @@ u64 sys_uptime(void) {
   release(&tickslock);
   return xticks;
 }
+
+u64 sys_gettimeofday(void) {
+  u64          outaddr, tzinfo;
+  struct proc* p = myproc();
+  argaddr(0, &outaddr);
+  argaddr(1, &tzinfo);
+  struct timeval time = {0, 0};
+  if (copyout(p->pagetable, outaddr, (const u8*)&time, sizeof(time)) < 0) {
+    return EFAULT;
+  }
+  return 0;
+}
+
+extern u8 end;
+
+u64 sys_sysinfo(void) {
+  u64          outaddr;
+  struct proc* p = myproc();
+  argaddr(0, &outaddr);
+  struct sysinfo info = {
+      .uptime    = sys_uptime(),
+      .loads     = {0},
+      .totalram  = PHYSTOP - (u64)&end,
+      .freeram   = PGSIZE * free_pages(),
+      .sharedram = 0,
+      .bufferram = 0,
+      .totalswap = 0,
+      .freeswap  = 0,
+      .procs     = 4,
+      .totalhigh = 0,
+      .freehigh  = 0,
+      .mem_unit  = 1,
+  };
+  if (copyout(p->pagetable, outaddr, (const u8*)&info, sizeof(info)) < 0) {
+    return EFAULT;
+  }
+  return 0;
+}
+
+u64 sys_futimesat(void) { return ENOSYS; }

@@ -68,6 +68,7 @@ void          itrunc(struct inode*);
 void* kalloc(void);
 void  kfree(void*);
 void  kinit(void);
+u64   free_pages(void);
 
 // log.c
 void initlog(int, struct superblock*);
@@ -192,3 +193,4 @@ extern void panic(char*) __attribute__((noreturn));
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))
+#define TODO     panic("todo");

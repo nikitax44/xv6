@@ -570,3 +570,37 @@ u64 sys_pipe(void) {
   }
   return 0;
 }
+
+u64 sys_getdents(void) {
+  struct file* f;
+  u64          output, size;
+  u32          sz;
+  if (argfd(0, 0, &f) < 0) {
+    return -1;
+  }
+  argaddr(0, &output);
+  argaddr(0, &size);
+  if (f->type != FD_INODE) {
+    return ENOTDIR;
+  }
+  ilock(f->ip);
+  if (f->ip->type != T_DIR) {
+    iunlock(f->ip);
+    return ENOTDIR;
+  }
+  u8* buf = kalloc();
+  if ((sz = readi(f->ip, false, (u64)buf, 0, PGSIZE)) == (u32)-1) {
+    kfree(buf);
+    iunlock(f->ip);
+    return ENOSYS;
+  }
+  iunlock(f->ip);
+
+  for (u32 pos = 0; pos < sz; pos++) {
+    // process((char*)buf+pos);
+    pos += strlen((char*)buf + pos);
+  }
+  kfree(buf);
+  return ENOSYS;
+  TODO
+}

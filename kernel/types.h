@@ -17,7 +17,10 @@ typedef usize     pde_t;
 typedef u8 bool;
 
 #ifndef NULL
-#define NULL  0
+#define NULL 0
+#endif
+
+#ifndef true
 #define true  1
 #define false 0
 #endif

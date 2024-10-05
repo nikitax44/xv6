@@ -21,11 +21,15 @@ struct run {
 
 struct {
   struct spinlock lock;
-  struct run*     freelist;
+  // requires lock
+  struct run* freelist;
+  // read-only if lock is not taken
+  u64 free_pages;
 } kmem;
 
 void kinit(void) {
   initlock(&kmem.lock, "kmem");
+  kmem.free_pages = 0;
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -56,6 +60,7 @@ void kfree(void* pa) {
   acquire(&kmem.lock);
   r->next       = kmem.freelist;
   kmem.freelist = r;
+  kmem.free_pages++;
   release(&kmem.lock);
 }
 
@@ -70,6 +75,7 @@ void* kalloc(void) {
   if (r) {
     kmem.freelist = r->next;
   }
+  kmem.free_pages--;
   release(&kmem.lock);
 
   if (r) {
@@ -77,3 +83,6 @@ void* kalloc(void) {
   }
   return (void*)r;
 }
+
+// free memory size
+u64 free_pages(void) { return kmem.free_pages; }

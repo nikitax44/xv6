@@ -172,8 +172,8 @@ int printf(str fmt, ...) {
 void panic(char* s) {
   pr.locking = 0;
   printf("panic: ");
-  printf("%s\n", s);
-  panicked = 1; // freeze uart output from other CPUs
+  printf("%s\n", s); // split off in case in is invalid
+  panicked = 1;      // freeze uart output from other CPUs
   shutdown();
 }
 

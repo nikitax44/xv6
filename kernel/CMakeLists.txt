@@ -59,11 +59,19 @@ add_custom_command(
         COMMENT "Generating _initcode.h from initcode.S"
 )
 
-add_custom_target(RebuildOnDependency ALL DEPENDS kernel.ld _initcode.h)
+add_custom_command(
+        OUTPUT librust_xv6.a
+        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/rust && cargo build --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target
+        COMMAND cp target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rust/src/*
+        COMMENT "Building rust part of xv6"
+)
+
+add_custom_target(RebuildOnDependency ALL DEPENDS kernel.ld _initcode.h librust_xv6.a)
 
 # Define the kernel target
 add_executable(kernel ${OBJS})
-target_link_libraries(kernel -lc)
+target_link_libraries(kernel -lc ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
 add_dependencies(kernel RebuildOnDependency)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld")
 

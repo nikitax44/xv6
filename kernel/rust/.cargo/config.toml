@@ -1,0 +1,13 @@
+[build]
+target = "riscv64gc-unknown-none-elf"
+
+[target.riscv64gc-unknown-none-elf]
+linker = "riscv-none-eabi-ld"
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+debug = 2
+opt-level = "z"
+lto = true

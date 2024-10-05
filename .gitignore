@@ -15,9 +15,10 @@ _*
 kernel/kernel
 .gdbinit
 /result
+target/
 /.direnv
 /.idea
-.gitignore
+.rustup
 
 # cmake
 /build/

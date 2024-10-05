@@ -2,9 +2,14 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    crane.url = "github:ipetkov/crane";
 
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -12,6 +17,9 @@
   outputs = inputs @ {
     flake-parts,
     treefmt-nix,
+    rust-overlay,
+    nixpkgs,
+    crane,
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} {
@@ -22,46 +30,41 @@
 
       perSystem = {
         config,
-        pkgs,
+        system,
         self',
         ...
       }: let
-        tpkg = pkgs.pkgsCross.riscv64-embedded;
-        newlib = tpkg.newlib.override {nanoizeNewlib = true;};
-        platform = tpkg.stdenv.hostPlatform.config;
+        localSystem = system;
+        crossSystem.config = "riscv64-unknown-none-elf";
 
-        qemu-script = pkgs.writeScript "qemu-script" ''
-          #!/bin/sh
-          set -e
-          BASE="$(dirname "$0")"
-          KERNEL="''${KERNEL:-$BASE/kernel}"
-          if [ -z "$FS" ]; then
-            FS="$(mktemp fs.XXXXXX.img)"
-            cp "$BASE/fs.img" "$FS"
-            echo "copied fs.img to $FS"
-            trap "rm -vf '$FS'" EXIT
-          fi
-          CPUS="''${CPUS:-$(nproc)}"
-          qemu-system-riscv64 \
-            -machine virt -m 128M -smp "$CPUS" -nographic \
-            -global virtio-mmio.force-legacy=false                     \
-            -drive file="$FS",if=none,format=raw,id=x0                 \
-            -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0   \
-            -kernel "$KERNEL"
-        '';
+        localPkgs = import nixpkgs {
+          inherit localSystem;
+        };
 
-        TOOLPREFIX = "${tpkg.stdenv.cc}/bin/${platform}-";
+        crossPkgs = import nixpkgs {
+          inherit crossSystem localSystem;
+          overlays = [(import rust-overlay)];
+        };
+
+        craneLib = (crane.mkLib crossPkgs).overrideToolchain (p: p.rust-bin.stable.latest.default);
+
+        rust-xv6 = crossPkgs.callPackage ./kernel/rust {inherit craneLib;};
+
+        newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
+        platform = crossPkgs.stdenv.hostPlatform.config;
+
+        TOOLPREFIX = "${crossPkgs.stdenv.cc}/bin/${platform}-";
         NEWLIB = "${newlib}/${platform}";
         nativeBuildInputs = [
-          pkgs.stdenv.cc
-          pkgs.perl
-          pkgs.fd
-          pkgs.cmake
-          pkgs.unixtools.xxd
-          (pkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
+          localPkgs.stdenv.cc
+          localPkgs.perl
+          localPkgs.fd
+          localPkgs.cmake
+          localPkgs.unixtools.xxd
+          (localPkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
         ];
         buildInputs = [newlib];
-        busybox = pkgs.pkgsCross.riscv64.busybox.override {
+        busybox = localPkgs.pkgsCross.riscv64.busybox.override {
           enableStatic = true;
           enableAppletSymlinks = false;
           enableMinimal = true;
@@ -71,29 +74,33 @@
 
         checks = {
           build-test = self'.packages.default;
+          inherit rust-xv6;
         };
 
-        devShells.default = tpkg.mkShell {
-          NL = "${pkgs.pkgsCross.riscv64.newlib}/${pkgs.pkgsCross.riscv64.stdenv.hostPlatform.config}";
+        devShells.default = craneLib.devShell {
+          inputsFrom = [rust-xv6];
           packages = [
             config.treefmt.build.wrapper
-            pkgs.pkgsCross.riscv64.stdenv.cc # not tpkg.stdenv.cc
-            pkgs.gnumake
-            pkgs.clang-tools
+            localPkgs.gnumake
+            localPkgs.clang-tools
           ];
           inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
         };
 
-        packages.default = tpkg.stdenv.mkDerivation {
+        packages.default = crossPkgs.stdenv.mkDerivation {
           src = ./.;
           pname = "xv6";
           version = "none";
+          preBuild = ''
+            cp ${rust-xv6}/lib/librust_xv6.a kernel/
+          '';
           inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
           installPhase = ''
             mkdir $out
             cp kernel/kernel $out/
             cp fs.img $out/
-            cp ${qemu-script} $out/qemu-script
+            cp $src/qemu-script.sh $out/qemu-script
+            chmod a+x $out/qemu-script
           '';
         };
       };

@@ -43,22 +43,30 @@ impl<T: Clone> Clone for Spinlock<T> {
 
 impl<T> Drop for SpinlockGuard<'_, T> {
     fn drop(&mut self) {
-        self.lock.locked.store(false, Ordering::Release)
+        self.lock.locked.store(false, Ordering::Release);
     }
 }
 
 impl<T> Deref for SpinlockGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
+        // SAFETY:
+        // we have acquired the lock, nobody else can use it.
         unsafe { &*self.lock.data.get() }
     }
 }
 
 impl<T> DerefMut for SpinlockGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
+        // SAFETY:
+        // we have acquired the lock, nobody else can use it.
         unsafe { &mut *self.lock.data.get() }
     }
 }
 
+// # SAFETY:
+// if T can be sent, so can be `Spinlock<T>`
 unsafe impl<T: Send> Send for Spinlock<T> {}
+// # SAFETY:
+// `Spinlock` guarantees that undelying value can be accessed only from one thread at a time
 unsafe impl<T: Send> Sync for Spinlock<T> {}

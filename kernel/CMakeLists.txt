@@ -31,7 +31,6 @@ set(OBJS
         util/util.c
 
         console.c
-        kalloc.c
         vm.c
         proc.c
         trap.c

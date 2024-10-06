@@ -64,12 +64,6 @@ void          stati(struct inode*, struct stat*);
 u32           writei(struct inode*, int, u64, u32, u32);
 void          itrunc(struct inode*);
 
-// kalloc.c
-void* kalloc(void);
-void  kfree(void*);
-void  kinit(void);
-u64   free_pages(void);
-
 // log.c
 void initlog(int, struct superblock*);
 void log_write(struct buf*);
@@ -188,8 +182,15 @@ void virtio_disk_init(void);
 void virtio_disk_rw(struct buf*, int);
 void virtio_disk_intr(void);
 
-// rust
+// #### Rust ####
+// panic
 extern void panic(char*) __attribute__((noreturn));
+
+// kalloc
+extern void* kalloc(void);
+extern void  kfree(void*);
+extern void  kinit(void);
+extern u64   free_pages(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))

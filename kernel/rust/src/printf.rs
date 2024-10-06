@@ -10,13 +10,15 @@ extern "C" {
 
 impl Console {
     pub fn _putc(&mut self, c: u8) {
+        // SAFETY:
+        // c is byte.
         unsafe {
-            consputc(c as c_int);
+            consputc(c.into());
         }
     }
 
     pub fn puts(&mut self, s: &str) {
-        s.as_bytes().iter().for_each(|&c| self._putc(c))
+        s.as_bytes().iter().for_each(|&c| self._putc(c));
     }
 }
 

@@ -11,7 +11,7 @@ extern "C" {
 }
 
 pub fn raw_panic(msg: &CStr) -> ! {
-    // # Safety
+    // SAFETY:
     // msg is valid CStr
     unsafe { _panic(msg.as_ptr()) }
 }
@@ -31,8 +31,13 @@ fn handle_panic(info: &PanicInfo) -> ! {
 
 /// # Safety
 /// msg must point to valid null-terminated string
+/// # Panics
+/// always, that is the point of this function
+/// the function itself shouldn't panic
 #[no_mangle]
 pub unsafe extern "C" fn panic(msg: *const c_char) -> ! {
+    // SAFETY:
+    // see precondition
     let cstr = unsafe { CStr::from_ptr::<'_>(msg) };
 
     let mut vec = Vec::new();

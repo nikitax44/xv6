@@ -1,4 +1,4 @@
-use alloc::alloc::{GlobalAlloc, Layout};
+use core::alloc::{GlobalAlloc, Layout};
 use core::cell::UnsafeCell;
 use core::ptr::null_mut;
 use core::sync::atomic::{AtomicUsize, Ordering::Relaxed};
@@ -17,8 +17,14 @@ static ALLOCATOR: SimpleAllocator = SimpleAllocator {
     remaining: AtomicUsize::new(ARENA_SIZE),
 };
 
+/// # SAFETY:
+/// all operations are synced with atomics
 unsafe impl Sync for SimpleAllocator {}
 
+/// # SAFETY:
+/// ## alloc
+/// 1. never unwinds.
+/// 2. always returns valid memory.
 unsafe impl GlobalAlloc for SimpleAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let size = layout.size();
@@ -48,7 +54,9 @@ unsafe impl GlobalAlloc for SimpleAllocator {
         {
             return null_mut();
         };
-        self.arena.get().cast::<u8>().add(allocated)
+        // SAFETY:
+        // never overflows as it points inside the arena
+        unsafe { self.arena.get().cast::<u8>().add(allocated) }
     }
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {}
 }

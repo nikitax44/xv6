@@ -169,7 +169,7 @@ int printf(str fmt, ...) {
   return 0;
 }
 
-void panic(char* s) {
+void _panic(char* s) {
   pr.locking = 0;
   printf("panic: ");
   printf("%s\n", s); // split off in case in is invalid

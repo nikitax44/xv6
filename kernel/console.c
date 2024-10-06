@@ -138,6 +138,9 @@ void consoleintr(int c) {
     printf("\nctrl+R: reboot\n");
     reboot();
     break;
+  case C('N'):
+    panic("ctrl+I: panic");
+    break;
   case C('C'): // Kill process
     kill_all();
     // fallthrough

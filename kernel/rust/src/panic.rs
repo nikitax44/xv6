@@ -4,14 +4,16 @@ use core::ffi::{c_char, CStr};
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
 
-const BUG_MSG: &CStr = c"rust: NUL in panic message";
-
 extern "C" {
-    fn panic(msg: *const c_char) -> !;
+    /// # Safety
+    /// msg must point to valid C-string
+    fn _panic(msg: *const c_char) -> !;
 }
 
-fn raw_panic(msg: &CStr) -> ! {
-    unsafe { panic(msg.as_ptr()) }
+pub fn raw_panic(msg: &CStr) -> ! {
+    // # Safety
+    // msg is valid CStr
+    unsafe { _panic(msg.as_ptr()) }
 }
 
 #[panic_handler]
@@ -23,8 +25,21 @@ fn handle_panic(info: &PanicInfo) -> ! {
     if let Ok(cstr) = CString::from_vec_with_nul(vec) {
         raw_panic(&cstr)
     } else {
-        raw_panic(BUG_MSG)
+        raw_panic(c"rust: NUL in panic message")
     }
+}
+
+/// # Safety
+/// msg must point to valid null-terminated string
+#[no_mangle]
+pub unsafe extern "C" fn panic(msg: *const c_char) -> ! {
+    let cstr = unsafe { CStr::from_ptr::<'_>(msg) };
+
+    let mut vec = Vec::new();
+    vec.extend_from_slice(b"C FFI:  ");
+    vec.extend_from_slice(cstr.to_bytes_with_nul());
+    let out = CString::from_vec_with_nul(vec).unwrap();
+    raw_panic(&out)
 }
 
 struct Bytes<'s>(&'s mut Vec<u8>);
@@ -32,7 +47,6 @@ struct Bytes<'s>(&'s mut Vec<u8>);
 impl fmt::Write for Bytes<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.0.extend_from_slice(s.as_bytes());
-
         Ok(())
     }
 }

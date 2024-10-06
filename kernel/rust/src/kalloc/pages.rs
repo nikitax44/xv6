@@ -76,10 +76,16 @@ impl PageHandle {
         self.ptr.0.fill(0x1d);
     }
 
-    pub fn leak(self) -> *mut () {
-        let ptr = ptr::from_ref(self.ptr);
+    pub fn leak(self) -> ptr::NonNull<Page> {
+        let ptr = ptr::from_mut(self.ptr);
         core::mem::forget(self);
-        ptr as *mut ()
+        ptr::NonNull::new(ptr).unwrap()
+    }
+
+    #[must_use]
+    pub fn zeroed(self) -> Self {
+        self.ptr.0.fill(0);
+        self
     }
 }
 
@@ -184,7 +190,7 @@ mod ffi {
     extern "C" fn kalloc() -> *mut c_void {
         KMEM.lock()
             .alloc()
-            .map(|page| page.leak().cast())
+            .map(|page| page.leak().cast().as_ptr())
             .unwrap_or_else(ptr::null_mut)
     }
 
@@ -199,6 +205,6 @@ mod ffi {
 
     #[no_mangle]
     extern "C" fn free_pages() -> usize {
-        return KMEM.lock().free_pages();
+        KMEM.lock().free_pages()
     }
 }

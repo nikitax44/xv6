@@ -46,6 +46,8 @@ pub mod kalloc;
 pub mod panic;
 pub mod printf;
 pub mod spinlock;
+pub mod util;
+pub mod vm;
 
 #[no_mangle]
 pub extern "C" fn rustdiv(x: i32, y: i32) -> i32 {

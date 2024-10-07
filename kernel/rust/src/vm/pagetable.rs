@@ -1,4 +1,3 @@
-use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::{PGSHIFT, PGSIZE};
 use crate::vm::mode::Mode;
 use crate::vm::pt_inner::IPagetable;
@@ -7,17 +6,23 @@ use crate::vm::PTError;
 use core::ops::IndexMut;
 
 #[repr(transparent)]
-pub struct Pagetable {
-    pub(super) inner: ThinBox<IPagetable>,
+pub struct Pagetable<'inner> {
+    pub(super) inner: &'inner mut IPagetable,
 }
 
-impl Pagetable {
+impl Pagetable<'static> {
+    pub fn alloc() -> Result<Self, PTError> {
+        Ok(Self::new(
+            IPagetable::new().ok_or(PTError::AllocFail)?.leak_ref(),
+        ))
+    }
+}
+
+impl<'inner> Pagetable<'inner> {
     /// # Errors
     /// malloc failed
-    pub fn new() -> Result<Self, PTError> {
-        Ok(Self {
-            inner: IPagetable::new().ok_or(PTError::AllocFail)?,
-        })
+    pub fn new(inner: &'inner mut IPagetable) -> Self {
+        Self { inner }
     }
 
     const PTELVLS: usize = 3;
@@ -87,14 +92,22 @@ impl Pagetable {
     pub fn map_page(
         &mut self,
         virtual_address: usize,
-        physycal_address: usize,
+        physical_address: usize,
         perm: Mode,
     ) -> Result<(), PTError> {
         let pte = self.walk_mut(virtual_address)?;
         if pte.flags().contains(Mode::PTE_V) {
             return Err(PTError::Remap);
         };
-        pte.set(physycal_address, perm)
+        pte.set(physical_address, perm)?;
+
+        assert_eq!(
+            self.walk(virtual_address)
+                .expect("failed to properly map")
+                .get(),
+            Some((physical_address, perm | Mode::PTE_V))
+        );
+        Ok(())
     }
 
     /// # Errors
@@ -123,5 +136,30 @@ impl Pagetable {
         (0usize..size).step_by(PGSIZE).try_for_each(|offset| {
             self.map_page(virtual_address + offset, physical_address + offset, mode)
         })
+    }
+}
+
+mod ffi {
+    use crate::vm::mode::Mode;
+    use crate::vm::pagetable::Pagetable;
+    use crate::vm::PTError;
+
+    //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)
+    #[no_mangle]
+    fn mappages(
+        mut pt: Pagetable,
+        virtual_address: usize,
+        size: usize,
+        physical_address: usize,
+        perm: Mode,
+    ) -> bool {
+        if let Err(err) = pt.map_pages(virtual_address, physical_address, size, perm) {
+            return match err {
+                PTError::AllocFail => true,
+
+                _ => panic!("ffi::mappages: {:?}", err),
+            };
+        }
+        false
     }
 }

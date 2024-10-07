@@ -1,4 +1,4 @@
-use crate::memlayout::{end_kernel, PGSIZE, PHYSTOP};
+use crate::memlayout::{addrof_end_kernel, PGSIZE, PHYSTOP};
 use crate::println;
 use crate::spinlock::Spinlock;
 use crate::util::once::Once;
@@ -48,12 +48,11 @@ pub unsafe fn init() {
 
     // SAFETY:
     // we're only using address and not actual value
-    let start = end_kernel() as *mut Page;
+    let start = addrof_end_kernel() as *mut Page;
+    assert!(start.is_aligned(), "kernel's .end is not page-aligned");
+    let start = ptr::NonNull::new(start).unwrap();
 
     let inner = || {
-        assert!(start.is_aligned(), "kernel's .end is not page-aligned");
-        let start = ptr::NonNull::new(start).unwrap();
-
         let pages = (0..)
             // SAFETY: it is one contiguous object
             .map(|i| unsafe { start.add(i) })
@@ -68,6 +67,7 @@ pub unsafe fn init() {
     println!("kalloc pool: {} pages", kmem.free_pages());
     println!("  start: {:?}", start);
     println!("  end:   {:?}", PHYSTOP as *const ());
+    println!();
 }
 
 impl PageHandle {

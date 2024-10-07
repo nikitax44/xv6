@@ -35,21 +35,21 @@ mod symbols {
 }
 
 #[must_use]
-pub fn end_kernel() -> usize {
+pub fn addrof_end_kernel() -> usize {
     // SAFETY:
     // only address is accessed
     unsafe { ptr::from_ref(&symbols::end) as usize }
 }
 
 #[must_use]
-pub fn end_text() -> usize {
+pub fn addrof_end_text() -> usize {
     // SAFETY:
     // only address is accessed
     unsafe { ptr::from_ref(&symbols::etext) as usize }
 }
 
 #[must_use]
-pub fn trampoline() -> usize {
+pub fn addrof_trampoline() -> usize {
     // SAFETY:
     // only address is accessed
     unsafe { ptr::from_ref(&symbols::trampoline) as usize }

@@ -22,6 +22,12 @@ impl<T: ?Sized> ThinBox<T> {
     pub fn leak(self) -> NonNull<T> {
         core::mem::ManuallyDrop::new(self).inner
     }
+
+    #[must_use]
+    pub fn leak_ref(self) -> &'static mut T {
+        // SAFETY: we owned it.
+        unsafe { self.leak().as_mut() }
+    }
 }
 
 impl<T: ?Sized> From<&'static mut T> for ThinBox<T> {

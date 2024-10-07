@@ -44,7 +44,7 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     () => {
-        print!("\n");
+        $crate::print!("\n");
     };
     ($($arg:tt)*) => {{
         use core::fmt::Write;

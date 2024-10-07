@@ -1,8 +1,5 @@
 #include "kernel/defs.h"
 
-extern void rustinit();
-extern i32  rustdiv(i32 x, i32 y);
-
 // start() jumps here in supervisor mode on all CPUs.
 void kernel_main(void) { scheduler(); }
 
@@ -12,8 +9,6 @@ void init_boot(void) {
   printf("\n");
   printf("xv6 kernel is booting\n");
   printf("\n");
-  rustinit();
-  printf("30/4=%d\n", rustdiv(30, 4)); // try to divide by zero
 
   kinit();            // physical page allocator
   kvminit();          // create kernel page table

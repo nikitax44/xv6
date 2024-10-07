@@ -8,3 +8,4 @@ name = "rust_xv6"
 crate-type = ["staticlib"]
 
 [dependencies]
+bitflags = "2.6.0"

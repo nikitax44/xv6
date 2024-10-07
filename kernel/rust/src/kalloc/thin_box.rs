@@ -4,13 +4,14 @@ use core::ptr::NonNull;
 /// # Invariant
 /// inner is valid and properly aligned.
 /// `ThinBox` owns `inner`'s content
+#[repr(transparent)]
 pub struct ThinBox<T: ?Sized> {
     inner: NonNull<T>,
 }
 
 impl<T: ?Sized> ThinBox<T> {
     /// # Safety
-    /// `inner` is valid, properly aligned and you have ownership over it's contents
+    /// `inner` is valid, properly aligned, and you have ownership over its contents
     /// you transfer the ownership over the `inner` contents to `ThinBox`
     #[must_use]
     pub unsafe fn new(inner: NonNull<T>) -> Self {
@@ -20,6 +21,13 @@ impl<T: ?Sized> ThinBox<T> {
     #[must_use]
     pub fn leak(self) -> NonNull<T> {
         core::mem::ManuallyDrop::new(self).inner
+    }
+}
+
+impl<T: ?Sized> From<&'static mut T> for ThinBox<T> {
+    fn from(value: &'static mut T) -> Self {
+        // SAFETY: inner is valid and properly aligned. we were given the ownership for 'static
+        unsafe { Self::new(value.into()) }
     }
 }
 

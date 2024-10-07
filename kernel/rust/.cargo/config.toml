@@ -5,7 +5,9 @@ target = "riscv64gc-unknown-none-elf"
 linker = "riscv-none-eabi-ld"
 
 [profile.dev]
-opt-level = "s"
+debug = "full"
+opt-level = 0
+lto = false
 
 [profile.release]
 debug = 2

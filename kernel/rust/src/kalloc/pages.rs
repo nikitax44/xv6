@@ -1,21 +1,10 @@
-const PHYSTOP: usize = 0x8000_0000 + 128 * 1024 * 1024;
-const PGSIZE: usize = 4096;
+use crate::memlayout::{end_kernel, PGSIZE, PHYSTOP};
 use crate::println;
 use crate::spinlock::Spinlock;
 use crate::util::once::Once;
-use core::ffi::c_void;
 use core::mem;
 use core::panic::Location;
 use core::ptr;
-
-#[repr(transparent)]
-struct Symbol {
-    _placeholder: c_void,
-}
-
-extern "C" {
-    static end: Symbol;
-}
 
 type Origin = &'static Location<'static>;
 
@@ -59,14 +48,9 @@ pub unsafe fn init() {
 
     // SAFETY:
     // we're only using address and not actual value
-    let start = unsafe { ptr::from_ref(&end) };
+    let start = end_kernel() as *mut Page;
 
     let inner = || {
-        #[expect(
-            clippy::cast_ptr_alignment,
-            reason = "we check the alignment in runtime"
-        )]
-        let start = start.cast::<Page>().cast_mut();
         assert!(start.is_aligned(), "kernel's .end is not page-aligned");
         let start = ptr::NonNull::new(start).unwrap();
 
@@ -135,7 +119,21 @@ impl PageHandle {
 
     /// # Panics
     /// if sizeof(T)>sizeof(Page)
-    pub fn as_uninit<T>(&mut self) -> &mut mem::MaybeUninit<T> {
+    #[must_use]
+    pub fn leak_uninit<T: 'static>(self) -> &'static mut mem::MaybeUninit<T> {
+        assert!(
+            size_of::<T>() <= size_of::<Page>(),
+            "attempt to get uninit with size exceeding Page"
+        );
+        // SAFETY:
+        // we own the ptr and MaybeUninit is valid for any bit pattern
+        unsafe { self.leak().cast().as_mut() }
+    }
+
+    /// # Panics
+    /// if sizeof(T)>sizeof(Page)
+    #[must_use]
+    pub fn as_uninit<T: 'static>(&mut self) -> &mut mem::MaybeUninit<T> {
         assert!(
             size_of::<T>() <= size_of::<Page>(),
             "attempt to get uninit with size exceeding Page"

@@ -14,7 +14,8 @@ extern char etext[]; // kernel.ld sets this to end of kernel code.
 extern char trampoline[]; // trampoline.S
 
 // Make a direct-map page table for the kernel.
-pagetable_t kvmmake(void) {
+pagetable_t kvmmake(void);
+pagetable_t kvmmake_(void) {
   pagetable_t kpgtbl;
 
   kpgtbl = (pagetable_t)kalloc();
@@ -54,9 +55,12 @@ pagetable_t kvmmake(void) {
 // Initialize the one kernel_pagetable
 void kvminit(void) { kernel_pagetable = kvmmake(); }
 
+pagetable_t kvmdebug(pagetable_t);
+
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 void kvminithart(void) {
+  kernel_pagetable = kvmdebug(kernel_pagetable);
   // wait for any previous writes to the page table memory to finish.
   sfence_vma();
 
@@ -64,6 +68,7 @@ void kvminithart(void) {
 
   // flush stale entries from the TLB.
   sfence_vma();
+  printf("activated kvm for hart %u\n", cpuid());
 }
 
 // Return the address of the PTE in page table pagetable

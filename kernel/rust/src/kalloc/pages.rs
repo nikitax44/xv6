@@ -1,8 +1,9 @@
-const PHYSTOP: usize = 0x80000000 + 128 * 1024 * 1024;
+const PHYSTOP: usize = 0x8000_0000 + 128 * 1024 * 1024;
 const PGSIZE: usize = 4096;
 use crate::println;
 use crate::spinlock::Spinlock;
 use core::ffi::c_char;
+use core::mem;
 use core::ptr;
 
 extern "C" {
@@ -13,7 +14,7 @@ extern "C" {
 pub struct Page(pub [u8; PGSIZE]);
 
 pub struct PageHandle {
-    ptr: &'static mut Page,
+    ptr: ptr::NonNull<Page>,
 }
 
 /// # Invariant
@@ -21,7 +22,7 @@ pub struct PageHandle {
 /// `free_pages` is length of that list
 /// `KMem` has ownership over all pages in that list
 pub struct KMem {
-    data: Option<ptr::NonNull<Page>>,
+    data: Option<PageHandle>,
     free_pages: usize,
 }
 
@@ -44,54 +45,72 @@ pub unsafe fn init() {
     let mut kmem = KMEM.lock();
     // SAFETY:
     // we're only using address and not actual value
-    let start = unsafe { ptr::from_ref(&end) } as *mut ();
-    assert_eq!(
-        start as usize % PGSIZE,
-        0,
-        "kernel's .end is not page-aligned"
-    );
+    let start = unsafe { ptr::from_ref(&end) }.cast::<Page>().cast_mut();
+    assert!(start.is_aligned(), "kernel's .end is not page-aligned");
     assert_eq!(PHYSTOP % PGSIZE, 0, "PHYSTOP is not page-aligned");
     // # SAFETY:
     // see preconditions
-    unsafe { kmem.free_range(start, PHYSTOP as *mut ()) }
+    unsafe {
+        kmem.free_range(
+            ptr::NonNull::new(start).unwrap(),
+            ptr::NonNull::new(PHYSTOP as *mut Page).unwrap(),
+        );
+    }
 }
 
 impl PageHandle {
     /// # Safety
-    /// ptr must be page-aligned
     /// you must have the ownership over the page at ptr
-    pub unsafe fn new(ptr: *mut Page) -> Self {
-        Self {
-            // SAFETY:
-            // precondition
-            ptr: unsafe { &mut *ptr },
-        }
+    /// # Panics
+    /// ptr must be page-aligned
+    #[must_use]
+    pub unsafe fn new(ptr: ptr::NonNull<Page>) -> Self {
+        assert!(ptr.is_aligned(), "ptr is not page-aligned");
+        Self { ptr }
     }
 
     fn mark_freed(&mut self) {
-        self.ptr.0.fill(0x19);
+        self.raw_page().0.fill(0x19);
     }
 
     fn mark_allocated(&mut self) {
-        self.ptr.0.fill(0x1d);
-    }
-
-    pub fn leak(self) -> ptr::NonNull<Page> {
-        let ptr = ptr::from_mut(self.ptr);
-        core::mem::forget(self);
-        ptr::NonNull::new(ptr).unwrap()
+        self.raw_page().0.fill(0x1d);
     }
 
     #[must_use]
-    pub fn zeroed(self) -> Self {
-        self.ptr.0.fill(0);
+    pub fn leak(self) -> ptr::NonNull<Page> {
+        mem::ManuallyDrop::new(self).ptr
+    }
+
+    pub fn raw_page(&mut self) -> &mut Page {
+        // SAFETY:
+        // we own the ptr contents
+        unsafe { self.ptr.as_mut() }
+    }
+
+    #[must_use]
+    pub fn zeroed(mut self) -> Self {
+        self.raw_page().0.fill(0);
         self
+    }
+
+    /// # Panics
+    /// if sizeof(T)>sizeof(Page)
+    pub fn as_uninit<T>(&mut self) -> &mut mem::MaybeUninit<T> {
+        assert!(
+            mem::size_of::<T>() <= mem::size_of::<Page>(),
+            "attempt to get uninit with size exceeding Page"
+        );
+        assert!(mem::align_of::<T>() <= mem::align_of::<Page>(), "wut?");
+        // SAFETY:
+        // we own the ptr and MaybeUninit is valid for any bit pattern as well as Page
+        unsafe { self.ptr.cast().as_mut() }
     }
 }
 
 impl Drop for PageHandle {
     fn drop(&mut self) {
-        println!("memory leak: {:?}", ptr::from_ref(self.ptr));
+        println!("memory leak: {:?}", self.ptr);
     }
 }
 
@@ -101,56 +120,31 @@ impl KMem {
     /// you must have the ownership over this memory range
     /// # Panics
     /// `start` and `end` must be aligned to PGSIZE
-    pub unsafe fn free_range(&mut self, start: *mut (), end_: *mut ()) {
-        assert_eq!(start as usize % PGSIZE, 0, "start is not page-aligned");
-        assert_eq!(end_ as usize % PGSIZE, 0, "end is not page-aligned");
-        for p in (start as usize..end_ as usize).step_by(PGSIZE) {
+    pub unsafe fn free_range(&mut self, start: ptr::NonNull<Page>, end_: ptr::NonNull<Page>) {
+        assert!(start.is_aligned(), "start is not page-aligned");
+        assert!(end_.is_aligned(), "end is not page-aligned");
+        for p in (start.as_ptr() as usize..end_.as_ptr() as usize).step_by(PGSIZE) {
+            let p = ptr::NonNull::new(p as *mut Page).unwrap();
             // SAFETY: we have ownership
-            unsafe {
-                self.free_page(p as *mut ());
-            }
+            let page = unsafe { PageHandle::new(p) };
+            self.free(page);
         }
     }
 
-    /// # Safety
-    /// you must have the ownership over page
-    /// # Panics
-    /// `page` is not page-aligned
-    pub unsafe fn free_page(&mut self, page: *mut ()) {
-        assert_eq!(page as usize % PGSIZE, 0, "ptr is not page-aligned");
-        // SAFETY:
-        // see preconditions
-        self.free(unsafe { PageHandle::new(page as *mut Page) });
-    }
-
-    /// # Panics
-    /// never
     pub fn free(&mut self, mut page: PageHandle) {
         page.mark_freed();
-        let ptr = page.ptr as *mut Page;
-        core::mem::forget(page);
-
-        // SAFETY:
-        // we have ownership over memory at ptr and ptr is page-aligned
-        unsafe {
-            ptr::write(ptr as *mut Option<ptr::NonNull<Page>>, self.data.take());
-        }
-
-        self.data = ptr::NonNull::new(ptr); // always returns Some
-        assert!(self.data.is_some(), "wut?");
-
+        page.as_uninit::<Option<PageHandle>>()
+            .write(self.data.take());
+        self.data = Some(page);
         self.free_pages += 1;
     }
 
     pub fn alloc(&mut self) -> Option<PageHandle> {
-        if let Some(page) = self.data {
+        if let Some(mut page) = self.data.take() {
             // SAFETY:
-            // we can read contents.
-            self.data = ptr::NonNull::new(unsafe { ptr::read(page.as_ptr() as *mut *mut Page) });
+            // we wrote value of this type beforehand.
+            self.data = unsafe { page.as_uninit::<Option<PageHandle>>().assume_init_mut() }.take();
             self.free_pages -= 1;
-            // SAFETY:
-            // we own the page
-            let mut page = unsafe { PageHandle::new(page.as_ptr()) };
             page.mark_allocated();
             Some(page)
         } else {
@@ -196,11 +190,11 @@ mod ffi {
 
     #[no_mangle]
     unsafe extern "C" fn kfree(ptr: *mut c_void) {
+        let ptr = ptr::NonNull::new(ptr.cast()).expect("kfree(null)");
         // SAFETY:
         // precondition
-        unsafe {
-            KMEM.lock().free_page(ptr as *mut ());
-        }
+        let page = unsafe { super::PageHandle::new(ptr) };
+        KMEM.lock().free(page);
     }
 
     #[no_mangle]

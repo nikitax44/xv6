@@ -1,6 +1,6 @@
 use crate::kalloc::pages::KMEM;
+use crate::kalloc::thin_box::ThinBox;
 use crate::util::{assert_page_aligned, PGSHIFT, PGSIZE};
-use core::ptr::NonNull;
 const PTE_V: usize = 1 << 0; // valid
 const PTE_R: usize = 1 << 1;
 const PTE_W: usize = 1 << 2;
@@ -13,11 +13,6 @@ const PTESIZE: usize = 1 << PTESHIFT;
 const PTEMASK: usize = (1 << PTESHIFT) - 1;
 const MAXVA: usize = 1 << (PTELVLS * PTESHIFT + PGSHIFT - 1);
 
-union PtInner {
-    addr: Option<NonNull<Pagetable>>,
-    pte: PtEntry,
-}
-
 #[derive(Copy, Clone)]
 pub struct PtEntry(usize);
 
@@ -29,11 +24,19 @@ pub enum MMapError {
     InvalidAddress,
 }
 
-pub struct Pagetable {
-    data: [PtInner; PTESIZE],
+pub struct Pagetable0 {
+    pte0: [PtEntry; PTESIZE],
 }
 
-impl Pagetable {
+pub struct Pagetable1 {
+    pte1: [Option<ThinBox<Pagetable0>>; PTESIZE],
+}
+
+pub struct Pagetable2 {
+    pte2: [Option<ThinBox<Pagetable1>>; PTESIZE],
+}
+
+impl Pagetable2 {
     fn get_idx(level: usize, virtual_address: usize) -> usize {
         (virtual_address >> (PGSHIFT + PTESHIFT * level)) & PTEMASK
     }
@@ -45,29 +48,15 @@ impl Pagetable {
             return Err(MMapError::InvalidAddress);
         };
 
-        let pt2: &Self = self;
+        let pt1: &Pagetable1 = self.pte2[Self::get_idx(2, virtual_address)]
+            .as_ref()
+            .ok_or(MMapError::NotMapped)?;
 
-        // SAFETY:
-        // statically known
-        let pt1_addr = unsafe { pt2.data[Self::get_idx(2, virtual_address)].addr };
-        // SAFETY:
-        // we own this ptr, it is safe
-        let pt1: &Self = unsafe { pt1_addr.ok_or(MMapError::NotMapped)?.as_ref() };
+        let pt0: &Pagetable0 = pt1.pte1[Self::get_idx(1, virtual_address)]
+            .as_ref()
+            .ok_or(MMapError::NotMapped)?;
 
-        // SAFETY:
-        // statically known
-        let pt0_addr = unsafe { pt1.data[Self::get_idx(1, virtual_address)].addr };
-        // SAFETY:
-        // we own this ptr, it is safe
-        let pt0: &Self = unsafe { pt0_addr.ok_or(MMapError::NotMapped)?.as_ref() };
-
-        // SAFETY:
-        // statically known
-        let final_pte = unsafe { pt0.data[Self::get_idx(0, virtual_address)].pte };
-        if final_pte.0 == 0 {
-            return Err(MMapError::NotMapped);
-        }
-        Ok(final_pte)
+        Ok(pt0.pte0[Self::get_idx(0, virtual_address)])
     }
 
     /// # Errors
@@ -77,33 +66,35 @@ impl Pagetable {
             return Err(MMapError::InvalidAddress);
         };
 
-        let pt2: &mut Self = self;
-
-        // SAFETY:
-        // statically known
-        let pt_entry2 = unsafe { &mut pt2.data[Self::get_idx(2, virtual_address)].addr };
+        let pt_entry2: &mut Option<ThinBox<Pagetable1>> =
+            &mut self.pte2[Self::get_idx(2, virtual_address)];
         if pt_entry2.is_none() {
-            *pt_entry2 = KMEM.lock().alloc().map(|page| page.zeroed().leak().cast());
+            *pt_entry2 = KMEM
+                .lock()
+                .alloc()
+                .map(|page| page.zeroed().leak().cast::<Pagetable1>())
+                // SAFETY:
+                // page points to valid Pagetable1
+                .map(|page| unsafe { ThinBox::new(page) });
         }
 
-        // SAFETY:
-        // we own this ptr, it is safe
-        let pt1: &mut Self = unsafe { pt_entry2.ok_or(MMapError::MallocFail)?.as_mut() };
+        let pt1: &mut Pagetable1 = pt_entry2.as_mut().ok_or(MMapError::MallocFail)?;
 
-        // SAFETY:
-        // statically known
-        let pt_entry1 = unsafe { &mut pt1.data[Self::get_idx(1, virtual_address)].addr };
+        let pt_entry1: &mut Option<ThinBox<Pagetable0>> =
+            &mut pt1.pte1[Self::get_idx(1, virtual_address)];
         if pt_entry1.is_none() {
-            *pt_entry1 = KMEM.lock().alloc().map(|page| page.zeroed().leak().cast());
+            *pt_entry1 = KMEM
+                .lock()
+                .alloc()
+                .map(|page| page.zeroed().leak().cast::<Pagetable0>())
+                // SAFETY:
+                // page points to valid Pagetable0
+                .map(|page| unsafe { ThinBox::new(page) });
         }
 
-        // SAFETY:
-        // we own this ptr, it is safe
-        let pt0: &mut Self = unsafe { pt_entry1.ok_or(MMapError::MallocFail)?.as_mut() };
+        let pt0: &mut Pagetable0 = pt_entry1.as_mut().ok_or(MMapError::MallocFail)?;
 
-        // SAFETY:
-        // statically known
-        Ok(unsafe { &mut pt0.data[Self::get_idx(0, virtual_address)].pte })
+        Ok(&mut pt0.pte0[Self::get_idx(0, virtual_address)])
     }
 
     /// # Errors

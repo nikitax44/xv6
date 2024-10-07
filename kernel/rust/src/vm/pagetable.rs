@@ -11,9 +11,10 @@ pub struct Pagetable<'inner> {
 }
 
 impl Pagetable<'static> {
+    #[track_caller]
     pub fn alloc() -> Result<Self, PTError> {
         Ok(Self::new(
-            IPagetable::new().ok_or(PTError::AllocFail)?.leak_ref(),
+            IPagetable::alloc().ok_or(PTError::AllocFail)?.leak_ref(),
         ))
     }
 }
@@ -70,14 +71,14 @@ impl<'inner> Pagetable<'inner> {
         // SAFETY: statically known to contain either Null or ptr to IPagetable
         let pt_entry2: &mut PtEntry = &mut self.inner[Self::get_idx(2, virtual_address)];
         if !pt_entry2.is_set() {
-            pt_entry2.set_pt(IPagetable::new().ok_or(PTError::AllocFail)?);
+            pt_entry2.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
         }
 
         let pt1: &mut IPagetable = unsafe { pt_entry2.as_pt_mut() }.unwrap();
 
         let pt_entry1: &mut PtEntry = &mut pt1[Self::get_idx(1, virtual_address)];
         if !pt_entry1.is_set() {
-            pt_entry1.set_pt(IPagetable::new().ok_or(PTError::AllocFail)?);
+            pt_entry1.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
         }
 
         let pt0: &mut IPagetable = unsafe { pt_entry1.as_pt_mut() }.unwrap();

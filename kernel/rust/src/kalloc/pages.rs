@@ -15,6 +15,7 @@ pub struct PageHandle {
     ptr: ptr::NonNull<Page>,
     origin: Origin,
     allocated: bool,
+    purpose: &'static str,
 }
 
 /// # Invariant
@@ -77,12 +78,14 @@ impl PageHandle {
         Self {
             ptr: ptr.into(),
             origin: origin.unwrap_or_else(Location::caller),
+            purpose: "unknown",
             allocated: false,
         }
     }
 
-    pub fn set_origin(&mut self, origin: Origin) {
+    pub fn set_origin(&mut self, origin: Origin, purpose: &'static str) {
         self.origin = origin;
+        self.purpose = purpose;
     }
 
     fn fill(&mut self, byte: u8) {
@@ -94,9 +97,9 @@ impl PageHandle {
         self.allocated = false;
     }
 
-    fn mark_allocated(&mut self, origin: Origin) {
+    fn mark_allocated(&mut self, origin: Origin, purpose: &'static str) {
         self.fill(0x1d);
-        self.set_origin(origin);
+        self.set_origin(origin, purpose);
         self.allocated = true;
     }
 
@@ -147,8 +150,8 @@ impl PageHandle {
 impl Drop for PageHandle {
     fn drop(&mut self) {
         println!(
-            "memory leak: {:?}, origin: {}, allocated: {:?}",
-            self.ptr, self.origin, self.allocated
+            "memory leak: {:?}, origin: {}, allocated: {:?}, purpose: {}",
+            self.ptr, self.origin, self.allocated, self.purpose
         );
     }
 }
@@ -171,13 +174,13 @@ impl KMem {
     }
 
     #[track_caller]
-    pub fn alloc(&mut self) -> Option<PageHandle> {
+    pub fn alloc(&mut self, purpose: &'static str) -> Option<PageHandle> {
         if let Some(mut page) = self.data.take() {
             // SAFETY:
             // we wrote value of this type beforehand.
             self.data = unsafe { page.as_uninit::<Option<PageHandle>>().assume_init_mut() }.take();
             self.free_pages -= 1;
-            page.mark_allocated(Location::caller());
+            page.mark_allocated(Location::caller(), purpose);
             Some(page)
         } else {
             None
@@ -193,6 +196,7 @@ impl KMem {
 mod ffi {
     use super::{Page, KMEM};
     use core::ffi::c_void;
+    use core::panic::Location;
     use core::ptr;
 
     #[no_mangle]
@@ -207,7 +211,7 @@ mod ffi {
     #[no_mangle]
     extern "C" fn kalloc() -> *mut c_void {
         KMEM.lock()
-            .alloc()
+            .alloc("ffi alloc")
             .map(|page| page.leak().cast().as_ptr())
             .unwrap_or_else(ptr::null_mut)
     }
@@ -219,7 +223,9 @@ mod ffi {
         // SAFETY:
         // precondition
         let rf = unsafe { ptr.as_mut() };
-        KMEM.lock().free(super::PageHandle::new(rf, None));
+        let mut page = super::PageHandle::new(rf, None);
+        page.set_origin(Location::caller(), "ffi free");
+        KMEM.lock().free(page);
     }
 
     #[no_mangle]

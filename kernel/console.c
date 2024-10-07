@@ -128,6 +128,7 @@ void consoleintr(int c) {
 
   switch (c) {
   case C('P'): // Print process list.
+    printf("\nfree RAM: %lu blocks\n", free_pages());
     procdump();
     break;
   case C('Q'):

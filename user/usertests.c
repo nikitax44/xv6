@@ -951,7 +951,7 @@ void forkfork(char* s) {
   for (int i = 0; i < N; i++) {
     _wait(&xstatus);
     if (xstatus != 0) {
-      printf("%s: fork in child failed", s);
+      printf("%s: fork in child failed: %d\n", s, xstatus);
       _exit(1);
     }
   }

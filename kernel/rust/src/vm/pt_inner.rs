@@ -5,14 +5,15 @@ use crate::vm::pte::PtEntry;
 use core::ops::{Index, IndexMut};
 
 #[repr(transparent)]
-pub(super) struct IPagetable {
+pub struct IPagetable {
     pub entries: [PtEntry; Pagetable::PT_ENTRIES],
 }
 
 impl IPagetable {
-    pub fn new() -> Option<ThinBox<IPagetable>> {
+    #[track_caller]
+    pub fn alloc() -> Option<ThinBox<IPagetable>> {
         KMEM.lock()
-            .alloc()
+            .alloc("IPagetable::alloc()")
             .map(|page| page.zeroed().leak_uninit::<IPagetable>())
             // SAFETY: any bit layout is valid
             .map(|uninit| unsafe { uninit.assume_init_mut() }.into())

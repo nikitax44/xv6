@@ -20,7 +20,8 @@ volatile int panicked = 0;
 // lock to avoid interleaving concurrent printf's.
 static struct {
   struct spinlock lock;
-  int             locking;
+  bool            locking;
+  bool            initialized;
 } pr;
 
 static char digits[] = "0123456789abcdef";
@@ -64,6 +65,10 @@ int printf(str fmt, ...) {
   va_list ap;
   int     i, cx, c0, c1, c2, locking;
   char*   s;
+
+  if (!pr.initialized) {
+    return -1;
+  }
 
   locking = pr.locking;
   if (locking) {
@@ -175,6 +180,15 @@ void panic(char* s) {
   shutdown();
 }
 
+void tabulate(u32 n) {
+  if (!pr.initialized) {
+    return;
+  }
+  for (; n > 0; --n) {
+    consputc(' ');
+  }
+}
+
 void shutdown() {
   *(volatile u32*)TEST0 = TEST0_SHUTDOWN;
   for (;;)
@@ -189,5 +203,6 @@ void reboot() {
 
 void printfinit(void) {
   initlock(&pr.lock, "pr");
-  pr.locking = 1;
+  pr.locking     = 1;
+  pr.initialized = 1;
 }

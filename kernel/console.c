@@ -164,6 +164,8 @@ void consoleintr(int c) {
     break;
   case '\x1b': // Escape key \e
     break;
+  case '\t':
+    break;
   default:
     if (c != 0 && cons.e - cons.r < INPUT_BUF_SIZE) {
       c = (c == '\r') ? '\n' : c;

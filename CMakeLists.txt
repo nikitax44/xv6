@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(Xv6 C ASM)
 
+set(GDBPORT 1234)
+set(NPROC 8)
+
+
 if(NOT DEFINED NEWLIB)
     set(NEWLIB $ENV{NEWLIB})
     if(NOT DEFINED NEWLIB)
@@ -11,11 +15,13 @@ endif()
 # Set compiler flags
 set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_WARNINGS}")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer") # -ggdb -gdwarf-2
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -ggdb -gdwarf-2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64g -static")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${CMAKE_CURRENT_SOURCE_DIR} -I ${NEWLIB}/include --specs=${NEWLIB}/lib/nano.specs")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -MD")
 set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Disable PIE if possible
 execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpspecs OUTPUT_VARIABLE DUMPSPECS)
@@ -86,16 +92,18 @@ add_custom_target(image ALL
 add_custom_target(qemu
     DEPENDS kernel fs.img
     COMMAND qemu-system-riscv64
-        -machine virt -bios none -kernel kernel/kernel -m 128M -smp 3 -nographic
+        -machine virt -m 128M -smp ${NPROC} -nographic
         -global "virtio-mmio.force-legacy=false"
         -drive "file=fs.img,if=none,format=raw,id=x0"
         -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
+        -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
+        -bios none
 )
 
 # Generate GDB initialization file
 add_custom_command(
     OUTPUT .gdbinit
-    COMMAND sed "s/:1234/:${GDBPORT}/" < ${CMAKE_CURRENT_SOURCE_DIR}.gdbinit.tmpl-riscv > .gdbinit
+    COMMAND sed "s/:1234/:${GDBPORT}/" < ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit.tmpl-riscv > .gdbinit
     DEPENDS .gdbinit.tmpl-riscv
 )
 
@@ -103,5 +111,12 @@ add_custom_command(
 add_custom_target(qemu-gdb
     DEPENDS kernel .gdbinit fs.img
     COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window."
-    COMMAND qemu-system-riscv64 -machine virt -bios none -kernel ${K}/kernel -m 128M -smp 3 -nographic -S -gdb tcp::${GDBPORT}
+    COMMAND qemu-system-riscv64
+        -machine virt -m 128M -smp ${NPROC} -nographic
+        -global "virtio-mmio.force-legacy=false"
+        -drive "file=fs.img,if=none,format=raw,id=x0"
+        -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
+        -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
+        -bios none
+        -S -gdb tcp::${GDBPORT}
 )

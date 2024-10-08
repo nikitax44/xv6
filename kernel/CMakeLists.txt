@@ -51,12 +51,12 @@ add_custom_command(
     COMMENT "Generating _initcode.h from initcode.S"
 )
 
-add_custom_target(generate_initcode DEPENDS _initcode.h)
+add_custom_target(RebuildOnDependency ALL DEPENDS kernel.ld _initcode.h)
 
 # Define the kernel target
 add_executable(kernel ${OBJS})
 target_link_libraries(kernel -lc)
-add_dependencies(kernel generate_initcode)
+add_dependencies(kernel RebuildOnDependency)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

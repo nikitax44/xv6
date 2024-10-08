@@ -14,3 +14,10 @@ typedef u64 usize;
 
 typedef const i8* str;
 typedef usize     pde_t;
+typedef u8 bool;
+
+#ifndef NULL
+#define NULL  0
+#define true  1
+#define false 0
+#endif

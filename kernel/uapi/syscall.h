@@ -1,8 +1,9 @@
 #pragma once
 // System call numbers
-#define SYS_fork 1
-#define SYS_wait 3
-#define SYS_pipe 4
+#define SYS_fork     1
+#define SYS_wait     3
+#define SYS_pipe     4
+#define SYS_shutdown 999 // for ci scripts
 
 #define SYS_getpid 11
 #define SYS_sleep  13

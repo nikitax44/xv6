@@ -109,8 +109,7 @@ static u64 (*syscalls[])(void) = {
     [SYS_mkdir] = sys_mkdir,       [SYS_close] = sys_close,
     [SYS_mmap] = sys_mmap,         [SYS_gettimeofday] = sys_gettimeofday,
     [SYS_sysinfo] = sys_sysinfo,   [SYS_futimesat] = sys_futimesat,
-    [SYS_getdents] = sys_getdents,
-};
+    [SYS_getdents] = sys_getdents, [SYS_shutdown] = (u64(*)(void))shutdown};
 
 void syscall(void) {
   u64          num;

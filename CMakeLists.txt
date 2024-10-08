@@ -52,6 +52,7 @@ list(APPEND UPROGS
         _grind
         _wc
         _zombie
+        _shutdown
 )
 
 list(APPEND PORTS

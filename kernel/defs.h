@@ -95,7 +95,7 @@ void reboot(void) __attribute__((noreturn));
 void printfinit(void);
 
 // proc.c
-int          cpuid(void);
+u32          cpuid(void);
 void         exit(int);
 int          fork(void);
 int          growproc(int);

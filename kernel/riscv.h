@@ -256,6 +256,56 @@ static inline void sfence_vma() {
   asm volatile("sfence.vma zero, zero");
 }
 
+struct sbiret {
+  i64 error;
+  u64 value;
+};
+
+#define SBI_EXT_HSM_HART_START   0
+#define SBI_EXT_HSM_HART_STOP    1
+#define SBI_EXT_HSM_HART_STATUS  2
+#define SBI_EXT_HSM_HART_SUSPEND 3
+
+enum sbi_ext {
+  SBI_EXT_HSM  = 0x48534D,
+  SBI_EXT_TIME = 0x54494D45,
+};
+enum perm_mode { MODE_U = 0, MODE_S = 1, MODE_M = 3 };
+
+static inline struct sbiret sbi_ecall(enum sbi_ext ext, u64 fid, u64 a0, u64 a1,
+                                      u64 a2, u64 a3, u64 a4, u64 a5) {
+  register u64 a0v asm("a0") = a0;
+  register u64 a1v asm("a1") = a1;
+  register u64 a2v asm("a2") = a2;
+  register u64 a3v asm("a3") = a3;
+  register u64 a4v asm("a4") = a4;
+  register u64 a5v asm("a5") = a5;
+  register u64 a6v asm("a6") = fid;
+  register u64 a7v asm("a7") = ext;
+  asm("ecall"
+      : "+r"(a0v), "+r"(a1v)
+      : "r"(a2v), "r"(a3v), "r"(a4v), "r"(a5v), "r"(a6v), "r"(a7v)
+      : "memory");
+
+  return (struct sbiret){a0v, a1v};
+}
+
+static inline struct sbiret
+sbi_hsm_hart_start(u32 hartid, void start(u64 hartid), enum perm_mode mode) {
+  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_START, hartid, (u64)start,
+                   mode, 0, 0, 0);
+}
+static inline struct sbiret sbi_hsm_hart_stop() {
+  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_STOP, 0, 0, 0, 0, 0, 0);
+}
+static inline struct sbiret sbi_hsm_hart_status(u32 hartid) {
+  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_STATUS, hartid, 0, 0, 0, 0, 0);
+}
+
+static inline struct sbiret sbi_set_timer(u64 abstime) {
+  return sbi_ecall(SBI_EXT_TIME, 0, abstime, 0, 0, 0, 0, 0);
+}
+
 typedef u64  pte_t;
 typedef u64* pagetable_t; // 512 PTEs
 

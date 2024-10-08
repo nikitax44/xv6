@@ -60,7 +60,7 @@ void procinit(void) {
 // Must be called with interrupts disabled,
 // to prevent race with process being moved
 // to a different CPU.
-int cpuid() {
+u32 cpuid() {
   int id = r_tp();
   return id;
 }

@@ -34,6 +34,7 @@ set(OBJS
     plic.c
     virtio_disk.c
     fwcfg.c
+    dtb.c
 )
 
 # Set compiler flags

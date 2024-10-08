@@ -1,14 +1,8 @@
 #include "fwcfg.h"
+#include "dtb.h"
 
 struct FWCfgFiles* fw_dir;
 
-static inline u16 bswap16(u16 x) { return __builtin_bswap16(x); }
-static inline u32 bswap32(u32 x) {
-  return ((u32)bswap16(x & 0xffff) << 16) | bswap16(x >> 16);
-}
-static inline u64 bswap64(u64 x) {
-  return ((u64)bswap32(x & 0xffffffff) << 32) | bswap32(x >> 32);
-}
 #define FW_GET_DAT(bits) (bswap##bits(*(volatile u##bits*)FW_CFG_DAT))
 #define FW_GET_DMA(bits) (bswap##bits(*(volatile u##bits*)FW_CFG_DMA))
 

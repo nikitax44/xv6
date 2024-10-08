@@ -43,7 +43,7 @@
           fi
           CPUS="''${CPUS:-$(nproc)}"
           qemu-system-riscv64 \
-            -machine virt -bios none -m 128M -smp "$CPUS" -nographic \
+            -machine virt -m 128M -smp "$CPUS" -nographic \
             -global virtio-mmio.force-legacy=false                     \
             -drive file="$FS",if=none,format=raw,id=x0                 \
             -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0   \

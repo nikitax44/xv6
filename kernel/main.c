@@ -1,25 +1,8 @@
 #include "defs.h"
 #include "fwcfg.h"
 
-static volatile int started = 0;
-
-void init_boot(void);
-void init_other(void);
-
 // start() jumps here in supervisor mode on all CPUs.
-int main() {
-  if (cpuid() == 0) {
-    init_boot();
-    __sync_synchronize();
-  } else {
-    while (started == 0)
-      ;
-    __sync_synchronize();
-    init_other();
-  }
-
-  scheduler();
-}
+void kernel_main() { scheduler(); }
 
 void init_boot() {
   consoleinit();

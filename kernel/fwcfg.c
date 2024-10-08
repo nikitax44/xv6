@@ -67,7 +67,7 @@ u8* readFileEntry(struct FWCfgFile* file) {
   return (u8*)data;
 }
 
-void dtbinit(void) {
+void fw_dump(void) {
   fw_verify();
   fw_dir = readCfgFiles();
   printf("fw_dir->count = %d\n", fw_dir->count);

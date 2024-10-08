@@ -17,4 +17,4 @@ struct FWCfgFiles {       /* the entire file directory fw_cfg item */
 extern struct FWCfgFiles* fw_dir;
 
 u8*  readFileEntry(struct FWCfgFile* file);
-void dtbinit(void);
+void fw_dump(void);

@@ -1,12 +1,9 @@
-        # qemu -kernel loads the kernel at 0x80200000
-        # OpenSBI causes boot hart (i.e. CPU) to jump there in S-mode.
-        # kernel.ld causes the following code to
-        # be placed at 0x80200000.
 #include "kernel/hardware/riscv.h"
 .section .entry
 .global _entry
-.global _entry_other
+
 _entry:
+#ifdef SBI_ENABLE
         mv tp, a0
         # set up a stack for C.
         # stack0 is declared in start.c,
@@ -18,10 +15,10 @@ _entry:
 
         mv a0, a1
         call start_boot
-spin:
         j spin
 
         # all other harts will go there as mandated in start_boot()
+.global _entry_other
 _entry_other:
         mv tp, a0
 
@@ -34,4 +31,19 @@ _entry_other:
         add sp, sp, t0
 
         call start_other
+#else
+        csrr tp, mhartid
+        # set up a stack for C.
+        # stack0 is declared in start.c,
+        # with a PGSIZE-byte stack per HART.
+        # sp = stack0 + ((hartid+1) * 4096)
+        la sp, stack0
+        li t0, PGSIZE
+        addi t1, tp, 1
+        mul t0, t0, t1
+        add sp, sp, t0
+        call start
+#endif
+
+spin:
         j spin

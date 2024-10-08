@@ -1,7 +1,7 @@
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::{
-    addrof_end_text, addrof_trampoline, FW_CFG, KERNBASE, KSTACK, PHYSTOP, PLIC, TEST0, TRAMPOLINE,
-    UART0, VIRTIO0,
+    addrof_end_text, addrof_kernel, addrof_trampoline, FW_CFG, KSTACK, PHYSTOP, PLIC, TEST0,
+    TRAMPOLINE, UART0, VIRTIO0,
 };
 use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
@@ -29,9 +29,9 @@ pub fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
 
     // map kernel text executable and read-only.
     pt.map_pages(
-        KERNBASE,
-        KERNBASE,
-        addrof_end_text() - KERNBASE,
+        addrof_kernel(),
+        addrof_kernel(),
+        addrof_end_text() - addrof_kernel(),
         Mode::PTE_R | Mode::PTE_X,
     )?;
 

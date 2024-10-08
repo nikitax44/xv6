@@ -98,6 +98,7 @@ add_custom_target(qemu
         -drive "file=fs.img,if=none,format=raw,id=x0"
         -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
         -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
+        -bios none
 )
 
 # Generate GDB initialization file
@@ -117,5 +118,6 @@ add_custom_target(qemu-gdb
         -drive "file=fs.img,if=none,format=raw,id=x0"
         -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
         -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
+        -bios none
         -S -gdb tcp::${GDBPORT}
 )

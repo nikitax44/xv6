@@ -13,7 +13,6 @@ pub const KSTACK: fn(usize) -> usize = |p| TRAMPOLINE - ((p) + 1) * 2 * PGSIZE;
 pub const TRAPFRAME: usize = TRAMPOLINE - PGSIZE;
 
 pub const RAMBASE: usize = 0x8000_0000;
-pub const KERNBASE: usize = 0x8020_0000;
 pub const PHYSTOP: usize = RAMBASE + 128 * 1024 * 1024;
 
 use core::ffi::c_void;
@@ -28,10 +27,18 @@ mod symbols {
     use crate::memlayout::Symbol;
 
     extern "C" {
+        pub static _entry: Symbol;
         pub static end: Symbol;
         pub static etext: Symbol;
         pub static trampoline: Symbol;
     }
+}
+
+#[must_use]
+pub fn addrof_kernel() -> usize {
+    // SAFETY:
+    // only address is accessed
+    unsafe { ptr::from_ref(&symbols::_entry) as usize }
 }
 
 #[must_use]

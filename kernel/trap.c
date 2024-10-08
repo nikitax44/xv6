@@ -196,7 +196,14 @@ void kerneltrap(void) {
   w_sstatus(sstatus);
 }
 
-void timerinithart(void) { sbi_set_timer(r_time() + 1000000); }
+void timerinithart(void) {
+  u64 target = r_time() + 1000000;
+#ifdef SBI_ENABLE
+  sbi_set_timer(target);
+#else
+  w_stimecmp(target);
+#endif
+}
 
 void clockintr(void) {
   if (cpuid() == 0) {

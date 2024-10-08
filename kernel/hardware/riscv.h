@@ -5,6 +5,36 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 
+// which hart (core) is this?
+static inline u64 r_mhartid(void) {
+  u64 x;
+  asm volatile("csrr %0, mhartid" : "=r"(x));
+  return x;
+}
+
+// Machine Status Register, mstatus
+
+#define MSTATUS_MPP_MASK (3L << 11) // previous mode.
+#define MSTATUS_MPP_M    (3L << 11)
+#define MSTATUS_MPP_S    (1L << 11)
+#define MSTATUS_MPP_U    (0L << 11)
+#define MSTATUS_MIE      (1L << 3) // machine-mode interrupt enable.
+
+static inline u64 r_mstatus(void) {
+  u64 x;
+  asm volatile("csrr %0, mstatus" : "=r"(x));
+  return x;
+}
+
+static inline void w_mstatus(u64 x) {
+  asm volatile("csrw mstatus, %0" : : "r"(x));
+}
+
+// machine exception program counter, holds the
+// instruction address to which a return from
+// exception will go.
+static inline void w_mepc(u64 x) { asm volatile("csrw mepc, %0" : : "r"(x)); }
+
 // Supervisor Status Register, sstatus
 
 #define SSTATUS_SPP  (1L << 8) // Previous mode, 1=Supervisor, 0=User
@@ -44,6 +74,16 @@ static inline u64 r_sie(void) {
 
 static inline void w_sie(u64 x) { asm volatile("csrw sie, %0" : : "r"(x)); }
 
+// Machine-mode Interrupt Enable
+#define MIE_STIE (1L << 5) // supervisor timer
+static inline u64 r_mie(void) {
+  u64 x;
+  asm volatile("csrr %0, mie" : "=r"(x));
+  return x;
+}
+
+static inline void w_mie(u64 x) { asm volatile("csrw mie, %0" : : "r"(x)); }
+
 // supervisor exception program counter, holds the
 // instruction address to which a return from
 // exception will go.
@@ -52,6 +92,38 @@ static inline void w_sepc(u64 x) { asm volatile("csrw sepc, %0" : : "r"(x)); }
 static inline u64 r_sepc(void) {
   u64 x;
   asm volatile("csrr %0, sepc" : "=r"(x));
+  return x;
+}
+
+// Machine Exception Delegation
+static inline u64 r_medeleg(void) {
+  u64 x;
+  asm volatile("csrr %0, medeleg" : "=r"(x));
+  return x;
+}
+
+static inline void w_medeleg(u64 x) {
+  asm volatile("csrw medeleg, %0" : : "r"(x));
+}
+
+// Machine Interrupt Delegation
+static inline u64 r_mideleg(void) {
+  u64 x;
+  asm volatile("csrr %0, mideleg" : "=r"(x));
+  return x;
+}
+
+static inline void w_mideleg(u64 x) {
+  asm volatile("csrw mideleg, %0" : : "r"(x));
+}
+
+// Machine Trap-Vector Base Address
+// low two bits are mode.
+static inline void w_mtvec(u64 x) { asm volatile("csrw mtvec, %0" : : "r"(x)); }
+
+static inline u64 r_mtvec(void) {
+  u64 x;
+  asm volatile("csrr %0, mtvec" : "=r"(x));
   return x;
 }
 
@@ -76,6 +148,28 @@ static inline u64 r_stimecmp(void) {
 static inline void w_stimecmp(u64 x) {
   // asm volatile("csrw stimecmp, %0" : : "r" (x));
   asm volatile("csrw 0x14d, %0" : : "r"(x));
+}
+
+// Machine Environment Configuration Register
+static inline u64 r_menvcfg(void) {
+  u64 x;
+  // asm volatile("csrr %0, menvcfg" : "=r" (x) );
+  asm volatile("csrr %0, 0x30a" : "=r"(x));
+  return x;
+}
+
+static inline void w_menvcfg(u64 x) {
+  // asm volatile("csrw menvcfg, %0" : : "r" (x));
+  asm volatile("csrw 0x30a, %0" : : "r"(x));
+}
+
+// Physical Memory Protection
+static inline void w_pmpcfg0(u64 x) {
+  asm volatile("csrw pmpcfg0, %0" : : "r"(x));
+}
+
+static inline void w_pmpaddr0(u64 x) {
+  asm volatile("csrw pmpaddr0, %0" : : "r"(x));
 }
 
 // use riscv's sv39 page table scheme.
@@ -104,6 +198,17 @@ static inline u64 r_scause(void) {
 static inline u64 r_stval(void) {
   u64 x;
   asm volatile("csrr %0, stval" : "=r"(x));
+  return x;
+}
+
+// Machine-mode Counter-Enable
+static inline void w_mcounteren(u64 x) {
+  asm volatile("csrw mcounteren, %0" : : "r"(x));
+}
+
+static inline u64 r_mcounteren(void) {
+  u64 x;
+  asm volatile("csrr %0, mcounteren" : "=r"(x));
   return x;
 }
 
@@ -154,6 +259,7 @@ static inline void sfence_vma(void) {
   asm volatile("sfence.vma zero, zero");
 }
 
+#ifdef SBI_ENABLE
 struct sbiret {
   i64 error;
   u64 value;
@@ -203,6 +309,7 @@ static inline struct sbiret sbi_hsm_hart_status(u32 hartid) {
 static inline struct sbiret sbi_set_timer(u64 abstime) {
   return sbi_ecall(SBI_EXT_TIME, 0, abstime, 0, 0, 0, 0, 0);
 }
+#endif
 
 typedef u64  pte_t;
 typedef u64* pagetable_t; // 512 PTEs

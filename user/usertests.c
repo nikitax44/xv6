@@ -936,7 +936,7 @@ void forkfork(char* s) {
       for (int j = 0; j < 200; j++) {
         int pid1 = _fork();
         if (pid1 < 0) {
-          _exit(1);
+          _exit(pid1);
         }
         if (pid1 == 0) {
           _exit(0);

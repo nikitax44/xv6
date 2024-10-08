@@ -11,7 +11,8 @@
     clippy::default_union_representation,
     clippy::mixed_read_write_in_expression,
     clippy::self_named_module_files,
-    clippy::undocumented_unsafe_blocks
+    clippy::undocumented_unsafe_blocks,
+    clippy::nursery
 )]
 #![warn(
     clippy::perf,

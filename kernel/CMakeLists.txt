@@ -33,7 +33,7 @@ set(OBJS
     kernelvec.S
     plic.c
     virtio_disk.c
-    dtb.c
+    fwcfg.c
 )
 
 # Set compiler flags

@@ -1,4 +1,4 @@
-#include "dtb.h"
+#include "fwcfg.h"
 
 struct FWCfgFiles* fw_dir;
 

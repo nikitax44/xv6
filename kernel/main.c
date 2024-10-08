@@ -1,5 +1,5 @@
 #include "defs.h"
-#include "dtb.h"
+#include "fwcfg.h"
 #include "memlayout.h"
 #include "param.h"
 #include "riscv.h"

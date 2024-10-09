@@ -141,6 +141,8 @@ impl<'inner> Pagetable<'inner> {
 }
 
 mod ffi {
+    use crate::errno::ErrNo;
+    use crate::errno::ErrNo::{ENOMEM, SUCCESS};
     use crate::vm::mode::Mode;
     use crate::vm::pagetable::Pagetable;
     use crate::vm::PTError;
@@ -153,14 +155,14 @@ mod ffi {
         size: usize,
         physical_address: usize,
         perm: Mode,
-    ) -> bool {
+    ) -> ErrNo {
         if let Err(err) = pt.map_pages(virtual_address, physical_address, size, perm) {
             return match err {
-                PTError::AllocFail => true,
+                PTError::AllocFail => ENOMEM,
 
                 _ => panic!("ffi::mappages: {:?}", err),
             };
         }
-        false
+        SUCCESS
     }
 }

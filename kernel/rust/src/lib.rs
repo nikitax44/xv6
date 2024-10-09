@@ -43,6 +43,7 @@
 extern crate alloc;
 
 pub mod asm;
+pub mod errno;
 pub mod kalloc;
 pub mod memlayout;
 pub mod panic;

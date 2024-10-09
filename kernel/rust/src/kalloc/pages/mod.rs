@@ -1,7 +1,7 @@
 use crate::memlayout::{addrof_end_kernel, PHYSTOP};
 use crate::println;
-use crate::spinlock::Spinlock;
 use crate::util::once::Once;
+use crate::util::spinlock::Spinlock;
 use core::panic::Location;
 use core::ptr;
 use page::{Page, PageHandle};

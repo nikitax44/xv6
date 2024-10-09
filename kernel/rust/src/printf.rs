@@ -1,4 +1,4 @@
-use crate::spinlock::Spinlock;
+use crate::util::spinlock::Spinlock;
 use core::ffi::c_int;
 use core::fmt;
 

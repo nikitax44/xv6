@@ -1,13 +1,21 @@
 use crate::memlayout::PGSIZE;
 use crate::println;
 use core::marker::PhantomPinned;
+use core::mem::MaybeUninit;
 use core::panic::Location;
 use core::{mem, ptr};
 
 type Origin = &'static Location<'static>;
 
 #[repr(align(4096))]
-pub struct Page(pub mem::MaybeUninit<[u8; PGSIZE]>, PhantomPinned);
+#[must_use]
+pub struct Page(pub MaybeUninit<[u8; PGSIZE]>, PhantomPinned);
+
+impl Page {
+    pub const fn initial() -> Self {
+        Self(MaybeUninit::uninit(), PhantomPinned)
+    }
+}
 
 #[must_use]
 pub struct PageHandle {

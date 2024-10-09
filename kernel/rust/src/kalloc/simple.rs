@@ -11,7 +11,7 @@ struct SimpleAllocator {
     remaining: AtomicUsize, // we allocate from the top, counting down
 }
 
-#[global_allocator]
+// #[global_allocator]
 static ALLOCATOR: SimpleAllocator = SimpleAllocator {
     arena: UnsafeCell::new([0x07; ARENA_SIZE]),
     remaining: AtomicUsize::new(ARENA_SIZE),

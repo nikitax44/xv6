@@ -12,22 +12,21 @@ pub struct PtEntry(usize);
 impl PtEntry {
     #[must_use]
     pub fn is_set(&self) -> bool {
-        self.flags().contains(Mode::PTE_V)
+        self.get().is_some()
     }
 
     #[must_use]
     pub fn get(&self) -> Option<(usize, Mode)> {
         Some(self.0)
-            .map(|val| ((val >> Mode::SHIFT) * PGSIZE, Mode::from_bits_truncate(val)))
-            .filter(|(_, m)| m.contains(Mode::PTE_V))
+            .filter(|val| val & Mode::VALID != 0)
+            .map(|val| {
+                (
+                    (val >> Mode::SHIFT) * PGSIZE,
+                    (val & Mode::ACCESS_MASK).try_into().expect("invalid PTE"),
+                )
+            })
     }
 
-    /// # Panics
-    /// if `is_set` would return false
-    #[must_use]
-    pub fn flags(&self) -> Mode {
-        self.get().map_or(Mode::empty(), |(_, mode)| mode)
-    }
     pub fn unset(&mut self) {
         self.0 = 0;
     }
@@ -35,25 +34,29 @@ impl PtEntry {
     /// # Errors
     /// addr and mode must be valid
     pub fn set(&mut self, addr: usize, mode: Mode) -> Result<(), PTError> {
-        if !Mode::MASK.contains(mode) {
+        if mode == Mode::Table {
             return Err(PTError::InvalidMode);
         }
+        self.set_raw(addr, mode)
+    }
+
+    fn set_raw(&mut self, addr: usize, mode: Mode) -> Result<(), PTError> {
         if addr % PGSIZE != 0 {
             return Err(PTError::InvalidPhysicalAddress);
         }
-        self.0 = ((addr / PGSIZE) << Mode::SHIFT) | (Mode::PTE_V | mode).bits();
+        self.0 = ((addr / PGSIZE) << Mode::SHIFT) | (mode as usize) | Mode::VALID;
         Ok(())
     }
 
     pub(super) fn set_pt(&mut self, pt: ThinBox<IPagetable>) {
-        self.set(pt.leak().as_ptr() as usize, Mode::empty()).ok();
+        self.set_raw(pt.leak().as_ptr() as usize, Mode::Table)
+            .unwrap();
     }
 
     /// # Safety
     /// `PtEntry` must contain valid IPageTable
     pub(super) unsafe fn as_pt(&self) -> Option<&IPagetable> {
         self.get()
-            .filter(|(_, m)| m.contains(Mode::PTE_V))
             .map(|(addr, _)| addr as *const IPagetable)
             // SAFETY: precondition
             .map(|ptr| unsafe { &*ptr })
@@ -63,7 +66,6 @@ impl PtEntry {
     /// `PtEntry` must contain valid IPageTable
     pub(super) unsafe fn as_pt_mut(&mut self) -> Option<&mut IPagetable> {
         self.get()
-            .filter(|(_, m)| m.contains(Mode::PTE_V))
             .map(|(addr, _)| addr as *mut IPagetable)
             // SAFETY: precondition
             .map(|ptr| unsafe { &mut *ptr })
@@ -72,7 +74,10 @@ impl PtEntry {
 
 impl Debug for PtEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let (addr, mode) = self.get().unwrap_or((0, Mode::empty()));
-        write!(f, "PtEntry({:#x}, {:?})", addr, mode)
+        if let Some((addr, mode)) = self.get() {
+            write!(f, "PtEntry({:#x}, {:?})", addr, mode)
+        } else {
+            write!(f, "PtEntry(None)")
+        }
     }
 }

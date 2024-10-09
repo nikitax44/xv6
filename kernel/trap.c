@@ -66,7 +66,7 @@ void usertrap(void) {
              r_stval(), r_sepc());
       break;
     case 12:
-      printf("usertrap: Instruction page fault: mepc=0x%lx sepc=0x%lx\n",
+      printf("usertrap: Instruction page fault: pc=0x%lx sepc=0x%lx\n",
              r_stval(), r_sepc());
       break;
     case 13:

@@ -97,7 +97,7 @@ impl<'inner> Pagetable<'inner> {
         perm: Mode,
     ) -> Result<(), PTError> {
         let pte = self.walk_mut(virtual_address)?;
-        if pte.flags().contains(Mode::PTE_V) {
+        if pte.is_set() {
             return Err(PTError::Remap);
         };
         pte.set(physical_address, perm)?;
@@ -106,7 +106,7 @@ impl<'inner> Pagetable<'inner> {
             self.walk(virtual_address)
                 .expect("failed to properly map")
                 .get(),
-            Some((physical_address, perm | Mode::PTE_V))
+            Some((physical_address, perm))
         );
         Ok(())
     }
@@ -143,7 +143,6 @@ impl<'inner> Pagetable<'inner> {
 mod ffi {
     use crate::errno::ErrNo;
     use crate::errno::ErrNo::{ENOMEM, SUCCESS};
-    use crate::vm::mode::Mode;
     use crate::vm::pagetable::Pagetable;
     use crate::vm::PTError;
 
@@ -154,8 +153,9 @@ mod ffi {
         virtual_address: usize,
         size: usize,
         physical_address: usize,
-        perm: Mode,
+        perm: usize,
     ) -> ErrNo {
+        let perm = perm.try_into().expect("invalid access mode");
         if let Err(err) = pt.map_pages(virtual_address, physical_address, size, perm) {
             return match err {
                 PTError::AllocFail => ENOMEM,

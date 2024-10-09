@@ -16,6 +16,8 @@ impl PtEntry {
     }
 
     #[must_use]
+    /// # Panics
+    /// if got invalid PTE
     pub fn get(&self) -> Option<(usize, Mode)> {
         Some(self.0)
             .filter(|val| val & Mode::VALID != 0)
@@ -54,7 +56,7 @@ impl PtEntry {
     }
 
     /// # Safety
-    /// `PtEntry` must contain valid IPageTable
+    /// `PtEntry` must contain valid `IPagetable`
     pub(super) unsafe fn as_pt(&self) -> Option<&IPagetable> {
         self.get()
             .map(|(addr, _)| addr as *const IPagetable)
@@ -63,7 +65,7 @@ impl PtEntry {
     }
 
     /// # Safety
-    /// `PtEntry` must contain valid IPageTable
+    /// `PtEntry` must contain valid `IPagetable`
     pub(super) unsafe fn as_pt_mut(&mut self) -> Option<&mut IPagetable> {
         self.get()
             .map(|(addr, _)| addr as *mut IPagetable)
@@ -75,7 +77,7 @@ impl PtEntry {
 impl Debug for PtEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         if let Some((addr, mode)) = self.get() {
-            write!(f, "PtEntry({:#x}, {:?})", addr, mode)
+            write!(f, "PtEntry({addr:#x}, {mode:?})")
         } else {
             write!(f, "PtEntry(None)")
         }

@@ -22,11 +22,10 @@ fn handle_panic(info: &PanicInfo) -> ! {
     let mut out = Bytes(&mut vec);
     writeln!(out, "RUST: {info}").ok();
     vec.push(b'\0');
-    if let Ok(cstr) = CString::from_vec_with_nul(vec) {
-        raw_panic(&cstr)
-    } else {
-        raw_panic(c"rust: NUL in panic message")
-    }
+    CString::from_vec_with_nul(vec).map_or_else(
+        |_| raw_panic(c"rust: NUL in panic message"),
+        |msg| raw_panic(&msg),
+    )
 }
 
 /// # Safety

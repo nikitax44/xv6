@@ -4,7 +4,6 @@
     clippy::correctness,
     clippy::suspicious,
     clippy::complexity,
-    clippy::allow_attributes,
     clippy::allow_attributes_without_reason,
     clippy::as_underscore,
     clippy::clone_on_ref_ptr,
@@ -39,12 +38,14 @@
     clippy::suspicious_xor_used_as_pow
 )]
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
+#![allow(clippy::cargo_common_metadata, reason = "TODO")]
 
 extern crate alloc;
 
 pub mod asm;
 pub mod errno;
 pub mod kalloc;
+pub mod lazy_cell;
 pub mod memlayout;
 pub mod panic;
 pub mod printf;

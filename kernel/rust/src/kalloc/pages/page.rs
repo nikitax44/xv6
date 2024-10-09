@@ -17,6 +17,10 @@ pub struct PageHandle {
     purpose: &'static str,
 }
 
+/// # SAFETY:
+/// safe to send because we own the Page
+unsafe impl Send for PageHandle {}
+
 impl PageHandle {
     #[track_caller]
     pub fn new(ptr: &'static mut Page, origin: Option<Origin>) -> Self {
@@ -59,7 +63,6 @@ impl PageHandle {
         unsafe { self.ptr.as_mut() }
     }
 
-    #[must_use]
     pub fn zeroed(mut self) -> Self {
         self.fill(0);
         self

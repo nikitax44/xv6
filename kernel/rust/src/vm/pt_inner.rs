@@ -11,10 +11,10 @@ pub struct IPagetable {
 
 impl IPagetable {
     #[track_caller]
-    pub fn alloc() -> Option<ThinBox<IPagetable>> {
+    pub fn alloc() -> Option<ThinBox<Self>> {
         KMEM.lock()
             .alloc("IPagetable::alloc()")
-            .map(|page| page.zeroed().leak_uninit::<IPagetable>())
+            .map(|page| page.zeroed().leak_uninit::<Self>())
             // SAFETY: any bit layout is valid
             .map(|uninit| unsafe { uninit.assume_init_mut() }.into())
     }

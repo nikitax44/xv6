@@ -12,6 +12,8 @@ pub struct Pagetable<'inner> {
 
 impl Pagetable<'static> {
     #[track_caller]
+    /// # Errors
+    /// out of memory
     pub fn alloc() -> Result<Self, PTError> {
         Ok(Self::new(
             IPagetable::alloc().ok_or(PTError::AllocFail)?.leak_ref(),
@@ -32,11 +34,11 @@ impl<'inner> Pagetable<'inner> {
     const PT_ENTRY_MASK: usize = (1 << Self::PTE_LVL_SHIFT) - 1;
     pub(crate) const MAX_VA: usize = 1 << (Self::PTELVLS * Self::PTE_LVL_SHIFT + PGSHIFT - 1);
 
-    fn get_idx(level: usize, virtual_address: usize) -> usize {
+    const fn get_idx(level: usize, virtual_address: usize) -> usize {
         (virtual_address >> (PGSHIFT + Self::PTE_LVL_SHIFT * level)) & Self::PT_ENTRY_MASK
     }
 
-    fn verify_va(addr: usize) -> Result<(), PTError> {
+    const fn verify_va(addr: usize) -> Result<(), PTError> {
         if addr >= Self::MAX_VA {
             return Err(PTError::InvalidVirtualAddress);
         };
@@ -52,12 +54,12 @@ impl<'inner> Pagetable<'inner> {
         Self::verify_va(virtual_address)?;
 
         let pt2 = &self.inner;
-        // SAFETY: statically known to contain either Null or ptr to IPagetable
         let pt1: &IPagetable =
+        // SAFETY: statically known to contain either Null or ptr to IPagetable
             unsafe { pt2[Self::get_idx(2, virtual_address)].as_pt() }.ok_or(PTError::NotMapped)?;
 
-        // SAFETY: statically known to contain either Null or ptr to IPagetable
         let pt0: &IPagetable =
+        // SAFETY: statically known to contain either Null or ptr to IPagetable
             unsafe { pt1[Self::get_idx(1, virtual_address)].as_pt() }.ok_or(PTError::NotMapped)?;
 
         Ok(pt0[Self::get_idx(0, virtual_address)])
@@ -65,6 +67,8 @@ impl<'inner> Pagetable<'inner> {
 
     /// # Errors
     /// see `MMapError`
+    /// # Panics
+    /// never
     pub fn walk_mut(&mut self, virtual_address: usize) -> Result<&mut PtEntry, PTError> {
         Self::verify_va(virtual_address)?;
 
@@ -74,6 +78,7 @@ impl<'inner> Pagetable<'inner> {
             pt_entry2.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
         }
 
+        // SAFETY: level2 ptentries may contain only `IPagetable`s
         let pt1: &mut IPagetable = unsafe { pt_entry2.as_pt_mut() }.unwrap();
 
         let pt_entry1: &mut PtEntry = &mut pt1[Self::get_idx(1, virtual_address)];
@@ -81,6 +86,7 @@ impl<'inner> Pagetable<'inner> {
             pt_entry1.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
         }
 
+        // SAFETY: level1 ptentries may contain only `IPagetable`s
         let pt0: &mut IPagetable = unsafe { pt_entry1.as_pt_mut() }.unwrap();
 
         // SAFETY: we know that inner will outlive 'self
@@ -89,6 +95,8 @@ impl<'inner> Pagetable<'inner> {
 
     /// # Errors
     /// see `MMapError`
+    /// # Panics
+    /// if contains bugs
     #[track_caller]
     pub fn map_page(
         &mut self,
@@ -102,11 +110,12 @@ impl<'inner> Pagetable<'inner> {
         };
         pte.set(physical_address, perm)?;
 
-        assert_eq!(
+        debug_assert_eq!(
             self.walk(virtual_address)
                 .expect("failed to properly map")
                 .get(),
-            Some((physical_address, perm))
+            Some((physical_address, perm)),
+            "vmmap: read different value from one written"
         );
         Ok(())
     }
@@ -148,7 +157,7 @@ mod ffi {
 
     //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)
     #[no_mangle]
-    fn mappages(
+    extern "C" fn mappages(
         mut pt: Pagetable,
         virtual_address: usize,
         size: usize,

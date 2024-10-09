@@ -18,10 +18,6 @@ pub struct KMem {
     free_pages: usize,
 }
 
-/// # SAFETY:
-/// pointer space is shared between all harts
-unsafe impl Send for KMem {}
-
 pub static KMEM: Spinlock<KMem> = Spinlock::new(KMem {
     data: None,
     free_pages: 0,
@@ -96,7 +92,7 @@ impl KMem {
     }
 
     #[must_use]
-    pub fn free_pages(&self) -> usize {
+    pub const fn free_pages(&self) -> usize {
         self.free_pages
     }
 }

@@ -14,7 +14,7 @@ impl<T: ?Sized> ThinBox<T> {
     /// `inner` is valid, properly aligned, and you have ownership over its contents
     /// you transfer the ownership over the `inner` contents to `ThinBox`
     #[must_use]
-    pub unsafe fn new(inner: NonNull<T>) -> Self {
+    pub const unsafe fn new(inner: NonNull<T>) -> Self {
         Self { inner }
     }
 

@@ -3,28 +3,6 @@
 // start() jumps here in supervisor mode on all CPUs.
 void kernel_main(void) { scheduler(); }
 
-#ifndef SBI_ENABLE
-static volatile bool started = 0;
-
-void init_boot(void);
-void init_other(void);
-
-int main(void) {
-  if (cpuid() == 0) {
-    init_boot();
-    __sync_synchronize();
-    started = true;
-  } else {
-    while (!started)
-      ;
-    __sync_synchronize();
-    init_other();
-  }
-
-  kernel_main();
-}
-#endif
-
 void init_boot(void) {
   consoleinit();
   printfinit();

@@ -1,11 +1,10 @@
-#include "dtb.h"
 #include "kernel/defs.h"
-#include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
 #include "kernel/param.h"
 #include "kernel/types.h"
 
 #ifdef SBI_ENABLE
+#include "dtb.h"
 
 // main.c
 void kernel_main(void);
@@ -60,8 +59,6 @@ void spawn_others(u32 hrts) {
   __sync_synchronize();
 
   for (u32 hartid = 0; hartid < hrts; hartid++) {
-    result = sbi_hsm_hart_status(hartid);
-
     if (hartid == cpuid()) {
       continue;
     }
@@ -106,7 +103,7 @@ static void preallocate_stacks(u32 n) {
 #define WARL_NA4   (0x10 << 3)
 #define WARL_NAPOT (0x11 << 3)
 
-void main(void);
+void dispatch(void);
 void timerinit(void);
 
 // entry.S needs one stack per CPU.
@@ -122,7 +119,7 @@ void start(void) {
 
   // set M Exception Program Counter to main, for mret.
   // requires gcc -mcmodel=medany
-  w_mepc((u64)main);
+  w_mepc((u64)dispatch);
 
   // disable paging for now.
   w_satp(0);
@@ -158,4 +155,26 @@ void timerinit(void) {
   // ask for the very first timer interrupt.
   w_stimecmp(r_time() + 1000000);
 }
+
+static volatile bool started = 0;
+
+void init_boot(void);
+void init_other(void);
+void kernel_main(void);
+
+void dispatch(void) {
+  if (cpuid() == 0) {
+    init_boot();
+    __sync_synchronize();
+    started = true;
+  } else {
+    while (!started)
+      ;
+    __sync_synchronize();
+    init_other();
+  }
+
+  kernel_main();
+}
+
 #endif

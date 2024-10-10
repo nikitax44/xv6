@@ -12,3 +12,5 @@
 #define NBUF        (MAXOPBLOCKS * 3) // size of disk block cache
 #define MAXPATH     128               // maximum file path name
 #define USERSTACK   8                 // user stack pages
+
+// #define SBI_ENABLE

@@ -1,5 +1,6 @@
 #pragma once
 #ifndef __ASSEMBLER__
+#include "kernel/param.h"
 #include "kernel/types.h"
 #define asm __asm__
 #pragma GCC diagnostic push

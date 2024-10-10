@@ -15,7 +15,7 @@ impl IPagetable {
         KMEM.lock()
             .alloc("IPagetable::alloc()")
             .map(|page| page.zeroed().leak_uninit::<Self>())
-            // SAFETY: any bit layout is valid
+            // SAFETY: page was zeroed
             .map(|uninit| unsafe { uninit.assume_init_mut() }.into())
     }
 }

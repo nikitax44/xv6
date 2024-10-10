@@ -22,6 +22,8 @@ impl Spinlock<Heap> {
 /// # SAFETY:
 /// we give the valid pointers
 unsafe impl GlobalAlloc for Spinlock<Heap> {
+    /// # Safety
+    /// safe
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         self.in_context(|heap| {
             if let Ok(ptr) = heap.alloc(layout) {
@@ -39,6 +41,8 @@ unsafe impl GlobalAlloc for Spinlock<Heap> {
         })
     }
 
+    /// # Safety
+    /// `ptr` must be allocated with `alloc` previously
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         let ptr = NonNull::new(ptr).expect("dealloc(null)");
         // heap.dealloc is actually unsound and thus should be unsafe

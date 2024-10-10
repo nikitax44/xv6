@@ -54,13 +54,13 @@ impl<'inner> Pagetable<'inner> {
         Self::verify_va(virtual_address)?;
 
         let pt2 = &self.inner;
-        let pt1: &IPagetable =
-        // SAFETY: statically known to contain either Null or ptr to IPagetable
-            unsafe { pt2[Self::get_idx(2, virtual_address)].as_pt() }.ok_or(PTError::NotMapped)?;
+        let pt1: &IPagetable = pt2[Self::get_idx(2, virtual_address)]
+            .as_pt()
+            .ok_or(PTError::NotMapped)?;
 
-        let pt0: &IPagetable =
-        // SAFETY: statically known to contain either Null or ptr to IPagetable
-            unsafe { pt1[Self::get_idx(1, virtual_address)].as_pt() }.ok_or(PTError::NotMapped)?;
+        let pt0: &IPagetable = pt1[Self::get_idx(1, virtual_address)]
+            .as_pt()
+            .ok_or(PTError::NotMapped)?;
 
         Ok(pt0[Self::get_idx(0, virtual_address)])
     }
@@ -72,24 +72,20 @@ impl<'inner> Pagetable<'inner> {
     pub fn walk_mut(&mut self, virtual_address: usize) -> Result<&mut PtEntry, PTError> {
         Self::verify_va(virtual_address)?;
 
-        // SAFETY: statically known to contain either Null or ptr to IPagetable
         let pt_entry2: &mut PtEntry = &mut self.inner[Self::get_idx(2, virtual_address)];
         if !pt_entry2.is_set() {
             pt_entry2.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
         }
 
-        // SAFETY: level2 ptentries may contain only `IPagetable`s
-        let pt1: &mut IPagetable = unsafe { pt_entry2.as_pt_mut() }.unwrap();
+        let pt1: &mut IPagetable = pt_entry2.as_pt_mut().unwrap();
 
         let pt_entry1: &mut PtEntry = &mut pt1[Self::get_idx(1, virtual_address)];
         if !pt_entry1.is_set() {
             pt_entry1.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
         }
 
-        // SAFETY: level1 ptentries may contain only `IPagetable`s
-        let pt0: &mut IPagetable = unsafe { pt_entry1.as_pt_mut() }.unwrap();
+        let pt0: &mut IPagetable = pt_entry1.as_pt_mut().unwrap();
 
-        // SAFETY: we know that inner will outlive 'self
         Ok(pt0.index_mut(Self::get_idx(0, virtual_address)))
     }
 

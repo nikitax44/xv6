@@ -1,24 +1,26 @@
 #![no_std]
 #![deny(
-    unsafe_op_in_unsafe_fn,
-    clippy::correctness,
-    clippy::suspicious,
-    clippy::complexity,
+    // keep-sorted start
     clippy::allow_attributes_without_reason,
     clippy::as_underscore,
     clippy::clone_on_ref_ptr,
+    clippy::complexity,
+    clippy::correctness,
     clippy::default_union_representation,
+    clippy::missing_safety_doc,
     clippy::mixed_read_write_in_expression,
+    clippy::nursery,
     clippy::self_named_module_files,
+    clippy::suspicious,
     clippy::undocumented_unsafe_blocks,
-    clippy::nursery
+    ffi_unwind_calls,
+    unsafe_op_in_unsafe_fn
+    // keep-sorted end
 )]
 #![warn(
-    clippy::perf,
-    clippy::style,
-    clippy::pedantic,
-    clippy::cargo,
+    // keep-sorted start
     clippy::alloc_instead_of_core,
+    clippy::cargo,
     clippy::decimal_literal_representation,
     clippy::else_if_without_else,
     clippy::empty_drop,
@@ -31,11 +33,17 @@
     clippy::missing_assert_message,
     clippy::multiple_inherent_impl,
     clippy::multiple_unsafe_ops_per_block,
+    clippy::pedantic,
+    clippy::perf,
     clippy::pub_without_shorthand,
     clippy::ref_patterns,
     clippy::renamed_function_params,
     clippy::same_name_method,
-    clippy::suspicious_xor_used_as_pow
+    clippy::style,
+    clippy::suspicious_xor_used_as_pow,
+    clippy::unnecessary_safety_comment,
+    clippy::unnecessary_safety_doc
+    // keep-sorted end
 )]
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]

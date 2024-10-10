@@ -55,21 +55,22 @@ impl PtEntry {
             .unwrap();
     }
 
-    /// # Safety
-    /// `PtEntry` must contain valid `IPagetable`
-    pub(super) unsafe fn as_pt(&self) -> Option<&IPagetable> {
+    pub(super) fn as_pt(&self) -> Option<&IPagetable> {
         self.get()
+            .filter(|(_, mode)| *mode == Mode::Table)
             .map(|(addr, _)| addr as *const IPagetable)
-            // SAFETY: precondition
+            // SAFETY: contains reference IPagetable
             .map(|ptr| unsafe { &*ptr })
     }
 
     /// # Safety
     /// `PtEntry` must contain valid `IPagetable`
-    pub(super) unsafe fn as_pt_mut(&mut self) -> Option<&mut IPagetable> {
+    #[expect(clippy::needless_pass_by_ref_mut, reason = "it returns &mut reference")]
+    pub(super) fn as_pt_mut(&mut self) -> Option<&mut IPagetable> {
         self.get()
+            .filter(|(_, mode)| *mode == Mode::Table)
             .map(|(addr, _)| addr as *mut IPagetable)
-            // SAFETY: precondition
+            // SAFETY: contains reference IPagetable
             .map(|ptr| unsafe { &mut *ptr })
     }
 }

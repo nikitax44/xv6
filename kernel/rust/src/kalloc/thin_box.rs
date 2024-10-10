@@ -42,7 +42,7 @@ impl<T: ?Sized> ThinBox<T> {
 
 impl<T: ?Sized> From<&'static mut T> for ThinBox<T> {
     fn from(value: &'static mut T) -> Self {
-        // SAFETY: inner is valid and properly aligned. we were given the ownership for 'static
+        // SAFETY: inner is valid and properly aligned. we now have the ownership for &'static mut
         unsafe { Self::new(value.into()) }
     }
 }
@@ -51,7 +51,7 @@ impl<T: ?Sized> Deref for ThinBox<T> {
     type Target = T;
     fn deref(&self) -> &T {
         // SAFETY:
-        // invariant
+        // by invariant we own the value for &'self
         unsafe { self.inner.as_ref() }
     }
 }
@@ -59,7 +59,7 @@ impl<T: ?Sized> Deref for ThinBox<T> {
 impl<T: ?Sized> DerefMut for ThinBox<T> {
     fn deref_mut(&mut self) -> &mut T {
         // SAFETY:
-        // invariant
+        // by invariant we own the value for &'self mut
         unsafe { self.inner.as_mut() }
     }
 }

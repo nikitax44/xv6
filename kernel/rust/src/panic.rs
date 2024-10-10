@@ -34,7 +34,7 @@ fn handle_panic(info: &PanicInfo) -> ! {
 /// always, that is the point of this function
 /// the function itself shouldn't panic
 #[no_mangle]
-pub unsafe extern "C" fn panic(msg: *const c_char) -> ! {
+unsafe extern "C" fn panic(msg: *const c_char) -> ! {
     // SAFETY:
     // see precondition
     let cstr = unsafe { CStr::from_ptr::<'_>(msg) };
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn panic(msg: *const c_char) -> ! {
 
 struct Bytes<'s>(&'s mut Vec<u8>);
 
-impl fmt::Write for Bytes<'_> {
+impl Write for Bytes<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.0.extend_from_slice(s.as_bytes());
         Ok(())

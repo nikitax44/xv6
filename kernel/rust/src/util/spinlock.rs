@@ -10,12 +10,12 @@ pub struct Spinlock<T> {
     data: UnsafeCell<T>,
 }
 
-pub struct SpinlockGuard<'l, T: 'l> {
+pub struct SpinlockGuard<'l, T: 'l + Send> {
     lock: &'l Spinlock<T>,
     _no_send: PhantomData<*mut T>,
 }
 
-impl<T> Spinlock<T> {
+impl<T: Send> Spinlock<T> {
     pub const fn new(value: T) -> Self {
         Self {
             locked: AtomicBool::new(false),
@@ -35,19 +35,19 @@ impl<T> Spinlock<T> {
     }
 }
 
-impl<T: Clone> Clone for Spinlock<T> {
+impl<T: Clone + Send> Clone for Spinlock<T> {
     fn clone(&self) -> Self {
         Self::new(self.lock().clone())
     }
 }
 
-impl<T> Drop for SpinlockGuard<'_, T> {
+impl<T: Send> Drop for SpinlockGuard<'_, T> {
     fn drop(&mut self) {
         self.lock.locked.store(false, Ordering::Release);
     }
 }
 
-impl<T> Deref for SpinlockGuard<'_, T> {
+impl<T: Send> Deref for SpinlockGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         // SAFETY:
@@ -56,7 +56,7 @@ impl<T> Deref for SpinlockGuard<'_, T> {
     }
 }
 
-impl<T> DerefMut for SpinlockGuard<'_, T> {
+impl<T: Send> DerefMut for SpinlockGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         // SAFETY:
         // we have acquired the lock, nobody else can use it.

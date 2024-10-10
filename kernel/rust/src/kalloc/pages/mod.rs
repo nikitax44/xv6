@@ -34,8 +34,6 @@ pub unsafe fn init() {
     static STATE: Once = Once::new();
     let mut kmem = KMEM.lock();
 
-    // SAFETY:
-    // we're only using address and not actual value
     let start = addrof_end_kernel() as *mut Page;
     assert!(start.is_aligned(), "kernel's .end is not page-aligned");
     let start = ptr::NonNull::new(start).unwrap();

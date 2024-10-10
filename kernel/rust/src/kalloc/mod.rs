@@ -30,11 +30,11 @@ unsafe impl GlobalAlloc for Spinlock<Heap> {
             let Some(page) = KMEM.lock().alloc("Buddy allocator") else {
                 return core::ptr::null_mut();
             };
-            let page = page.leak().as_ptr() as usize;
+            let page = page.into_box().leak().as_ptr() as usize;
             // SAFETY: we have the ownership
             unsafe { heap.add_to_heap(page, page + PGSIZE) };
             heap.alloc(layout)
-                .expect("failed to allocate page")
+                .expect("failed to allocate object larger than PGSIZE. TODO: use kvmmap")
                 .as_ptr()
         })
     }

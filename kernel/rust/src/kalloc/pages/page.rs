@@ -1,39 +1,35 @@
+use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::PGSIZE;
 use crate::println;
 use core::marker::PhantomPinned;
-use core::mem::MaybeUninit;
+use core::mem;
 use core::panic::Location;
-use core::{mem, ptr};
 
 type Origin = &'static Location<'static>;
 
 #[repr(align(4096))]
 #[must_use]
-pub struct Page(pub MaybeUninit<[u8; PGSIZE]>, PhantomPinned);
+pub struct Page(pub mem::MaybeUninit<[u8; PGSIZE]>, PhantomPinned);
 
 impl Page {
     pub const fn initial() -> Self {
-        Self(MaybeUninit::uninit(), PhantomPinned)
+        Self(mem::MaybeUninit::uninit(), PhantomPinned)
     }
 }
 
 #[must_use]
 pub struct PageHandle {
-    ptr: ptr::NonNull<Page>,
+    ptr: Option<ThinBox<Page>>,
     origin: Origin,
     in_use: bool,
     purpose: &'static str,
 }
 
-/// # SAFETY:
-/// safe to send because we own the Page
-unsafe impl Send for PageHandle {}
-
 impl PageHandle {
     #[track_caller]
     pub fn new(ptr: &'static mut Page, origin: Option<Origin>) -> Self {
         Self {
-            ptr: ptr.into(),
+            ptr: Some(ptr.into()),
             origin: origin.unwrap_or_else(Location::caller),
             purpose: "unknown",
             in_use: true,
@@ -61,14 +57,14 @@ impl PageHandle {
     }
 
     #[must_use]
-    pub fn leak(self) -> ptr::NonNull<Page> {
-        mem::ManuallyDrop::new(self).ptr
+    /// # Panics
+    /// never
+    pub fn into_box(self) -> ThinBox<Page> {
+        mem::ManuallyDrop::new(self).ptr.take().unwrap()
     }
 
     pub fn raw_page(&mut self) -> &mut Page {
-        // SAFETY:
-        // we own the ptr contents and any bit pattern is valid for Page
-        unsafe { self.ptr.as_mut() }
+        self.ptr.as_mut().unwrap()
     }
 
     pub fn zeroed(mut self) -> Self {
@@ -85,8 +81,8 @@ impl PageHandle {
             "attempt to get uninit with size exceeding Page"
         );
         // SAFETY:
-        // we own the ptr and MaybeUninit is valid for any bit pattern
-        unsafe { self.leak().cast().as_mut() }
+        // we own the ptr, MaybeUninit is valid for any bit pattern and size and alignment are at least the required
+        unsafe { self.into_box().leak().cast().as_mut() }
     }
 
     /// # Panics
@@ -98,8 +94,8 @@ impl PageHandle {
             "attempt to get uninit with size exceeding Page"
         );
         // SAFETY:
-        // we own the ptr and MaybeUninit is valid for any bit pattern
-        unsafe { self.ptr.cast().as_mut() }
+        // we own the ptr, MaybeUninit is valid for any bit pattern and size and alignment are at least the required
+        unsafe { self.ptr.as_mut().unwrap().inner().cast().as_mut() }
     }
 }
 

@@ -1,3 +1,4 @@
+use core::fmt::{Debug, Formatter};
 use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 
@@ -8,6 +9,10 @@ use core::ptr::NonNull;
 pub struct ThinBox<T: ?Sized> {
     inner: NonNull<T>,
 }
+
+/// # SAFETY:
+/// by invariant we own the value, so no aliased accesses are allowed
+unsafe impl<T: ?Sized> Send for ThinBox<T> {}
 
 impl<T: ?Sized> ThinBox<T> {
     /// # Safety
@@ -27,6 +32,11 @@ impl<T: ?Sized> ThinBox<T> {
     pub fn leak_ref(self) -> &'static mut T {
         // SAFETY: we owned it.
         unsafe { self.leak().as_mut() }
+    }
+
+    /// creates an aliased pointer for use in `ManuallyDrop` context
+    pub fn inner(&mut self) -> NonNull<T> {
+        self.inner
     }
 }
 
@@ -57,5 +67,11 @@ impl<T: ?Sized> DerefMut for ThinBox<T> {
 impl<T: ?Sized> Drop for ThinBox<T> {
     fn drop(&mut self) {
         panic!("ThinBox was dropped");
+    }
+}
+
+impl<T: ?Sized> Debug for ThinBox<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        self.inner.fmt(f)
     }
 }

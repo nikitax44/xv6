@@ -16,7 +16,7 @@ unsafe extern "C" fn kinit() {
 extern "C" fn kalloc() -> *mut Page {
     KMEM.lock()
         .alloc("ffi alloc")
-        .map_or_else(ptr::null_mut, |page| page.leak().as_ptr())
+        .map_or_else(ptr::null_mut, |page| page.into_box().leak().as_ptr())
 }
 
 #[no_mangle]

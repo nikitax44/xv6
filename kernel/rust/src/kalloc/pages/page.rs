@@ -9,7 +9,7 @@ type Origin = &'static Location<'static>;
 
 #[repr(align(4096))]
 #[must_use]
-pub struct Page(pub mem::MaybeUninit<[u8; PGSIZE]>, PhantomPinned);
+pub struct Page(mem::MaybeUninit<[u8; PGSIZE]>, PhantomPinned);
 
 impl Page {
     pub const fn initial() -> Self {
@@ -63,6 +63,8 @@ impl PageHandle {
         mem::ManuallyDrop::new(self).ptr.take().unwrap()
     }
 
+    /// # Panics
+    /// never
     pub fn raw_page(&mut self) -> &mut Page {
         self.ptr.as_mut().unwrap()
     }
@@ -105,5 +107,6 @@ impl Drop for PageHandle {
             "memory leak: {:?}, origin: {}, in use: {:?}, purpose: {}",
             self.ptr, self.origin, self.in_use, self.purpose
         );
+        let _ = mem::ManuallyDrop::new(self.ptr.take());
     }
 }

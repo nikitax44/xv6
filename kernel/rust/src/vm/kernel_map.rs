@@ -1,7 +1,8 @@
+use crate::addrof_symbol;
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::{
-    addrof_end_text, addrof_kernel, addrof_trampoline, FW_CFG, KSTACK, PHYSTOP, PLIC, TEST0,
-    TRAMPOLINE, UART0, VIRTIO0,
+    addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PHYSTOP, PLIC, TEST0, TRAMPOLINE, UART0,
+    VIRTIO0,
 };
 use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
@@ -45,7 +46,7 @@ pub fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
 
     // map the trampoline for trap entry/exit to
     // the highest virtual address in the kernel.
-    pt.map_page(TRAMPOLINE, addrof_trampoline(), Mode::___X)?;
+    pt.map_page(TRAMPOLINE, addrof_symbol!(trampoline), Mode::___X)?;
 
     // allocate and map a kernel stack for each process.
     proc_mapstacks(&mut pt)?;

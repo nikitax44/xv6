@@ -16,48 +16,42 @@ pub const RAMBASE: usize = 0x8000_0000;
 pub const PHYSTOP: usize = RAMBASE + 128 * 1024 * 1024;
 
 use core::ffi::c_void;
-use core::ptr;
 
 #[repr(transparent)]
 pub struct Symbol {
     _placeholder: c_void,
 }
 
-mod symbols {
-    use crate::memlayout::Symbol;
-
-    extern "C" {
-        pub static _entry: Symbol;
-        pub static end: Symbol;
-        pub static etext: Symbol;
-        pub static trampoline: Symbol;
-    }
+#[macro_export]
+macro_rules! extern_symbol {
+    () => {};
+    ($(#[$attr:meta])* $vis:vis symbol $N:ident : $T:ty => $e:ident; $($t:tt)*) => {
+        $(#[$attr])*
+        #[must_use]
+        $vis fn $N () -> $T {
+            type Target = $T;
+            extern "C" {
+               static $e : $crate::memlayout::Symbol;
+            }
+            // SAFETY: we only read address at runtime
+            (unsafe {::core::ptr::from_ref(& ($e))}) as Target
+        }
+        $crate::extern_symbol!($($t)*);
+    };
 }
 
-#[must_use]
-pub fn addrof_kernel() -> usize {
-    // SAFETY:
-    // only address is accessed
-    unsafe { ptr::from_ref(&symbols::_entry) as usize }
+#[macro_export]
+macro_rules! addrof_symbol {
+    ($symbol: ident) => {{
+        $crate::extern_symbol! {
+            symbol __read: usize => $symbol;
+        }
+        __read()
+    }};
 }
 
-#[must_use]
-pub fn addrof_end_kernel() -> usize {
-    // SAFETY:
-    // only address is accessed
-    unsafe { ptr::from_ref(&symbols::end) as usize }
-}
-
-#[must_use]
-pub fn addrof_end_text() -> usize {
-    // SAFETY:
-    // only address is accessed
-    unsafe { ptr::from_ref(&symbols::etext) as usize }
-}
-
-#[must_use]
-pub fn addrof_trampoline() -> usize {
-    // SAFETY:
-    // only address is accessed
-    unsafe { ptr::from_ref(&symbols::trampoline) as usize }
+extern_symbol! {
+    pub symbol addrof_kernel: usize => _entry;
+    pub symbol addrof_end_kernel: usize => end;
+    pub symbol addrof_end_text: usize => etext;
 }

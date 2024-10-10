@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(Xv6 C ASM)
 
-set(GDBPORT 1234)
+set(GDBPORT 1235)
 set(NPROC 8)
 
 

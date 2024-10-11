@@ -1,44 +1,17 @@
-use core::panic::Location;
-use page::PageHandle;
-
-// mod ffi;
-// mod kmem;
+#[cfg(not(feature = "rust_kalloc"))]
+mod c_kmem;
+#[cfg(feature = "rust_kalloc")]
+mod ffi;
 pub mod page;
+#[cfg(feature = "rust_kalloc")]
+mod rust_kmem;
 
-use crate::kalloc::pages::page::Page;
-use core::ptr::NonNull;
+#[cfg(not(feature = "rust_kalloc"))]
+pub use c_kmem::{KMem, KMEM};
+#[cfg(feature = "rust_kalloc")]
+pub use rust_kmem::{KMem, KMEM};
 
-pub struct KMem;
-pub static KMEM: KMem = KMem;
-impl KMem {
-    #[must_use]
-    pub const fn lock(&self) -> &Self {
-        self
-    }
-    #[must_use]
-    #[track_caller]
-    pub fn alloc(&self, purpose: &'static str) -> Option<PageHandle> {
-        extern "C" {
-            pub fn kalloc() -> Option<NonNull<Page>>;
-        }
-        // SAFETY: safe
-        unsafe { kalloc() }
-            // SAFETY: we now own the value. any bit pattern is valid
-            .map(|mut ptr| unsafe { ptr.as_mut() })
-            .map(|ptr| PageHandle::new(ptr, None))
-            .map(|mut ph| {
-                ph.mark_allocated(Location::caller(), purpose);
-                ph
-            })
-    }
-
-    pub fn free(&self, mut page: PageHandle) {
-        extern "C" {
-            pub fn kfree(ptr: NonNull<Page>);
-        }
-
-        page.mark_freed();
-        // SAFETY: we own the value. it is of the valid type
-        unsafe { kfree(page.into_box().leak()) }
-    }
+#[derive(Debug)]
+pub enum KMEMError {
+    NoFreePages(usize),
 }

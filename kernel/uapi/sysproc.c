@@ -96,7 +96,7 @@ u64 sys_sysinfo(void) {
   struct sysinfo info = {
       .uptime    = sys_uptime(),
       .loads     = {0},
-      .totalram  = PHYSTOP - (u64)&end,
+      .totalram  = 128 * 1024 * 1024,
       .freeram   = PGSIZE * free_pages(),
       .sharedram = 0,
       .bufferram = 0,

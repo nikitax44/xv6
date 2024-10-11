@@ -57,7 +57,10 @@ pub fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
 
 fn proc_mapstacks(pt: &mut Pagetable) -> Result<(), PTError> {
     for i in 0..NPROC {
-        let page = KMEM.lock().alloc("proc stack").ok_or(PTError::AllocFail)?;
+        let page = KMEM
+            .lock()
+            .alloc("proc stack")
+            .map_err(PTError::AllocFail)?;
         let va = KSTACK(i);
         pt.map_page(va, page.into_box().leak().as_ptr() as usize, Mode::_RW_)?;
     }

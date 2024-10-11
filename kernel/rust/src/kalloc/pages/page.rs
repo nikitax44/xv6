@@ -17,6 +17,7 @@ impl Page {
 }
 
 #[must_use]
+#[derive(Debug)]
 pub struct PageHandle {
     ptr: Option<ThinBox<Page>>,
     origin: Origin,
@@ -102,10 +103,7 @@ impl PageHandle {
 
 impl Drop for PageHandle {
     fn drop(&mut self) {
-        println!(
-            "memory leak: {:?}, origin: {}, in use: {:?}, purpose: {}",
-            self.ptr, self.origin, self.in_use, self.purpose
-        );
+        println!("memory leak: {:?}", self);
         let _ = mem::ManuallyDrop::new(self.ptr.take());
     }
 }

@@ -589,6 +589,9 @@ u64 sys_getdents(void) {
     return ENOTDIR;
   }
   u8* buf = kalloc();
+  if (buf == 0) {
+    return ENOMEM;
+  }
   if ((sz = readi(f->ip, false, (u64)buf, 0, PGSIZE)) == (u32)-1) {
     kfree(buf);
     iunlock(f->ip);

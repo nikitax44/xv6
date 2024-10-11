@@ -2,6 +2,8 @@
 #include "hardware/memlayout.h"
 #include "hardware/riscv.h"
 #include "types.h"
+
+#include <errno.h>
 #include <string.h>
 
 /*
@@ -227,6 +229,7 @@ int uvmcopy(pagetable_t old, pagetable_t new, u64 sz) {
   u64    pa, i;
   u32    flags;
   char*  mem;
+  int    res = 0;
 
   for (i = 0; i < sz; i += PGSIZE) {
     if ((pte = walk(old, i, 0)) == 0) {
@@ -238,10 +241,11 @@ int uvmcopy(pagetable_t old, pagetable_t new, u64 sz) {
     pa    = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     if ((mem = kalloc()) == 0) {
+      res = ENOMEM;
       goto err;
     }
     memmove(mem, (char*)pa, PGSIZE);
-    if (mappages(new, i, PGSIZE, (u64)mem, (int)flags) != 0) {
+    if ((res = mappages(new, i, PGSIZE, (u64)mem, (int)flags)) != 0) {
       kfree(mem);
       goto err;
     }
@@ -250,7 +254,7 @@ int uvmcopy(pagetable_t old, pagetable_t new, u64 sz) {
 
 err:
   uvmunmap(new, 0, i / PGSIZE, 1);
-  return -1;
+  return res;
 }
 
 // mark a PTE invalid for user access.

@@ -7,5 +7,9 @@ edition = "2021"
 name = "rust_xv6"
 crate-type = ["staticlib"]
 
+[features]
+rust_kalloc = []
+
 [dependencies]
 buddy_system_allocator = { version = "0.11.0", default-features = false }
+riscv = "0.11.1"

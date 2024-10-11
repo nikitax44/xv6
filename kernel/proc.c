@@ -1,6 +1,7 @@
 #include "proc.h"
 #include "_initcode.h"
 #include "defs.h"
+#include "errno.h"
 #include "hardware/memlayout.h"
 #include "hardware/riscv.h"
 #include "param.h"
@@ -81,18 +82,17 @@ int allocpid(void) {
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
-static struct proc* allocproc(void) {
+static int allocproc(struct proc** proc_out) {
   struct proc* p;
 
   for (p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
     if (p->state == UNUSED) {
       goto found;
-    } else {
-      release(&p->lock);
     }
+    release(&p->lock);
   }
-  return 0;
+  return ENOPROC;
 
 found:
   p->pid   = allocpid();
@@ -102,7 +102,7 @@ found:
   if ((p->trapframe = (struct trapframe*)kalloc()) == 0) {
     freeproc(p);
     release(&p->lock);
-    return 0;
+    return ENOMEM;
   }
 
   // An empty user page table.
@@ -110,7 +110,7 @@ found:
   if (p->pagetable == 0) {
     freeproc(p);
     release(&p->lock);
-    return 0;
+    return -10;
   }
 
   // Set up new context to start executing at forkret,
@@ -119,7 +119,8 @@ found:
   p->context.ra = (u64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
-  return p;
+  *proc_out = p;
+  return 0;
 }
 
 // free a proc structure and the data hanging from it,
@@ -189,7 +190,7 @@ void proc_freepagetable(pagetable_t pagetable, u64 sz) {
 void userinit(void) {
   struct proc* p;
 
-  p        = allocproc();
+  allocproc(&p);
   initproc = p;
 
   // allocate one user page and copy initcode's instructions
@@ -232,18 +233,19 @@ int growproc(int n) {
 int fork(void) {
   int          i, pid;
   struct proc* np;
-  struct proc* p = myproc();
+  struct proc* p   = myproc();
+  int          res = 0;
 
   // Allocate process.
-  if ((np = allocproc()) == 0) {
-    return -1;
+  if ((res = allocproc(&np)) != 0) {
+    return -res;
   }
 
   // Copy user memory from parent to child.
-  if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0) {
+  if ((res = uvmcopy(p->pagetable, np->pagetable, p->sz)) != 0) {
     freeproc(np);
     release(&np->lock);
-    return -1;
+    return -res;
   }
   np->sz = p->sz;
 

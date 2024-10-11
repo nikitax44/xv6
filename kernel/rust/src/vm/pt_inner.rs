@@ -1,4 +1,4 @@
-use crate::kalloc::pages::KMEM;
+use crate::kalloc::pages::{KMEMError, KMEM};
 use crate::kalloc::thin_box::ThinBox;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::pte::PtEntry;
@@ -11,7 +11,7 @@ pub struct IPagetable {
 
 impl IPagetable {
     #[track_caller]
-    pub fn alloc() -> Option<ThinBox<Self>> {
+    pub fn alloc() -> Result<ThinBox<Self>, KMEMError> {
         KMEM.lock()
             .alloc("IPagetable::alloc()")
             .map(|page| page.zeroed().leak_uninit::<Self>())

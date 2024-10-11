@@ -1,5 +1,7 @@
+use crate::kalloc::pages::page::Page;
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::PGSIZE;
+use crate::util::lazy_cell::LazyCell;
 use crate::util::spinlock::Spinlock;
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::NonNull;
@@ -9,19 +11,38 @@ pub mod thin_box;
 
 const LEVELS: usize = (128 * 1024 * 1024 / PGSIZE).ilog2() as usize;
 type Heap = buddy_system_allocator::Heap<LEVELS>;
-#[global_allocator]
-pub static KALLOC: Spinlock<Heap> = Spinlock::new(Heap::new());
+pub struct SharedHeap<F: FnOnce() -> Heap + Send>(Spinlock<LazyCell<Heap, F>>);
 
-impl Spinlock<Heap> {
+// would be unsound if was public
+fn initial_heap() -> Heap {
+    static INITIAL: Page = Page::initial();
+    let mut heap = Heap::new();
+    let addr = core::ptr::addr_of!(INITIAL) as usize;
+    // SAFETY: we own the memory in this range
+    unsafe {
+        heap.init(addr, addr + PGSIZE);
+    }
+    heap
+}
+
+#[global_allocator]
+pub static KALLOC: SharedHeap<fn() -> buddy_system_allocator::Heap<LEVELS>> =
+    SharedHeap::new(initial_heap);
+
+impl<F: FnOnce() -> Heap + Send> SharedHeap<F> {
+    pub const fn new(init: F) -> Self {
+        Self(Spinlock::new(LazyCell::new(init)))
+    }
+
     fn in_context<T>(&self, op: impl FnOnce(&mut Heap) -> T) -> T {
-        let mut lock = self.lock();
-        op(&mut lock)
+        let mut lock = self.0.lock();
+        op(lock.get_mut())
     }
 }
 
 /// # SAFETY:
 /// we give the valid pointers
-unsafe impl GlobalAlloc for Spinlock<Heap> {
+unsafe impl<F: FnOnce() -> Heap + Send> GlobalAlloc for SharedHeap<F> {
     /// # Safety
     /// safe
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -29,9 +50,7 @@ unsafe impl GlobalAlloc for Spinlock<Heap> {
             if let Ok(ptr) = heap.alloc(layout) {
                 return ptr.as_ptr();
             };
-            let Some(page) = KMEM.lock().alloc("Buddy allocator") else {
-                return core::ptr::null_mut();
-            };
+            let page = KMEM.lock().alloc("Buddy allocator").expect("KMEMError");
             let page = page.into_box().leak().as_ptr() as usize;
             // SAFETY: we have the ownership
             unsafe { heap.add_to_heap(page, page + PGSIZE) };

@@ -1,3 +1,5 @@
+use crate::kalloc::pages::KMEMError;
+
 mod kernel_map;
 pub mod mode;
 pub mod pagetable;
@@ -7,7 +9,7 @@ pub mod pte;
 #[derive(Debug)]
 pub enum PTError {
     Remap,
-    AllocFail,
+    AllocFail(KMEMError),
     NotMapped,
     InvalidVirtualAddress,
     InvalidPhysicalAddress,

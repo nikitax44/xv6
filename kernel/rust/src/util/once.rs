@@ -38,6 +38,8 @@ impl Once {
         Ok(())
     }
     pub fn wait(&self) {
-        while self.state.load(Ordering::SeqCst) != 2 {}
+        while self.state.load(Ordering::SeqCst) != 2 {
+            core::hint::spin_loop();
+        }
     }
 }

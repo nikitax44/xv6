@@ -16,7 +16,7 @@ impl Pagetable<'static> {
     /// out of memory
     pub fn alloc() -> Result<Self, PTError> {
         Ok(Self::new(
-            IPagetable::alloc().ok_or(PTError::AllocFail)?.leak_ref(),
+            IPagetable::alloc().map_err(PTError::AllocFail)?.leak_ref(),
         ))
     }
 }
@@ -74,14 +74,14 @@ impl<'inner> Pagetable<'inner> {
 
         let pt_entry2: &mut PtEntry = &mut self.inner[Self::get_idx(2, virtual_address)];
         if !pt_entry2.is_set() {
-            pt_entry2.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
+            pt_entry2.set_pt(IPagetable::alloc().map_err(PTError::AllocFail)?);
         }
 
         let pt1: &mut IPagetable = pt_entry2.as_pt_mut().unwrap();
 
         let pt_entry1: &mut PtEntry = &mut pt1[Self::get_idx(1, virtual_address)];
         if !pt_entry1.is_set() {
-            pt_entry1.set_pt(IPagetable::alloc().ok_or(PTError::AllocFail)?);
+            pt_entry1.set_pt(IPagetable::alloc().map_err(PTError::AllocFail)?);
         }
 
         let pt0: &mut IPagetable = pt_entry1.as_pt_mut().unwrap();
@@ -119,9 +119,9 @@ impl<'inner> Pagetable<'inner> {
     /// # Errors
     /// this address it not mapped
     pub fn unmap_page(&mut self, virtual_address: usize) -> Result<(), PTError> {
-        if self.walk(virtual_address).is_err() {
-            return Err(PTError::NotMapped);
-        }
+        // do not create pages to unmapped page
+        self.walk(virtual_address)?;
+
         self.walk_mut(virtual_address)?.unset();
         Ok(())
     }
@@ -147,9 +147,8 @@ impl<'inner> Pagetable<'inner> {
 
 mod ffi {
     use crate::errno::ErrNo;
-    use crate::errno::ErrNo::{ENOMEM, SUCCESS};
+    use crate::errno::ErrNo::SUCCESS;
     use crate::vm::pagetable::Pagetable;
-    use crate::vm::PTError;
 
     //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)
     #[no_mangle]
@@ -161,13 +160,14 @@ mod ffi {
         perm: usize,
     ) -> ErrNo {
         let perm = perm.try_into().expect("invalid access mode");
-        if let Err(err) = pt.map_pages(virtual_address, physical_address, size, perm) {
-            return match err {
-                PTError::AllocFail => ENOMEM,
-
-                _ => panic!("ffi::mappages: {:?}", err),
-            };
-        }
+        let result = pt.map_pages(virtual_address, physical_address, size, perm);
+        // if let Err(err) = result {
+        // return match err {
+        // PTError::AllocFail(err) => ENOMEM,
+        // _ => panic!("ffi::mappages: {:?}", err),
+        // };
+        // }
+        result.expect("ffi::mappages");
         SUCCESS
     }
 }

@@ -1,4 +1,3 @@
-use crate::asm;
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
@@ -24,8 +23,12 @@ impl<T: Send> Spinlock<T> {
     }
 
     pub fn lock(&self) -> SpinlockGuard<'_, T> {
-        while !self.locked.swap(true, Ordering::Acquire) {
-            asm::nop();
+        while self
+            .locked
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_err()
+        {
+            core::hint::spin_loop();
         }
 
         SpinlockGuard {

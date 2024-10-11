@@ -59,9 +59,16 @@ add_custom_command(
         COMMENT "Generating _initcode.h from initcode.S"
 )
 
+set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
+
+if (RUST_KALLOC_ENABLE)
+list(APPEND CARGO_ARGUMENTS --features rust_kalloc)
+list(REMOVE_ITEM OBJS kalloc.c)
+endif()
+
 add_custom_command(
         OUTPUT librust_xv6.a
-        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/rust && cargo build --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target
+        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/rust && cargo build ${CARGO_ARGUMENTS}
         COMMAND cp target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rust/src/*
         COMMENT "Building rust part of xv6"

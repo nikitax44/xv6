@@ -4,7 +4,7 @@ project(Xv6 C ASM)
 set(GDBPORT 1235)
 set(NPROC 8)
 set(OPENSBI_ENABLED false)
-
+set(RUST_KALLOC_ENABLE false)
 
 
 if (NOT DEFINED NEWLIB)

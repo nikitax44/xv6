@@ -7,13 +7,14 @@ use core::panic::PanicInfo;
 extern "C" {
     /// # Safety
     /// msg must point to valid C-string
-    fn _panic(msg: *const c_char) -> !;
+    #[link_name = "_panic"]
+    fn panic_impl(msg: *const c_char) -> !;
 }
 
 pub fn raw_panic(msg: &CStr) -> ! {
     // SAFETY:
     // msg is valid CStr
-    unsafe { _panic(msg.as_ptr()) }
+    unsafe { panic_impl(msg.as_ptr()) }
 }
 
 #[panic_handler]
@@ -22,6 +23,7 @@ fn handle_panic(info: &PanicInfo) -> ! {
     let mut out = Bytes(&mut vec);
     writeln!(out, "RUST: {info}").ok();
     vec.push(b'\0');
+    crate::println!("calling panic");
     CString::from_vec_with_nul(vec).map_or_else(
         |_| raw_panic(c"rust: NUL in panic message"),
         |msg| raw_panic(&msg),
@@ -42,8 +44,8 @@ unsafe extern "C" fn panic(msg: *const c_char) -> ! {
     let mut vec = Vec::new();
     vec.extend_from_slice(b"C FFI:  ");
     vec.extend_from_slice(cstr.to_bytes_with_nul());
-    let out = CString::from_vec_with_nul(vec).unwrap();
-    raw_panic(&out)
+    let out = CStr::from_bytes_with_nul(&vec).unwrap();
+    raw_panic(out)
 }
 
 struct Bytes<'s>(&'s mut Vec<u8>);

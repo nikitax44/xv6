@@ -140,7 +140,7 @@ void consoleintr(int c) {
     reboot();
     break;
   case C('N'):
-    panic("ctrl+I: panic");
+    testpanic();
     break;
   case C('C'): // Kill process
     kill_all();

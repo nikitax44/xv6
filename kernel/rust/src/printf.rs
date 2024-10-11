@@ -1,6 +1,6 @@
-use crate::util::spinlock::Spinlock;
 use core::ffi::c_int;
 use core::fmt;
+use spin::Mutex;
 
 pub struct Console {}
 
@@ -32,7 +32,7 @@ impl Console {
     }
 }
 
-pub static CONSOLE: Spinlock<Console> = Spinlock::new(Console {});
+pub static CONSOLE: Mutex<Console> = Mutex::new(Console {});
 
 impl fmt::Write for Console {
     fn write_str(&mut self, s: &str) -> fmt::Result {

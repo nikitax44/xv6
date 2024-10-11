@@ -1,12 +1,12 @@
-use LazyCell::{Data, Init, Invalid};
+use Lazy::{Data, Init, Invalid};
 
-pub enum LazyCell<T, F: FnOnce() -> T = fn() -> T> {
+pub enum Lazy<T, F: FnOnce() -> T = fn() -> T> {
     Data(T),
     Init(F),
     Invalid,
 }
 
-impl<T, F: FnOnce() -> T> LazyCell<T, F> {
+impl<T, F: FnOnce() -> T> Lazy<T, F> {
     pub const fn new(init: F) -> Self {
         Init(init)
     }

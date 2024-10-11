@@ -10,6 +10,8 @@ void init_boot(void) {
   printf("xv6 kernel is booting\n");
   printf("\n");
 
+  dumpconf();
+
   kinit();            // physical page allocator
   kvminit();          // create kernel page table
   kvminithart();      // turn on paging

@@ -2,9 +2,9 @@ use crate::kalloc::pages::page::{Page, PageHandle};
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::{addrof_end_kernel, PHYSTOP};
 use crate::println;
-use crate::util::once::Once;
 use core::panic::Location;
 use core::ptr;
+use spin::Once;
 
 /// # Safety
 /// this call transfers the memory in range `kernel_end..=PHYSTOP` with &'static mut
@@ -17,8 +17,7 @@ unsafe extern "C" fn kinit() {
     STATUS
         // SAFETY:
         // precondition
-        .init(|| unsafe { init_kmem() })
-        .expect("multiple initialisation");
+        .call_once(|| unsafe { init_kmem() });
 }
 
 /// # Safety
@@ -45,7 +44,7 @@ unsafe fn init_kmem() {
         kmem.free_range(pages);
     };
 
-    STATE.init(inner).expect("multiple KMEM initialisations");
+    STATE.call_once(inner);
 
     println!("kalloc pool: {} pages", kmem.free_pages());
     println!("  start: {:?}", start);

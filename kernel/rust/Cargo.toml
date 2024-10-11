@@ -12,4 +12,4 @@ rust_kalloc = []
 
 [dependencies]
 buddy_system_allocator = { version = "0.11.0", default-features = false }
-riscv = "0.11.1"
+spin = "0.9.8"

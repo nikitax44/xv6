@@ -47,6 +47,7 @@
 )]
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]
+#![feature(allocator_api)]
 
 extern crate alloc;
 
@@ -58,3 +59,24 @@ pub mod panic;
 pub mod printf;
 pub mod util;
 pub mod vm;
+
+mod ffi {
+    use crate::println;
+
+    #[cfg(feature = "rust_kalloc")]
+    const KALLOC: &str = "rust";
+    #[cfg(not(feature = "rust_kalloc"))]
+    const KALLOC: &str = "C";
+
+    #[no_mangle]
+    extern "C" fn dumpconf() {
+        println!("rust features:");
+        println!("  kalloc: {}", KALLOC);
+        println!();
+    }
+
+    #[no_mangle]
+    extern "C" fn testpanic() {
+        panic!("test panic");
+    }
+}

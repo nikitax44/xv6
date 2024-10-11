@@ -1,48 +1,35 @@
-use crate::kalloc::pages::page::Page;
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::PGSIZE;
-use crate::util::lazy_cell::LazyCell;
-use crate::util::spinlock::Spinlock;
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::NonNull;
+use spin::Mutex;
 
 pub mod pages;
 pub mod thin_box;
 
 const LEVELS: usize = (128 * 1024 * 1024 / PGSIZE).ilog2() as usize;
 type Heap = buddy_system_allocator::Heap<LEVELS>;
-pub struct SharedHeap<F: FnOnce() -> Heap + Send>(Spinlock<LazyCell<Heap, F>>);
-
-// would be unsound if was public
-fn initial_heap() -> Heap {
-    static INITIAL: Page = Page::initial();
-    let mut heap = Heap::new();
-    let addr = core::ptr::addr_of!(INITIAL) as usize;
-    // SAFETY: we own the memory in this range
-    unsafe {
-        heap.init(addr, addr + PGSIZE);
-    }
-    heap
-}
+pub struct SharedHeap(Mutex<Heap>);
 
 #[global_allocator]
-pub static KALLOC: SharedHeap<fn() -> buddy_system_allocator::Heap<LEVELS>> =
-    SharedHeap::new(initial_heap);
+pub static KALLOC: SharedHeap = SharedHeap::new();
 
-impl<F: FnOnce() -> Heap + Send> SharedHeap<F> {
-    pub const fn new(init: F) -> Self {
-        Self(Spinlock::new(LazyCell::new(init)))
+impl SharedHeap {
+    #[must_use]
+    #[allow(clippy::new_without_default, reason = "temporary solution??")]
+    pub const fn new() -> Self {
+        Self(Mutex::new(Heap::new()))
     }
 
     fn in_context<T>(&self, op: impl FnOnce(&mut Heap) -> T) -> T {
         let mut lock = self.0.lock();
-        op(lock.get_mut())
+        op(&mut lock)
     }
 }
 
 /// # SAFETY:
 /// we give the valid pointers
-unsafe impl<F: FnOnce() -> Heap + Send> GlobalAlloc for SharedHeap<F> {
+unsafe impl GlobalAlloc for SharedHeap {
     /// # Safety
     /// safe
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {

@@ -182,8 +182,10 @@ void virtio_disk_rw(struct buf*, int);
 void virtio_disk_intr(void);
 
 // #### Rust ####
+extern void dumpconf(void);
 // panic
 extern void panic(char*) __attribute__((noreturn));
+void        testpanic(void);
 
 // kalloc
 extern void* kalloc(void);

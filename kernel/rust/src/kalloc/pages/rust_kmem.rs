@@ -1,7 +1,7 @@
 use super::page::{Page, PageHandle};
 use crate::kalloc::pages::KMEMError;
-use crate::util::spinlock::Spinlock;
 use core::panic::Location;
+use spin::Mutex;
 
 /// # Invariant
 /// `data` is linked list of page-aligned pointers
@@ -12,7 +12,7 @@ pub struct KMem {
     free_pages: usize,
 }
 
-pub static KMEM: Spinlock<KMem> = Spinlock::new(KMem {
+pub static KMEM: Mutex<KMem> = Mutex::new(KMem {
     data: None,
     free_pages: 0,
 });

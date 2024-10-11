@@ -1,4 +1,8 @@
 {
+  nixConfig = {
+    fallback = true;
+  };
+
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -46,7 +50,7 @@
           overlays = [(import rust-overlay)];
         };
 
-        craneLib = (crane.mkLib crossPkgs).overrideToolchain (p: p.rust-bin.stable.latest.default);
+        craneLib = (crane.mkLib crossPkgs).overrideToolchain (p: p.rust-bin.nightly.latest.default);
 
         rust-xv6 = crossPkgs.callPackage ./kernel/rust {inherit craneLib;};
 

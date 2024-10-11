@@ -1,19 +1,18 @@
 use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::PGSIZE;
 use crate::println;
-use core::marker::PhantomPinned;
 use core::mem;
 use core::panic::Location;
 
 type Origin = &'static Location<'static>;
 
-#[repr(align(4096))]
+#[repr(C, align(4096))]
 #[must_use]
-pub struct Page(mem::MaybeUninit<[u8; PGSIZE]>, PhantomPinned);
+pub struct Page(mem::MaybeUninit<[u8; PGSIZE]>);
 
 impl Page {
     pub const fn initial() -> Self {
-        Self(mem::MaybeUninit::uninit(), PhantomPinned)
+        Self(mem::MaybeUninit::uninit())
     }
 }
 

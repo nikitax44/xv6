@@ -37,6 +37,7 @@ set(OBJS
         bio.c
         log.c
         exec.c
+        kalloc.c
 
         swtch.S
         trampoline.S

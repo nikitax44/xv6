@@ -76,3 +76,19 @@ add_dependencies(kernel RebuildOnDependency)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+if(OPENSBI_ENABLED)
+    set(KERNEL_ENTRY_START "0x80200000")
+    add_compile_definitions(-DSBI_ENABLE)
+else()
+    set(KERNEL_ENTRY_START "0x80000000")
+endif()
+
+add_custom_command(
+        OUTPUT kernel.ld
+        COMMAND sed "s/@KERNEL_ENTRY_START@/${KERNEL_ENTRY_START}/g" < ${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld.tmpl > kernel.ld
+        DEPENDS kernel.ld.tmpl
+)
+
+if (OPENSBI_ENABLED)
+endif ()

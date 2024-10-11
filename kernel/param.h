@@ -12,5 +12,8 @@
 #define NBUF        (MAXOPBLOCKS * 3) // size of disk block cache
 #define MAXPATH     128               // maximum file path name
 #define USERSTACK   8                 // user stack pages
-
-// #define SBI_ENABLE
+#ifdef OPENSBI
+#define KERNEL_ENTRY_START 0x80200000
+#else
+#define KERNEL_ENTRY_START 0x80000000
+#endif

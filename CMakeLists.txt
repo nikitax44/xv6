@@ -3,6 +3,8 @@ project(Xv6 C ASM)
 
 set(GDBPORT 1235)
 set(NPROC 8)
+set(OPENSBI_ENABLED false)
+
 
 
 if (NOT DEFINED NEWLIB)
@@ -11,6 +13,7 @@ if (NOT DEFINED NEWLIB)
         message(FATAL_ERROR "NEWLIB must be set and exported by shell")
     endif ()
 endif ()
+
 
 # Set compiler flags
 set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra -Wold-style-definition")
@@ -89,6 +92,13 @@ add_custom_target(image ALL
         DEPENDS fs.img
 )
 
+# Enable bios for qemu
+if (OPENSBI_ENABLED)
+    set(QEMU_BIOS_ARG)
+else ()
+    set(QEMU_BIOS_ARG -bios none)
+endif()
+
 # Add the QEMU target
 add_custom_target(qemu
         DEPENDS kernel fs.img
@@ -98,7 +108,7 @@ add_custom_target(qemu
         -drive "file=fs.img,if=none,format=raw,id=x0"
         -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
         -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
-        -bios none
+        ${QEMU_BIOS_ARG}
 )
 
 # Generate GDB initialization file
@@ -118,6 +128,6 @@ add_custom_target(qemu-gdb
         -drive "file=fs.img,if=none,format=raw,id=x0"
         -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
         -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
-        -bios none
+        ${QEMU_BIOS_ARG}
         -S -gdb tcp::${GDBPORT}
 )

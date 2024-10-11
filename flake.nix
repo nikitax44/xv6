@@ -96,12 +96,11 @@
           '';
           inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
           installPhase = ''
-            mkdir $out
-            cp kernel/kernel $out/
-            cp fs.img $out/
-            cp $src/qemu-script.sh $out/qemu-script
-            chmod a+x $out/qemu-script
+            mkdir -p $out/bin
+            install -Dm 0444 kernel/kernel fs.img $out/
+            install -DTm 0555 $src/qemu-script.sh $out/bin/qemu-script
           '';
+          meta.mainProgram = "qemu-script";
         };
       };
     };

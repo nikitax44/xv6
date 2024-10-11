@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-BASE="$(dirname "$0")"
+BASE="$(dirname "$0")/.."
 KERNEL="${KERNEL:-$BASE/kernel}"
 if [ -z "$FS" ]; then
     FS="$(mktemp fs.XXXXXX.img)"

@@ -6,7 +6,7 @@ if [ -z "$FS" ]; then
     FS="$(mktemp fs.XXXXXX.img)"
     cp "$BASE/fs.img" "$FS"
     echo "copied fs.img to $FS"
-    trap "rm -vf '$FS'" EXIT
+    trap 'rm -vf "$FS"' EXIT
 fi
 CPUS="${CPUS:-3}"
 qemu-system-riscv64                                            \

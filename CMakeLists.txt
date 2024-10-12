@@ -97,7 +97,7 @@ if (OPENSBI_ENABLED)
     set(QEMU_BIOS_ARG)
 else ()
     set(QEMU_BIOS_ARG -bios none)
-endif()
+endif ()
 
 # Add the QEMU target
 add_custom_target(qemu

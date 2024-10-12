@@ -62,9 +62,9 @@ add_custom_command(
 set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 
 if (RUST_KALLOC_ENABLE)
-list(APPEND CARGO_ARGUMENTS --features rust_kalloc)
-list(REMOVE_ITEM OBJS kalloc.c)
-endif()
+    list(APPEND CARGO_ARGUMENTS --features rust_kalloc)
+    list(REMOVE_ITEM OBJS kalloc.c)
+endif ()
 
 add_custom_command(
         OUTPUT librust_xv6.a
@@ -74,26 +74,26 @@ add_custom_command(
         COMMENT "Building rust part of xv6"
 )
 
-add_custom_target(RebuildOnDependency ALL DEPENDS kernel.ld _initcode.h librust_xv6.a)
+add_custom_target(RebuildOnDependency ALL DEPENDS _kernel.ld _initcode.h librust_xv6.a)
 
 # Define the kernel target
 add_executable(kernel ${OBJS})
 target_link_libraries(kernel -lc ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
 add_dependencies(kernel RebuildOnDependency)
-target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld")
+target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_BINARY_DIR}/_kernel.ld")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-if(OPENSBI_ENABLED)
+if (OPENSBI_ENABLED)
     set(KERNEL_ENTRY_START "0x80200000")
     add_compile_definitions(-DSBI_ENABLE)
-else()
+else ()
     set(KERNEL_ENTRY_START "0x80000000")
-endif()
+endif ()
 
 add_custom_command(
-        OUTPUT kernel.ld
-        COMMAND sed "s/@KERNEL_ENTRY_START@/${KERNEL_ENTRY_START}/g" < ${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld.tmpl > kernel.ld
+        OUTPUT _kernel.ld
+        COMMAND sed "s/@KERNEL_ENTRY_START@/${KERNEL_ENTRY_START}/g" < ${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld.tmpl > _kernel.ld
         DEPENDS kernel.ld.tmpl
 )
 

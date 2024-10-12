@@ -1,10 +1,30 @@
 cmake_minimum_required(VERSION 3.10)
 project(Xv6 C ASM)
 
-set(GDBPORT 1235)
-set(NPROC 8)
-set(OPENSBI_ENABLED false)
-set(RUST_KALLOC_ENABLE false)
+if (NOT DEFINED GDBPORT)
+    set(GDBPORT $ENV{GDBPORT})
+    if (NOT DEFINED GDBPORT)
+        set(GDBPORT 1235)
+    endif ()
+endif ()
+if (NOT DEFINED NPROC)
+    set(NPROC $ENV{NPROC})
+    if (NOT DEFINED NPROC)
+        set(NPROC 8)
+    endif ()
+endif ()
+if (NOT DEFINED OPENSBI_ENABLED)
+    set(OPENSBI_ENABLED $ENV{OPENSBI_ENABLED})
+    if (NOT DEFINED OPENSBI_ENABLED)
+        set(OPENSBI_ENABLED false)
+    endif ()
+endif ()
+if (NOT DEFINED RUST_KALLOC_ENABLE)
+    set(RUST_KALLOC_ENABLE $ENV{RUST_KALLOC_ENABLE})
+    if (NOT DEFINED RUST_KALLOC_ENABLE)
+        set(RUST_KALLOC_ENABLE false)
+    endif ()
+endif ()
 
 
 if (NOT DEFINED NEWLIB)
@@ -94,21 +114,26 @@ add_custom_target(image ALL
 
 # Enable bios for qemu
 if (OPENSBI_ENABLED)
-    set(QEMU_BIOS_ARG)
+    set(QEMU_FLAGS "")
 else ()
-    set(QEMU_BIOS_ARG -bios none)
+    set(QEMU_FLAGS "-bios none")
 endif ()
+
+add_custom_command(
+        OUTPUT qemu-script
+        COMMAND sed "s/@QEMU_FLAGS@/${QEMU_FLAGS}/g" < "${CMAKE_CURRENT_SOURCE_DIR}/qemu-script.tmpl" > qemu-script
+        COMMAND chmod a+x qemu-script
+        DEPENDS qemu-script.tmpl
+)
+
+add_custom_target(script ALL
+        DEPENDS qemu-script
+)
 
 # Add the QEMU target
 add_custom_target(qemu
-        DEPENDS kernel fs.img
-        COMMAND qemu-system-riscv64
-        -machine virt -m 128M -smp ${NPROC} -nographic
-        -global "virtio-mmio.force-legacy=false"
-        -drive "file=fs.img,if=none,format=raw,id=x0"
-        -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
-        -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
-        ${QEMU_BIOS_ARG}
+        DEPENDS kernel fs.img qemu-script
+        COMMAND CPUS=${NPROC} KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img" ./qemu-script
 )
 
 # Generate GDB initialization file
@@ -120,14 +145,7 @@ add_custom_command(
 
 # Add the GDB target
 add_custom_target(qemu-gdb
-        DEPENDS kernel .gdbinit fs.img
+        DEPENDS kernel .gdbinit fs.img qemu-script
         COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window."
-        COMMAND qemu-system-riscv64
-        -machine virt -m 128M -smp ${NPROC} -nographic
-        -global "virtio-mmio.force-legacy=false"
-        -drive "file=fs.img,if=none,format=raw,id=x0"
-        -device "virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0"
-        -kernel ${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel
-        ${QEMU_BIOS_ARG}
-        -S -gdb tcp::${GDBPORT}
+        COMMAND CPUS=${NPROC} KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img" EXTRA_QEMU_FLAGS="-S -gdb tcp::${GDBPORT}" ./qemu-script
 )

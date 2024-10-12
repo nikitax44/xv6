@@ -102,8 +102,10 @@
           installPhase = ''
             mkdir -p $out/bin
             install -Dm 0444 kernel/kernel fs.img $out/
-            install -DTm 0555 $src/qemu-script.sh $out/bin/qemu-script
+            install -Dm 0555 qemu-script $out/bin/
           '';
+          OPENSBI_ENABLED = false;
+          RUST_KALLOC_ENABLE = false;
           meta.mainProgram = "qemu-script";
         };
       };

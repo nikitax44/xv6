@@ -13,6 +13,7 @@ _*
 *.elf
 
 kernel/kernel
+qemu-script
 .gdbinit
 result
 target/

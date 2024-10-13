@@ -1,7 +1,9 @@
 #include "fwcfg.h"
+
 #include "kernel/boot/dtb.h"
 #include "kernel/defs.h"
 #include "kernel/util/util.h"
+#include "memlayout.h"
 
 struct FWCfgFiles* fw_dir;
 

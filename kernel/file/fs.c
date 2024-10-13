@@ -171,7 +171,7 @@ struct {
 } itable;
 
 void iinit(void) {
-  int i = 0;
+  int i;
 
   initlock(&itable.lock, "itable");
   for (i = 0; i < NINODE; i++) {

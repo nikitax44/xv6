@@ -1,7 +1,6 @@
 #include "../defs.h"
 #include "../proc.h"
 #include "file.h"
-#include "fs.h"
 
 #define PIPESIZE 512
 

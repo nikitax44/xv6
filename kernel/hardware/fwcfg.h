@@ -1,6 +1,5 @@
-#include "kernel/defs.h"
+#pragma once
 #include "kernel/types.h"
-#include "memlayout.h"
 
 struct FWCfgFile { /* an individual file entry, 64 bytes total */
   u32  size;       /* size of referenced fw_cfg item, big-endian */

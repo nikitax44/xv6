@@ -93,7 +93,7 @@ int filestat(struct file* f, u64 addr) {
 // Read from file f.
 // addr is a user virtual address.
 int fileread(struct file* f, u64 addr, int n) {
-  int r = 0;
+  int r;
 
   if (f->readable == 0) {
     return -1;
@@ -120,7 +120,7 @@ int fileread(struct file* f, u64 addr, int n) {
 }
 
 int fileseek(struct file* f, u64 offset, WHENCE whence) {
-  int r = -1;
+  int r;
 
   if (f->type == FD_INODE) {
     struct stat st;
@@ -153,7 +153,7 @@ int fileseek(struct file* f, u64 offset, WHENCE whence) {
 // Write to file f.
 // addr is a user virtual address.
 int filewrite(struct file* f, u64 addr, int n) {
-  int r, ret = 0;
+  int r, ret;
 
   if (f->writable == 0) {
     return -1;

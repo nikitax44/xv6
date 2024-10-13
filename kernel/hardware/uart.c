@@ -3,7 +3,6 @@
 //
 
 #include "kernel/defs.h"
-#include "kernel/proc.h"
 #include "kernel/types.h"
 #include "kernel/util/spinlock.h"
 #include "memlayout.h"
@@ -152,9 +151,8 @@ int uartgetc(void) {
   if (ReadReg(LSR) & 0x01) {
     // input data is ready.
     return ReadReg(RHR);
-  } else {
-    return -1;
   }
+  return -1;
 }
 
 // handle a uart interrupt, raised because input has

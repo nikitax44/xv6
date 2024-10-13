@@ -320,10 +320,9 @@ u64 sys_open(void) {
   int           fd, omode;
   struct file*  f;
   struct inode* ip;
-  int           n;
 
   argint(1, &omode);
-  if ((n = argstr(0, path, MAXPATH)) < 0) {
+  if (argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
 
@@ -450,7 +449,7 @@ static u64 fetchargs(u64 uargv, char* (*argv)[MAXARG]) {
     if (i >= NELEM((*argv))) {
       return E2BIG;
     }
-    if (fetchaddr(uargv + sizeof(u64) * i, (u64*)&uarg) < 0) {
+    if (fetchaddr(uargv + sizeof(u64) * i, &uarg) < 0) {
       return EFAULT;
     }
     if (uarg == 0) {
@@ -547,7 +546,7 @@ u64 sys_pipe(void) {
   struct proc* p = myproc();
 
   argaddr(0, &fdarray);
-  if (pipealloc(&rf, &wf) < 0) {
+  if (pipealloc(&rf, &wf) != 0) {
     return -1;
   }
   fd0 = -1;

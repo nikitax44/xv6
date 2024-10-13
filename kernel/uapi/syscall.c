@@ -42,9 +42,9 @@ static u64 argraw(int n) {
     return p->trapframe->a4;
   case 5:
     return p->trapframe->a5;
+  default:
+    panic("argraw");
   }
-  panic("argraw");
-  return -1;
 }
 
 // Fetch the nth 32-bit system call argument.

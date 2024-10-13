@@ -14,6 +14,9 @@
 #define WARL_NA4   (0x10 << 3)
 #define WARL_NAPOT (0x11 << 3)
 
+#define STCE         (1L << 63)
+#define COUNTEREN_TM (1 << 1)
+
 void dispatch(void);
 void timerinit(void);
 
@@ -57,13 +60,13 @@ void timerinit(void) {
   w_mie(r_mie() | MIE_STIE);
 
   // enable the sstc extension (i.e. stimecmp).
-  w_menvcfg(r_menvcfg() | (1L << 63));
+  w_menvcfg(r_menvcfg() | STCE);
 
   // allow supervisor to use stimecmp and time.
-  w_mcounteren(r_mcounteren() | 2);
+  w_mcounteren(r_mcounteren() | COUNTEREN_TM);
 }
 
-static volatile bool started = 0;
+static volatile bool started = false;
 
 void init_boot(void);
 void init_other(void);

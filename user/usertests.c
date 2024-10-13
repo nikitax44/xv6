@@ -2060,8 +2060,7 @@ void sbrkmuch(char* s) {
 void kernmem(char* s) {
   char* a;
   int   pid;
-
-  for (a = (char*)(KERNBASE); a < (char*)(KERNBASE + 2000000); a += 50000) {
+  for (a = (char*)0x80000000; a < (char*)0x82200000; a += 50000) {
     pid = _fork();
     if (pid < 0) {
       printf("%s: fork failed\n", s);

@@ -1,10 +1,13 @@
+use crate::kalloc::pages::page::Page;
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::PGSIZE;
 use core::alloc::{GlobalAlloc, Layout};
+use core::ptr;
 use core::ptr::NonNull;
-use spin::Mutex;
+use spin::{Mutex, Once};
 
 pub mod pages;
+pub mod region;
 pub mod thin_box;
 
 const LEVELS: usize = (128 * 1024 * 1024 / PGSIZE).ilog2() as usize;
@@ -33,12 +36,22 @@ unsafe impl GlobalAlloc for SharedHeap {
     /// # Safety
     /// safe
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        static BASE: [Page; 32] = [Page::initial(); 32];
+        static INIT: Once = Once::new();
+
         self.in_context(|heap| {
+            INIT.call_once(|| {
+                let start = ptr::from_ref(&BASE) as usize;
+                // SAFETY: we own this memory and give it only once
+                unsafe {
+                    heap.add_to_heap(start, start + size_of_val(&BASE));
+                }
+            });
             if let Ok(ptr) = heap.alloc(layout) {
                 return ptr.as_ptr();
             };
             let Ok(page) = KMEM.lock().alloc("Buddy allocator") else {
-                return core::ptr::null_mut();
+                return ptr::null_mut();
             };
             let page = page.into_box().leak().as_ptr() as usize;
             // SAFETY: we have the ownership

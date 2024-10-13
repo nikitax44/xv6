@@ -12,18 +12,18 @@ void init_boot(void) {
 
   dumpconf();
 
-  kinit();            // physical page allocator
-  kvminit();          // create kernel page table
-  kvminithart();      // turn on paging
-  procinit();         // process table
-  trapinit();         // trap vectors
-  trapinithart();     // install kernel trap vector
-  timerinithart();    // request timer interrupts
-  plicinit();         // set up interrupt controller
-  plicinithart();     // ask PLIC for device interrupts
-  binit();            // buffer cache
-  iinit();            // inode table
-  fileinit();         // file table
+  kinit();         // physical page allocator lock. after that `free_pages()==0`
+  kvminit();       // create kernel page table. initialize the kalloc
+  kvminithart();   // turn on paging
+  procinit();      // process table
+  trapinit();      // trap vectors
+  trapinithart();  // install kernel trap vector
+  timerinithart(); // request timer interrupts
+  plicinit();      // set up interrupt controller
+  plicinithart();  // ask PLIC for device interrupts
+  binit();         // buffer cache
+  iinit();         // inode table
+  fileinit();      // file table
   virtio_disk_init(); // emulated hard disk
   userinit();         // first user process
 }

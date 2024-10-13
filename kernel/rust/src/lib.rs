@@ -48,10 +48,11 @@
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]
 #![feature(allocator_api)]
-
+#![feature(iter_collect_into)]
 extern crate alloc;
 
 pub mod asm;
+pub mod dtb;
 pub mod errno;
 pub mod kalloc;
 pub mod memlayout;

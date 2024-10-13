@@ -3,36 +3,33 @@
 #include "kernel/param.h"
 #include "kernel/types.h"
 
-#include "dtb.h"
-
 // main.c
 void kernel_main(void);
 void init_boot(void);
 void init_other(void);
 
+void parse_dtb(u8* ptr);
+void init_harts(void(u64));
+
 // sbi_entry.S
 void _entry_other(u64 hartid);
 
 // implemented below
-void        spawn_others(u32 hrts);
-static void preallocate_stacks(u32 n);
+static void spawn_harts(void);
 
 // sbi_entry.S jumps here in supervisor mode on boot hart.
-void start_boot(struct fdt_header* dtb) {
+void start_boot(u8* dtb) {
   // enable interrupts
   w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
 
-  // needs to be parsed before kvm init. TODO: map me
-  u32 hrts = harts(dtb);
+  // needs to be parsed before kvm init.
+  parse_dtb(dtb);
 
   init_boot();
 
   __sync_synchronize();
 
-  if (hrts > 1) {
-    // needs to be run after everything is initialized
-    spawn_others(hrts);
-  }
+  spawn_harts();
 
   kernel_main();
   panic("main exited on boot hart");
@@ -49,24 +46,6 @@ void start_other(void) {
   panic("main exited");
 }
 
-void spawn_others(u32 hrts) {
-  struct sbiret result;
-
-  preallocate_stacks(hrts);
-  __sync_synchronize();
-
-  for (u32 hartid = 0; hartid < hrts; hartid++) {
-    if (hartid == cpuid()) {
-      continue;
-    }
-
-    result = sbi_hsm_hart_start(hartid, _entry_other, MODE_S);
-    if (result.error != 0) {
-      printf("failed to start hart %u: %ld\n", hartid, result.error);
-    }
-  }
-}
-
 typedef __attribute__((aligned(PGSIZE))) struct {
   u8 _[PGSIZE];
 } page_t;
@@ -76,15 +55,30 @@ __attribute__((aligned(16))) u8 stack0[PGSIZE];
 // and one more stack for each hart except for the boot one.
 page_t** other_stack_arr;
 
-static void preallocate_stacks(u32 n) {
-  if (n * sizeof(u8*) > PGSIZE) {
-    panic("preallocate_stacks");
+void init_hart(u64 hartid) {
+  if (hartid == cpuid()) {
+    return;
   }
-  page_t** ptr = kalloc();
-  for (u32 i = 0; i < n; i++) {
-    if (i != r_tp()) {
-      ptr[i] = (page_t*)kalloc();
-    }
+
+  if (hartid * sizeof(u8*) > PGSIZE) {
+    panic("allocate stack out of page bounds");
   }
-  other_stack_arr = ptr;
+  other_stack_arr[hartid] = (page_t*)kalloc();
+  if (other_stack_arr[hartid] == NULL) {
+    panic("failed to allocate stack");
+  }
+
+  struct sbiret result;
+  result = sbi_hsm_hart_start(hartid, _entry_other, MODE_S);
+  if (result.error != 0) {
+    printf("failed to start hart %lu: %ld\n", hartid, result.error);
+  }
+}
+
+static void spawn_harts(void) {
+  other_stack_arr = kalloc();
+  if (other_stack_arr == NULL) {
+    panic("failed to allocate stack array");
+  }
+  init_harts(init_hart);
 }

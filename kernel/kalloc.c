@@ -30,7 +30,7 @@ struct {
 void kinit(void) {
   initlock(&kmem.lock, "kmem");
   kmem.free_pages = 0;
-  freerange(end, (void*)PHYSTOP);
+  kmem.freelist   = NULL;
 }
 
 void freerange(void* pa_start, void* pa_end) {
@@ -41,6 +41,8 @@ void freerange(void* pa_start, void* pa_end) {
   }
 }
 
+extern char _entry[];
+
 // Free the page of physical memory pointed at by pa,
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
@@ -48,7 +50,8 @@ void freerange(void* pa_start, void* pa_end) {
 void kfree(void* pa) {
   struct run* r;
 
-  if (((u64)pa % PGSIZE) != 0 || (char*)pa < end || (u64)pa >= PHYSTOP) {
+  if (((u64)pa % PGSIZE) != 0 || ((char*)pa < end && (char*)pa >= _entry) ||
+      (char*)pa < (char*)0x80000000L) {
     panic("kfree");
   }
 
@@ -74,8 +77,8 @@ void* kalloc(void) {
   r = kmem.freelist;
   if (r) {
     kmem.freelist = r->next;
+    kmem.free_pages--;
   }
-  kmem.free_pages--;
   release(&kmem.lock);
 
   if (r) {

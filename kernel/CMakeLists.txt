@@ -7,7 +7,6 @@ set(CMAKE_C_STANDARD 11)
 # Define the source files (object files)
 set(OBJS
         boot/main.c
-        boot/dtb.c
 
         file/fs.c
         file/pipe.c
@@ -20,7 +19,6 @@ set(OBJS
         hardware/uart.c
         hardware/virtio_disk.c
         hardware/plic.c
-        hardware/fwcfg.c
 
         util/spinlock.c
         util/sleeplock.c

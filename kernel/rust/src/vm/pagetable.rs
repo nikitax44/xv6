@@ -1,3 +1,4 @@
+use crate::kalloc::region::Region;
 use crate::memlayout::{PGSHIFT, PGSIZE};
 use crate::vm::mode::Mode;
 use crate::vm::pt_inner::IPagetable;
@@ -142,5 +143,12 @@ impl<'inner> Pagetable<'inner> {
         (0usize..size).step_by(PGSIZE).try_for_each(|offset| {
             self.map_page(virtual_address + offset, physical_address + offset, mode)
         })
+    }
+
+    /// # Errors
+    /// region is not page-aligned or is empty
+    /// see `map_page`
+    pub fn map_reg(&mut self, reg: Region, mode: Mode) -> Result<(), PTError> {
+        self.map_pages(reg.start(), reg.start(), reg.size(), mode)
     }
 }

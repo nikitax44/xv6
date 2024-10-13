@@ -12,9 +12,6 @@ pub const TRAMPOLINE: usize = Pagetable::MAX_VA - PGSIZE;
 pub const KSTACK: fn(usize) -> usize = |p| TRAMPOLINE - ((p) + 1) * 2 * PGSIZE;
 pub const TRAPFRAME: usize = TRAMPOLINE - PGSIZE;
 
-pub const RAMBASE: usize = 0x8000_0000;
-pub const PHYSTOP: usize = RAMBASE + 128 * 1024 * 1024;
-
 use core::ffi::c_void;
 
 #[repr(transparent)]

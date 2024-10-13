@@ -8,6 +8,7 @@ type Origin = &'static Location<'static>;
 
 #[repr(C, align(4096))]
 #[must_use]
+#[derive(Copy, Clone)]
 pub struct Page(mem::MaybeUninit<[u8; PGSIZE]>);
 
 impl Page {

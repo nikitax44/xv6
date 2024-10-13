@@ -4,16 +4,21 @@ use core::panic::Location;
 use core::ptr::NonNull;
 
 pub struct KMem;
-pub static KMEM: KMem = KMem;
-impl KMem {
+pub struct KMemLock;
+impl KMemLock {
     #[must_use]
-    pub const fn lock(&self) -> &Self {
-        self
+    #[expect(clippy::unused_self, reason = "it is used to monomorphise the api")]
+    pub const fn lock(&self) -> KMem {
+        KMem
     }
+}
+
+pub static KMEM: KMemLock = KMemLock;
+impl KMem {
     #[track_caller]
     /// # Errors
     /// out of memory
-    pub fn alloc(&self, purpose: &'static str) -> Result<PageHandle, KMEMError> {
+    pub fn alloc(&mut self, purpose: &'static str) -> Result<PageHandle, KMEMError> {
         extern "C" {
             pub fn kalloc() -> Option<NonNull<Page>>;
         }
@@ -29,7 +34,7 @@ impl KMem {
             })
     }
 
-    pub fn free(&self, mut page: PageHandle) {
+    pub fn free(&mut self, mut page: PageHandle) {
         extern "C" {
             pub fn kfree(ptr: NonNull<Page>);
         }

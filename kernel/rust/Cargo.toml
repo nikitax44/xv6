@@ -13,3 +13,4 @@ rust_kalloc = []
 [dependencies]
 buddy_system_allocator = { version = "0.11.0", default-features = false }
 spin = "0.9.8"
+fdt = "0.1.5"

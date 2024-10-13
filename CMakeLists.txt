@@ -147,5 +147,5 @@ add_custom_command(
 add_custom_target(qemu-gdb
         DEPENDS kernel .gdbinit fs.img qemu-script
         COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window."
-        COMMAND CPUS=${NPROC} KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img" EXTRA_QEMU_FLAGS="-S -gdb tcp::${GDBPORT}" ./qemu-script
+        COMMAND CPUS=${NPROC} KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img" ./qemu-script -S -gdb "tcp::${GDBPORT}"
 )

@@ -147,8 +147,8 @@ impl<'inner> Pagetable<'inner> {
 
 mod ffi {
     use crate::errno::ErrNo;
-    use crate::errno::ErrNo::SUCCESS;
     use crate::vm::pagetable::Pagetable;
+    use crate::vm::PTError;
 
     //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)
     #[no_mangle]
@@ -161,13 +161,12 @@ mod ffi {
     ) -> ErrNo {
         let perm = perm.try_into().expect("invalid access mode");
         let result = pt.map_pages(virtual_address, physical_address, size, perm);
-        // if let Err(err) = result {
-        // return match err {
-        // PTError::AllocFail(err) => ENOMEM,
-        // _ => panic!("ffi::mappages: {:?}", err),
-        // };
-        // }
-        result.expect("ffi::mappages");
-        SUCCESS
+        if let Err(err) = result {
+            return match err {
+                PTError::AllocFail(_err) => ErrNo::ENOMEM,
+                _ => panic!("ffi::mappages: {:?}", err),
+            };
+        }
+        ErrNo::SUCCESS
     }
 }

@@ -8,13 +8,10 @@ if [ -z "$FS" ]; then
     echo "copied fs.img to $FS"
     trap 'rm -vf "$FS"' EXIT
 fi
-if [ -z "$EXTRA_QEMU_FLAGS" ]; then
-    EXTRA_QEMU_FLAGS=()
-fi
 CPUS="${CPUS:-3}"
 qemu-system-riscv64                                            \
     -machine virt -m 128M -smp "$CPUS" -nographic              \
     -global virtio-mmio.force-legacy=false                     \
     -drive file="$FS",if=none,format=raw,id=x0                 \
     -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0   \
-    -kernel "$KERNEL" @QEMU_FLAGS@ "${EXTRA_QEMU_FLAGS[@]}"
+    -kernel "$KERNEL" @QEMU_FLAGS@ "${@[@]}"

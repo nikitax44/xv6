@@ -5,4 +5,4 @@ symbol-file kernel/kernel
 set disassemble-next-line auto
 set riscv use-compressed-breakpoints yes
 
-break panic
+break src/panic.rs:21

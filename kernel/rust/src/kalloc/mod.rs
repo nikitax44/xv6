@@ -37,7 +37,9 @@ unsafe impl GlobalAlloc for SharedHeap {
             if let Ok(ptr) = heap.alloc(layout) {
                 return ptr.as_ptr();
             };
-            let page = KMEM.lock().alloc("Buddy allocator").expect("KMEMError");
+            let Ok(page) = KMEM.lock().alloc("Buddy allocator") else {
+                return core::ptr::null_mut();
+            };
             let page = page.into_box().leak().as_ptr() as usize;
             // SAFETY: we have the ownership
             unsafe { heap.add_to_heap(page, page + PGSIZE) };

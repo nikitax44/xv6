@@ -1,3 +1,4 @@
+#pragma once
 #include "kernel/types.h"
 
 #define DTB_MAGIC 0xD00DFEED

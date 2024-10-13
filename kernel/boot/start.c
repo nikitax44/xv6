@@ -11,14 +11,14 @@ void kernel_main(void);
 void init_boot(void);
 void init_other(void);
 
-// entry.S
+// sbi_entry.S
 void _entry_other(u64 hartid);
 
 // implemented below
 void        spawn_others(u32 hrts);
 static void preallocate_stacks(u32 n);
 
-// entry.S jumps here in supervisor mode on boot hart.
+// sbi_entry.S jumps here in supervisor mode on boot hart.
 void start_boot(struct fdt_header* dtb) {
   // enable interrupts
   w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
@@ -74,7 +74,7 @@ typedef __attribute__((aligned(PGSIZE))) struct {
   u8 _[PGSIZE];
 } page_t;
 
-// entry.S needs one static stack.
+// sbi_entry.S needs one static stack.
 __attribute__((aligned(16))) u8 stack0[PGSIZE];
 // and one more stack for each hart except for the boot one.
 page_t** other_stack_arr;
@@ -106,10 +106,10 @@ static void preallocate_stacks(u32 n) {
 void dispatch(void);
 void timerinit(void);
 
-// entry.S needs one stack per CPU.
-__attribute__((aligned(16))) char stack0[4096 * NCPU];
+// m_entry.S needs one stack per CPU.
+__attribute__((aligned(16))) char stack0[PGSIZE * NCPU];
 
-// entry.S jumps here in machine mode on stack0.
+// m_entry.S jumps here in machine mode on stack0.
 void start(void) {
   // set M Previous Privilege mode to Supervisor, for mret.
   u64 x = r_mstatus();

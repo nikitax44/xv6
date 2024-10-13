@@ -3,7 +3,6 @@
 .global _entry
 
 _entry:
-#ifdef SBI_ENABLE
         mv tp, a0
         # set up a stack for C.
         # stack0 is declared in start.c,
@@ -31,19 +30,6 @@ _entry_other:
         add sp, sp, t0
 
         call start_other
-#else
-        csrr tp, mhartid
-        # set up a stack for C.
-        # stack0 is declared in start.c,
-        # with a PGSIZE-byte stack per HART.
-        # sp = stack0 + ((hartid+1) * 4096)
-        la sp, stack0
-        li t0, PGSIZE
-        addi t1, tp, 1
-        mul t0, t0, t1
-        add sp, sp, t0
-        call start
-#endif
 
 spin:
         j spin

@@ -6,7 +6,6 @@ set(CMAKE_C_STANDARD 11)
 
 # Define the source files (object files)
 set(OBJS
-        boot/entry.S
         boot/start.c
         boot/main.c
         boot/dtb.c
@@ -37,7 +36,6 @@ set(OBJS
         bio.c
         log.c
         exec.c
-        kalloc.c
 
         swtch.S
         trampoline.S
@@ -61,9 +59,15 @@ add_custom_command(
 
 set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 
+if (OPENSBI_ENABLED)
+    list(APPEND OBJS boot/sbi_entry.S)
+else ()
+    list(APPEND OBJS boot/m_entry.S)
+endif ()
 if (RUST_KALLOC_ENABLE)
     list(APPEND CARGO_ARGUMENTS --features rust_kalloc)
-    list(REMOVE_ITEM OBJS kalloc.c)
+else ()
+    list(APPEND OBJS kalloc.c)
 endif ()
 
 add_custom_command(

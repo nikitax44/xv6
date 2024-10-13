@@ -5,7 +5,7 @@
 _entry:
         mv tp, a0
         # set up a stack for C.
-        # stack0 is declared in start.c,
+        # stack0 is declared in sbi_start.c,
         # with a PGSIZE-byte stack for boot HART.
         # sp = stack0 + PGSIZE
         la sp, stack0

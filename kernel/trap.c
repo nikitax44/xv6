@@ -1,7 +1,6 @@
 #include "defs.h"
 #include "hardware/memlayout.h"
 #include "hardware/riscv.h"
-#include "param.h"
 #include "proc.h"
 #include "types.h"
 #include "util/spinlock.h"
@@ -197,12 +196,8 @@ void kerneltrap(void) {
 }
 
 void timerinithart(void) {
-  u64 target = r_time() + 1000000;
-#ifdef SBI_ENABLE
-  sbi_set_timer(target);
-#else
-  w_stimecmp(target);
-#endif
+  // 1000000 is about a tenth of a second.
+  set_timer(r_time() + 1000000);
 }
 
 void clockintr(void) {
@@ -214,8 +209,7 @@ void clockintr(void) {
   }
 
   // ask for the next timer interrupt. this also clears
-  // the interrupt request. 1000000 is about a tenth
-  // of a second.
+  // the interrupt request.
   timerinithart();
 }
 

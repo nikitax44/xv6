@@ -5,9 +5,9 @@
 _entry:
         csrr tp, mhartid
         # set up a stack for C.
-        # stack0 is declared in start.c,
+        # stack0 is declared in m_start.c,
         # with a PGSIZE-byte stack per HART.
-        # sp = stack0 + ((hartid+1) * 4096)
+        # sp = stack0 + ((hartid+1) * PGSIZE)
         la sp, stack0
         li t0, PGSIZE
         addi t1, tp, 1

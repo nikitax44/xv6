@@ -1,6 +1,5 @@
 #pragma once
 #ifndef __ASSEMBLER__
-#include "kernel/param.h"
 #include "kernel/types.h"
 #define asm __asm__
 #pragma GCC diagnostic push
@@ -260,7 +259,6 @@ static inline void sfence_vma(void) {
   asm volatile("sfence.vma zero, zero");
 }
 
-#ifdef SBI_ENABLE
 struct sbiret {
   i64 error;
   u64 value;
@@ -310,7 +308,14 @@ static inline struct sbiret sbi_hsm_hart_status(u32 hartid) {
 static inline struct sbiret sbi_set_timer(u64 abstime) {
   return sbi_ecall(SBI_EXT_TIME, 0, abstime, 0, 0, 0, 0, 0);
 }
+
+static inline void set_timer(u64 abstime) {
+#ifdef SBI_ENABLE
+  sbi_set_timer(abstime);
+#else
+  w_stimecmp(abstime);
 #endif
+}
 
 typedef u64  pte_t;
 typedef u64* pagetable_t; // 512 PTEs

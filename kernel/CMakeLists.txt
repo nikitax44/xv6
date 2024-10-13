@@ -6,7 +6,6 @@ set(CMAKE_C_STANDARD 11)
 
 # Define the source files (object files)
 set(OBJS
-        boot/start.c
         boot/main.c
         boot/dtb.c
 
@@ -60,9 +59,9 @@ add_custom_command(
 set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 
 if (OPENSBI_ENABLED)
-    list(APPEND OBJS boot/sbi_entry.S)
+    list(APPEND OBJS boot/sbi_entry.S boot/sbi_start.c)
 else ()
-    list(APPEND OBJS boot/m_entry.S)
+    list(APPEND OBJS boot/m_entry.S boot/m_start.c)
 endif ()
 if (RUST_KALLOC_ENABLE)
     list(APPEND CARGO_ARGUMENTS --features rust_kalloc)

@@ -66,8 +66,3 @@ fn proc_mapstacks(pt: &mut Pagetable) -> Result<(), PTError> {
     }
     Ok(())
 }
-
-#[no_mangle]
-extern "C" fn kvmmake() -> Pagetable<'static> {
-    make_kernel_map().expect("failed to create kernel map")
-}

@@ -56,10 +56,7 @@ unsafe fn init_kmem() {
 extern "C" fn kalloc() -> *mut Page {
     KMEM.lock()
         .alloc("ffi alloc")
-        .expect("failed to allocate for kalloc")
-        .into_box()
-        .leak()
-        .as_ptr()
+        .map_or(ptr::null_mut(), |page| page.into_box().leak().as_ptr())
 }
 
 /// # Safety

@@ -1,5 +1,6 @@
 use crate::kalloc::pages::KMEMError;
 
+mod ffi;
 mod kernel_map;
 pub mod mode;
 pub mod pagetable;

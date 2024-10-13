@@ -66,31 +66,6 @@ pte_t* walk(pagetable_t pagetable, u64 va, int alloc) {
   return &pagetable[PX(0, va)];
 }
 
-// Look up a virtual address, return the physical address,
-// or 0 if not mapped.
-// Can only be used to look up user pages.
-u64 walkaddr(pagetable_t pagetable, u64 va) {
-  pte_t* pte;
-  u64    pa;
-
-  if (va >= MAXVA) {
-    return 0;
-  }
-
-  pte = walk(pagetable, va, 0);
-  if (pte == 0) {
-    return 0;
-  }
-  if ((*pte & PTE_V) == 0) {
-    return 0;
-  }
-  if ((*pte & PTE_U) == 0) {
-    return 0;
-  }
-  pa = PTE2PA(*pte);
-  return pa;
-}
-
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.

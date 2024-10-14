@@ -1,4 +1,7 @@
+use crate::println;
+use core::any::type_name;
 use core::fmt::{Debug, Formatter};
+use core::mem::ManuallyDrop;
 use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 
@@ -6,6 +9,7 @@ use core::ptr::NonNull;
 /// inner is valid and properly aligned.
 /// `ThinBox` owns `inner`'s content
 #[repr(transparent)]
+#[must_use]
 pub struct ThinBox<T: ?Sized> {
     inner: NonNull<T>,
 }
@@ -18,9 +22,15 @@ impl<T: ?Sized> ThinBox<T> {
     /// # Safety
     /// `inner` is valid, properly aligned, and you have ownership over its contents
     /// you transfer the ownership over the `inner` contents to `ThinBox`
-    #[must_use]
     pub const unsafe fn new(inner: NonNull<T>) -> Self {
         Self { inner }
+    }
+
+    /// # Safety
+    /// reinterpret cast from T to U must be valid
+    pub unsafe fn cast<U>(self) -> ThinBox<U> {
+        // SAFETY: precondition
+        unsafe { ThinBox::new(ManuallyDrop::new(self).inner.cast()) }
     }
 
     #[must_use]
@@ -66,7 +76,11 @@ impl<T: ?Sized> DerefMut for ThinBox<T> {
 
 impl<T: ?Sized> Drop for ThinBox<T> {
     fn drop(&mut self) {
-        panic!("ThinBox was dropped");
+        println!(
+            "ThinBox<{}>@{:0x?} was dropped",
+            type_name::<T>(),
+            self.inner
+        );
     }
 }
 

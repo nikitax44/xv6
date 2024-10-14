@@ -4,9 +4,11 @@ use crate::vm::mode::Mode;
 use crate::vm::pt_inner::IPagetable;
 use crate::vm::PTError;
 use core::fmt::{Debug, Formatter};
+use zerocopy::FromZeros;
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
+#[derive(FromZeros)]
 pub struct PtEntry(usize);
 
 impl PtEntry {

@@ -3,8 +3,10 @@ use crate::kalloc::thin_box::ThinBox;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::pte::PtEntry;
 use core::ops::{Index, IndexMut};
+use zerocopy::{FromZeros, KnownLayout, TryFromBytes};
 
 #[repr(transparent)]
+#[derive(FromZeros, KnownLayout)]
 pub struct IPagetable {
     pub entries: [PtEntry; Pagetable::PT_ENTRIES],
 }
@@ -14,9 +16,11 @@ impl IPagetable {
     pub fn alloc() -> Result<ThinBox<Self>, KMEMError> {
         KMEM.lock()
             .alloc("IPagetable::alloc()")
-            .map(|page| page.zeroed().leak_uninit::<Self>())
-            // SAFETY: page was zeroed
-            .map(|uninit| unsafe { uninit.assume_init_mut() }.into())
+            .map(|page| page.zeroed().into_box().leak_ref())
+            .map(|page| &mut page.0[..])
+            .map(Self::try_mut_from_bytes)
+            .map(Result::unwrap)
+            .map(ThinBox::from)
     }
 }
 

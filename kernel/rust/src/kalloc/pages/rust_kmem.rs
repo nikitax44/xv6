@@ -1,5 +1,6 @@
 use super::page::{Page, PageHandle};
 use crate::kalloc::pages::KMEMError;
+use core::mem::ManuallyDrop;
 use core::panic::Location;
 use spin::Mutex;
 
@@ -8,12 +9,12 @@ use spin::Mutex;
 /// `free_pages` is length of that list
 /// `KMem` has ownership over all pages in that list
 pub struct KMem {
-    data: Option<PageHandle>,
+    data: ManuallyDrop<Option<PageHandle>>,
     free_pages: usize,
 }
 
 pub static KMEM: Mutex<KMem> = Mutex::new(KMem {
-    data: None,
+    data: ManuallyDrop::new(None),
     free_pages: 0,
 });
 
@@ -29,13 +30,9 @@ impl KMem {
     /// # Panics
     /// never
     pub fn free(&mut self, mut page: PageHandle) {
-        page.mark_freed();
-        let next = self.data.take();
-        page.as_uninit::<Option<PageHandle>>().write(next);
+        page.mark_freed(self.data.take());
 
-        // for some reason it produces different assembly
-        // self.data = Some(page);
-        self.data.replace(page).ok_or(()).unwrap_err();
+        *self.data = Some(page);
 
         self.free_pages += 1;
     }
@@ -49,15 +46,9 @@ impl KMem {
             .take()
             .ok_or(KMEMError::NoFreePages(self.free_pages))?;
 
-        // SAFETY:
-        // we wrote value of this type beforehand.
-        self.data = unsafe {
-            page.as_uninit::<Option<PageHandle>>()
-                .assume_init_mut()
-                .take()
-        };
+        *self.data = page.mark_allocated(Location::caller(), purpose);
         self.free_pages -= 1;
-        page.mark_allocated(Location::caller(), purpose);
+
         Ok(page)
     }
 

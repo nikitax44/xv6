@@ -14,3 +14,4 @@ rust_kalloc = []
 buddy_system_allocator = { version = "0.11.0", default-features = false }
 spin = "0.9.8"
 fdt = "0.1.5"
+zerocopy = { version = "0.8.5", default-features = false, features = ["derive"] }

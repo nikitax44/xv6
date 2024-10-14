@@ -1,4 +1,4 @@
-use crate::kalloc::pages::page::Page;
+use crate::kalloc::pages::page::{Page, PageHandle};
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::PGSIZE;
 use core::alloc::{GlobalAlloc, Layout};
@@ -30,6 +30,12 @@ impl SharedHeap {
     }
 }
 
+fn add_page(heap: &mut Heap, page: PageHandle) {
+    let page = page.into_box().leak().as_ptr() as usize;
+    // SAFETY: we have the ownership
+    unsafe { heap.add_to_heap(page, page + PGSIZE) };
+}
+
 /// # SAFETY:
 /// we give the valid pointers
 unsafe impl GlobalAlloc for SharedHeap {
@@ -53,9 +59,7 @@ unsafe impl GlobalAlloc for SharedHeap {
             let Ok(page) = KMEM.lock().alloc("Buddy allocator") else {
                 return ptr::null_mut();
             };
-            let page = page.into_box().leak().as_ptr() as usize;
-            // SAFETY: we have the ownership
-            unsafe { heap.add_to_heap(page, page + PGSIZE) };
+            add_page(heap, page);
             heap.alloc(layout)
                 .expect("failed to allocate object larger than PGSIZE. TODO: use kvmmap")
                 .as_ptr()

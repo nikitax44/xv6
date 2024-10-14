@@ -52,7 +52,17 @@
 
         craneLib = (crane.mkLib crossPkgs).overrideToolchain (p: p.rust-bin.nightly.latest.default);
 
-        rust-xv6 = crossPkgs.callPackage ./kernel/rust {inherit craneLib;};
+        OPENSBI_ENABLED = true;
+        RUST_KALLOC_ENABLE = true;
+
+        rust-xv6 = crossPkgs.callPackage ./kernel/rust {
+          inherit craneLib;
+          cargoExtraArgs =
+            if RUST_KALLOC_ENABLE
+            then "--features rust_kalloc"
+            else "";
+          #          CARGO_PROFILE = "";
+        };
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
         platform = crossPkgs.stdenv.hostPlatform.config;
@@ -73,6 +83,10 @@
           enableAppletSymlinks = false;
           enableMinimal = true;
         };
+
+        common = {
+          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs RUST_KALLOC_ENABLE OPENSBI_ENABLED;
+        };
       in {
         treefmt.config = import ./treefmt.nix;
 
@@ -81,33 +95,31 @@
           inherit rust-xv6;
         };
 
-        devShells.default = craneLib.devShell {
-          inputsFrom = [rust-xv6];
-          packages = [
-            config.treefmt.build.wrapper
-            localPkgs.gnumake
-            localPkgs.clang-tools
-          ];
-          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
-        };
+        devShells.default = craneLib.devShell ({
+            inputsFrom = [rust-xv6];
+            packages = [
+              config.treefmt.build.wrapper
+              localPkgs.gnumake
+              localPkgs.clang-tools
+            ];
+          }
+          // common);
 
-        packages.default = crossPkgs.stdenv.mkDerivation {
-          src = ./.;
-          pname = "xv6";
-          version = "none";
-          preBuild = ''
-            cp ${rust-xv6}/lib/librust_xv6.a kernel/
-          '';
-          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
-          installPhase = ''
-            mkdir -p $out/bin
-            install -Dm 0444 kernel/kernel fs.img $out/
-            install -Dm 0555 qemu-script $out/bin/
-          '';
-          OPENSBI_ENABLED = false;
-          RUST_KALLOC_ENABLE = false;
-          meta.mainProgram = "qemu-script";
-        };
+        packages.default = crossPkgs.stdenv.mkDerivation ({
+            src = ./.;
+            pname = "xv6";
+            version = "none";
+            preBuild = ''
+              cp ${rust-xv6}/lib/librust_xv6.a kernel/
+            '';
+            installPhase = ''
+              mkdir -p $out/bin
+              install -Dm 0444 kernel/kernel fs.img $out/
+              install -Dm 0555 qemu-script $out/bin/
+            '';
+            meta.mainProgram = "qemu-script";
+          }
+          // common);
       };
     };
 }

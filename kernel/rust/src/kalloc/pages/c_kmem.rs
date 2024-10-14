@@ -29,19 +29,18 @@ impl KMem {
             .map(|mut ptr| unsafe { ptr.as_mut() })
             .map(|ptr| PageHandle::new(ptr, None))
             .map(|mut ph| {
-                ph.mark_allocated(Location::caller(), purpose);
+                ph.set_origin(Location::caller(), purpose);
                 ph
             })
     }
 
-    pub fn free(&mut self, mut page: PageHandle) {
+    pub fn free(&mut self, page: PageHandle) {
         extern "C" {
-            pub fn kfree(ptr: NonNull<Page>);
+            pub fn kfree(ptr: &'static mut Page);
         }
 
-        page.mark_freed();
-        // SAFETY: we own the value. it is of the valid type
-        unsafe { kfree(page.into_box().leak()) }
+        // SAFETY: safe
+        unsafe { kfree(page.into_box().leak_ref()) }
     }
 
     #[must_use]

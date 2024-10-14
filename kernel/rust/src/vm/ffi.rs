@@ -4,9 +4,12 @@ use crate::vm::pagetable::Pagetable;
 use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
 
+/// # Safety
+/// no one owns memory outside of kernel and bios regions
 #[no_mangle]
-extern "C" fn kvmmake() -> Pagetable<'static> {
-    make_kernel_map().expect("failed to create kernel map")
+unsafe extern "C" fn kvmmake() -> Pagetable<'static> {
+    // SAFETY: precondition
+    unsafe { make_kernel_map() }.expect("failed to create kernel map")
 }
 
 //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)

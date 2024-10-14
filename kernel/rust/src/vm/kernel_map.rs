@@ -15,7 +15,7 @@ use alloc::vec::Vec;
 
 const NPROC: usize = 64;
 
-pub fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
+pub unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     let xv6_mem = xv6_memory();
 
     let mem: Region;
@@ -47,7 +47,7 @@ pub fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
         for reg in &free {
             reg.pages().for_each(|addr| {
                 kmem.free(PageHandle::new(
-                    // SAFETY: no one owns that memory
+                    // SAFETY: no one owns that memory by precondition
                     unsafe { addr.cast_mut().as_mut().unwrap() },
                     None,
                 ));

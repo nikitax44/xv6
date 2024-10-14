@@ -1,7 +1,9 @@
 #include "kernel/hardware/riscv.h"
 .section .entry
-.global _entry
 
+        # a0 contains hartid
+        # a1 contains pointer to dtb
+.global _entry
 _entry:
         mv tp, a0
         # set up a stack for C.
@@ -16,19 +18,13 @@ _entry:
         call start_boot
         j spin
 
-        # all other harts will go there as mandated in start_boot()
+        # all other harts will go there as mandated in init_hart()
+        # a0 contains hartid
+        # a1 contains stack pointer
 .global _entry_other
 _entry_other:
         mv tp, a0
-
-        # $sp=other_stack_arr[$tp]+PGSIZE
-        ld t0, other_stack_arr
-        slli t1, tp, 3
-        add t0, t0, t1
-        ld sp, (t0)
-        li t0, PGSIZE
-        add sp, sp, t0
-
+        mv sp, a1
         call start_other
 
 spin:

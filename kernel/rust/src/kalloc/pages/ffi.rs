@@ -4,6 +4,9 @@ use core::panic::Location;
 use core::ptr;
 
 #[no_mangle]
+const extern "C" fn kinit() {}
+
+#[no_mangle]
 extern "C" fn kalloc() -> *mut Page {
     KMEM.lock()
         .alloc("ffi alloc")

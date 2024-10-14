@@ -22,7 +22,7 @@ endif ()
 if (NOT DEFINED RUST_KALLOC_ENABLE)
     set(RUST_KALLOC_ENABLE $ENV{RUST_KALLOC_ENABLE})
     if (NOT DEFINED RUST_KALLOC_ENABLE)
-        set(RUST_KALLOC_ENABLE false)
+        set(RUST_KALLOC_ENABLE true)
     endif ()
 endif ()
 

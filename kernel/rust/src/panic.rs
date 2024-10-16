@@ -23,7 +23,7 @@ fn handle_panic(info: &PanicInfo) -> ! {
     let mut out = Bytes(&mut vec);
     writeln!(out, "RUST: {info}").ok();
     vec.push(b'\0');
-    crate::println!("calling panic");
+    crate::print!("calling panic: ");
     CString::from_vec_with_nul(vec).map_or_else(
         |_| raw_panic(c"rust: NUL in panic message"),
         |msg| raw_panic(&msg),

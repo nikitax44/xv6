@@ -42,7 +42,7 @@ unsafe impl GlobalAlloc for SharedHeap {
     /// # Safety
     /// safe
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        static BASE: [Page; 32] = [Page::initial(); 32];
+        static BASE: [Page; 32] = [Page::uninit(); 32];
         static INIT: Once = Once::new();
 
         self.in_context(|heap| {

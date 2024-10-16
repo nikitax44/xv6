@@ -58,8 +58,40 @@ static struct disk {
 
 } disk;
 
+static u64 read_driver_features(void) {
+  *R(VIRTIO_MMIO_DEVICE_FEATURES_SEL) = 0;
+  u64 features                        = *R(VIRTIO_MMIO_DEVICE_FEATURES);
+  *R(VIRTIO_MMIO_DEVICE_FEATURES_SEL) = 1;
+  features |= (u64)*R(VIRTIO_MMIO_DEVICE_FEATURES) << 32;
+  return features;
+}
+
+static void write_driver_features(u64 features) {
+  *R(VIRTIO_MMIO_DEVICE_FEATURES_SEL) = 0;
+  *R(VIRTIO_MMIO_DEVICE_FEATURES)     = (u32)features;
+  *R(VIRTIO_MMIO_DEVICE_FEATURES_SEL) = 1;
+  *R(VIRTIO_MMIO_DEVICE_FEATURES)     = features >> 32;
+}
+
+u64 begin_init(u64 supported_features) {
+  *R(VIRTIO_MMIO_STATUS) = 0;
+  u64 status             = VIRTIO_CONFIG_S_ACKNOWLEDGE | VIRTIO_CONFIG_S_DRIVER;
+  *R(VIRTIO_MMIO_STATUS) = status;
+
+  u64 device_features     = read_driver_features();
+  u64 negotiated_features = device_features & supported_features;
+  write_driver_features(negotiated_features);
+  status |= VIRTIO_CONFIG_S_FEATURES_OK;
+  *R(VIRTIO_MMIO_STATUS) = status;
+  return negotiated_features;
+}
+
+extern void reset_blk(usize blk_mmio);
+
 void virtio_disk_init(void) {
-  u32 status = 0;
+  u32 status;
+
+  reset_blk(VIRTIO0);
 
   initlock(&disk.vdisk_lock, "virtio_disk");
 
@@ -69,31 +101,15 @@ void virtio_disk_init(void) {
     panic("could not find virtio disk");
   }
 
-  // reset device
-  *R(VIRTIO_MMIO_STATUS) = status;
-
-  // set ACKNOWLEDGE status bit
-  status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
-  *R(VIRTIO_MMIO_STATUS) = status;
-
-  // set DRIVER status bit
-  status |= VIRTIO_CONFIG_S_DRIVER;
-  *R(VIRTIO_MMIO_STATUS) = status;
-
-  // negotiate features
-  u64 features = *R(VIRTIO_MMIO_DEVICE_FEATURES);
-  features &= ~(1 << VIRTIO_BLK_F_RO);
-  features &= ~(1 << VIRTIO_BLK_F_SCSI);
-  features &= ~(1 << VIRTIO_BLK_F_CONFIG_WCE);
-  features &= ~(1 << VIRTIO_BLK_F_MQ);
-  features &= ~(1 << VIRTIO_F_ANY_LAYOUT);
-  features &= ~(1 << VIRTIO_RING_F_EVENT_IDX);
-  features &= ~(1 << VIRTIO_RING_F_INDIRECT_DESC);
-  *R(VIRTIO_MMIO_DRIVER_FEATURES) = features;
-
-  // tell device that feature negotiation is complete.
-  status |= VIRTIO_CONFIG_S_FEATURES_OK;
-  *R(VIRTIO_MMIO_STATUS) = status;
+  u64 unset_features = 0;
+  unset_features |= 1 << VIRTIO_BLK_F_RO;
+  unset_features |= 1 << VIRTIO_BLK_F_SCSI;
+  unset_features |= 1 << VIRTIO_BLK_F_CONFIG_WCE;
+  unset_features |= 1 << VIRTIO_BLK_F_MQ;
+  unset_features |= 1 << VIRTIO_F_ANY_LAYOUT;
+  unset_features |= 1 << VIRTIO_RING_F_EVENT_IDX;
+  unset_features |= 1 << VIRTIO_RING_F_INDIRECT_DESC;
+  begin_init(~unset_features);
 
   // re-read status to ensure FEATURES_OK is set.
   status = *R(VIRTIO_MMIO_STATUS);
@@ -264,7 +280,7 @@ void virtio_disk_rw(struct buf* b, int write) {
   disk.desc[idx[2]].next   = 0;
 
   // record struct buf for virtio_disk_intr().
-  b->disk             = 1;
+  b->disk             = true;
   disk.info[idx[0]].b = b;
 
   // tell the device the first index in our chain of descriptors.
@@ -280,7 +296,7 @@ void virtio_disk_rw(struct buf* b, int write) {
   *R(VIRTIO_MMIO_QUEUE_NOTIFY) = 0; // value is queue number
 
   // Wait for virtio_disk_intr() to say request has finished.
-  while (b->disk == 1) {
+  while (b->disk) {
     sleep(b, &disk.vdisk_lock);
   }
 
@@ -315,7 +331,7 @@ void virtio_disk_intr(void) {
     }
 
     struct buf* b = disk.info[id].b;
-    b->disk       = 0; // disk is done with buf
+    b->disk       = false; // disk is done with buf
     wakeup(b);
 
     disk.used_idx += 1;

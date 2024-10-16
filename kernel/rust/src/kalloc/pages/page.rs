@@ -17,8 +17,11 @@ union PageWrap {
 }
 
 impl Page {
-    pub const fn initial() -> Self {
+    pub const fn uninit() -> Self {
         Self([0x93; PGSIZE])
+    }
+    pub const fn zeroed() -> Self {
+        Self([0; PGSIZE])
     }
 }
 

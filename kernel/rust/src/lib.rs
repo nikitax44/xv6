@@ -47,13 +47,19 @@
 )]
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]
+#![allow(
+    clippy::multiple_crate_versions,
+    reason = "I need FromZeros 0.8 but virtio_drivers uses 0.7"
+)]
 #![feature(allocator_api)]
 #![feature(iter_collect_into)]
+#![feature(box_vec_non_null)]
 extern crate alloc;
 
 pub mod asm;
 pub mod dtb;
 pub mod errno;
+pub mod hw;
 pub mod kalloc;
 pub mod memlayout;
 pub mod panic;

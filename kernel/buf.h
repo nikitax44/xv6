@@ -4,8 +4,8 @@
 #include "util/sleeplock.h"
 
 struct buf {
-  int              valid; // has data been read from disk?
-  int              disk;  // does disk "own" buf?
+  bool             valid; // has data been read from disk?
+  bool             disk;  // does disk "own" buf?
   u32              dev;
   u32              blockno;
   struct sleeplock lock;

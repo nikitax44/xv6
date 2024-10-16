@@ -3,6 +3,8 @@
 // start() jumps here in supervisor mode on all CPUs.
 void kernel_main(void) { scheduler(); }
 
+extern void dump_blk_info(void);
+
 void init_boot(void) {
   consoleinit();
   printfinit();
@@ -21,9 +23,12 @@ void init_boot(void) {
   timerinithart(); // request timer interrupts
   plicinit();      // set up interrupt controller
   plicinithart();  // ask PLIC for device interrupts
-  binit();         // buffer cache
-  iinit();         // inode table
-  fileinit();      // file table
+
+  dump_blk_info();
+
+  binit();            // buffer cache
+  iinit();            // inode table
+  fileinit();         // file table
   virtio_disk_init(); // emulated hard disk
   userinit();         // first user process
 }

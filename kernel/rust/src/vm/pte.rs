@@ -61,8 +61,15 @@ impl PtEntry {
         self.get()
             .filter(|(_, mode)| *mode == Mode::Table)
             .map(|(addr, _)| addr as *const IPagetable)
-            // SAFETY: contains reference IPagetable
+            // SAFETY: contains reference to IPagetable by invariant
             .map(|ptr| unsafe { &*ptr })
+    }
+
+    #[must_use]
+    pub fn addr(&self) -> Option<usize> {
+        self.get()
+            .filter(|(_, mode)| *mode != Mode::Table)
+            .map(|(addr, _)| addr)
     }
 
     /// # Safety
@@ -72,7 +79,7 @@ impl PtEntry {
         self.get()
             .filter(|(_, mode)| *mode == Mode::Table)
             .map(|(addr, _)| addr as *mut IPagetable)
-            // SAFETY: contains reference IPagetable
+            // SAFETY: contains reference to IPagetable by invariant
             .map(|ptr| unsafe { &mut *ptr })
     }
 }

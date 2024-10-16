@@ -22,6 +22,8 @@ impl Pagetable<'static> {
     }
 }
 
+// TODO: add support for megapages and gigapages
+
 impl<'inner> Pagetable<'inner> {
     /// # Errors
     /// malloc failed
@@ -88,6 +90,16 @@ impl<'inner> Pagetable<'inner> {
         let pt0: &mut IPagetable = pt_entry1.as_pt_mut().unwrap();
 
         Ok(pt0.index_mut(Self::get_idx(0, virtual_address)))
+    }
+
+    /// # Errors
+    /// page is not mapped
+    /// self's invariant aren't held
+    pub fn translate(&self, va: usize) -> Result<usize, PTError> {
+        let page = va / PGSIZE * PGSIZE;
+        self.walk(page)
+            .and_then(|pte| pte.addr().ok_or(PTError::NotPage))
+            .map(|pa| pa + (va - page))
     }
 
     /// # Errors

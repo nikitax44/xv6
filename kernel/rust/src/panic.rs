@@ -38,7 +38,7 @@ fn handle_panic(info: &PanicInfo) -> ! {
 #[no_mangle]
 unsafe extern "C" fn panic(msg: *const c_char) -> ! {
     // SAFETY:
-    // see precondition
+    // msg is valid CStr by precondition
     let cstr = unsafe { CStr::from_ptr::<'_>(msg) };
 
     let mut vec = Vec::new();

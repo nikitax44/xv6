@@ -28,10 +28,11 @@ macro_rules! extern_symbol {
         $vis fn $N () -> $T {
             type Target = $T;
             extern "C" {
-               static $e : $crate::memlayout::Symbol;
+                static $e : $crate::memlayout::Symbol;
             }
             // SAFETY: we only read address at runtime
-            (unsafe {::core::ptr::from_ref(& ($e))}) as Target
+            let sym = unsafe {& ($e)};
+            ::core::ptr::from_ref(sym) as Target
         }
         $crate::extern_symbol!($($t)*);
     };

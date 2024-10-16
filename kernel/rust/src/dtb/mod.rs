@@ -4,6 +4,9 @@ use spin::Once;
 
 pub static DTB: Once<(Fdt<'static>, Region)> = Once::new();
 
+/// # Safety
+/// ptr must point to 'static valid FDT
+/// ptr need not be aligned
 #[no_mangle]
 unsafe extern "C" fn parse_dtb(ptr: *const u8) {
     DTB.try_call_once(|| {

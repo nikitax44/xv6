@@ -25,7 +25,7 @@ impl KMem {
         // SAFETY: safe
         unsafe { kalloc() }
             .ok_or_else(|| KMEMError::NoFreePages(self.free_pages()))
-            // SAFETY: we now own the value. any bit pattern is valid
+            // SAFETY: we now own the value. any bit pattern is valid for `Page`
             .map(|mut ptr| unsafe { ptr.as_mut() })
             .map(|ptr| PageHandle::new(ptr, None))
             .map(|mut ph| {

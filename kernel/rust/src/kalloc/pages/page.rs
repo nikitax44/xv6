@@ -38,6 +38,7 @@ impl PageHandle {
     #[track_caller]
     pub fn new(ptr: &'static mut Page, origin: Option<Origin>) -> Self {
         Self {
+            // TODO: maybe use bytemuck?
             // SAFETY: transmuting Page to PageWrap is always sound
             ptr: Some(unsafe { ThinBox::from(ptr).cast() }),
             origin: origin.unwrap_or_else(Location::caller),

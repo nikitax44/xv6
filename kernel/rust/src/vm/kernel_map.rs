@@ -15,7 +15,10 @@ use alloc::vec::Vec;
 
 const NPROC: usize = 64;
 
-pub unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
+/// # Safety
+/// no one owns memory outside of kernel and bios regions,
+/// or it is declared in dtb's reserved regions
+pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     let xv6_mem = xv6_memory();
 
     let mem: Region;

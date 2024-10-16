@@ -5,7 +5,8 @@ use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
 
 /// # Safety
-/// no one owns memory outside of kernel and bios regions
+/// no one owns memory outside of kernel and bios regions,
+/// or it is declared in dtb's reserved regions
 #[no_mangle]
 unsafe extern "C" fn kvmmake() -> Pagetable<'static> {
     // SAFETY: precondition

@@ -1,6 +1,7 @@
 use crate::kalloc::pages::page::{Page, PageHandle};
 use crate::kalloc::pages::KMEM;
 use crate::memlayout::PGSIZE;
+use crate::println;
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr;
 use core::ptr::NonNull;
@@ -40,7 +41,7 @@ fn add_page(heap: &mut Heap, page: PageHandle) {
 /// we give the valid pointers
 unsafe impl GlobalAlloc for SharedHeap {
     /// # Safety
-    /// safe
+    /// no panics can happen
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         static BASE: [Page; 32] = [Page::uninit(); 32];
         static INIT: Once = Once::new();
@@ -61,15 +62,20 @@ unsafe impl GlobalAlloc for SharedHeap {
             };
             add_page(heap, page);
             heap.alloc(layout)
-                .expect("failed to allocate object larger than PGSIZE. TODO: use kvmmap")
-                .as_ptr()
+                .map_err(|()| {
+                    println!("failed to allocate object larger than PGSIZE. TODO: use kvmmap");
+                })
+                .map_or(ptr::null_mut(), NonNull::as_ptr)
         })
     }
 
     /// # Safety
     /// `ptr` must be allocated with `alloc` previously
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let ptr = NonNull::new(ptr).expect("dealloc(null)");
+        let Some(ptr) = NonNull::new(ptr) else {
+            println!("dealloc(null)");
+            return;
+        };
         // heap.dealloc is actually unsound and thus should be unsafe
         self.in_context(|heap| heap.dealloc(ptr, layout));
     }

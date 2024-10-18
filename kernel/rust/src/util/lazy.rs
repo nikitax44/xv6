@@ -25,4 +25,13 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
             _ => unreachable!(),
         }
     }
+
+    /// # Panics
+    /// if self is not `Data` variant
+    pub fn unwrap(&self) -> &T {
+        match self {
+            Data(val) => val,
+            _ => panic!("unwrap on Init lazy"),
+        }
+    }
 }

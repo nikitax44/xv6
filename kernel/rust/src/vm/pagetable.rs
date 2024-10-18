@@ -7,6 +7,7 @@ use crate::vm::PTError;
 use core::ops::IndexMut;
 
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct Pagetable<'inner> {
     pub(super) inner: &'inner mut IPagetable,
 }
@@ -94,7 +95,7 @@ impl<'inner> Pagetable<'inner> {
 
     /// # Errors
     /// page is not mapped
-    /// self's invariant aren't held
+    /// self's invariants aren't held
     pub fn translate(&self, va: usize) -> Result<usize, PTError> {
         let page = va / PGSIZE * PGSIZE;
         self.walk(page)

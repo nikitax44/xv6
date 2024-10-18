@@ -2,6 +2,7 @@ use crate::kalloc::pages::{KMEMError, KMEM};
 use crate::kalloc::thin_box::ThinBox;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::pte::PtEntry;
+use core::fmt::{Debug, Formatter};
 use core::ops::{Index, IndexMut};
 use zerocopy::{FromZeros, KnownLayout, TryFromBytes};
 
@@ -35,5 +36,18 @@ impl Index<usize> for IPagetable {
 impl IndexMut<usize> for IPagetable {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.entries[index]
+    }
+}
+
+impl Debug for IPagetable {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_map()
+            .entries(
+                self.entries
+                    .iter()
+                    .enumerate()
+                    .filter(|(_idx, entry)| entry.is_set()),
+            )
+            .finish()
     }
 }

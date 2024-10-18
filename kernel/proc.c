@@ -117,7 +117,7 @@ found:
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (u64)forkret;
-  p->context.sp = p->kstack + PGSIZE;
+  p->context.sp = p->kstack + 2 * PGSIZE;
 
   *proc_out = p;
   return 0;

@@ -9,7 +9,7 @@ pub const UART0: usize = 0x1000_0000;
 pub const VIRTIO0: usize = 0x1000_1000;
 pub const PLIC: usize = 0x0c00_0000;
 pub const TRAMPOLINE: usize = Pagetable::MAX_VA - PGSIZE;
-pub const KSTACK: fn(usize) -> usize = |p| TRAMPOLINE - ((p) + 1) * 2 * PGSIZE;
+pub const KSTACK: fn(usize) -> usize = |p| TRAMPOLINE - ((p) + 1) * 3 * PGSIZE;
 pub const TRAPFRAME: usize = TRAMPOLINE - PGSIZE;
 
 use core::ffi::c_void;

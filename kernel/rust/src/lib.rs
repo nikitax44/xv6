@@ -51,9 +51,14 @@
     clippy::multiple_crate_versions,
     reason = "I need FromZeros 0.8 but virtio_drivers uses 0.7"
 )]
+#![warn(clippy::large_stack_frames)]
 #![feature(allocator_api)]
 #![feature(iter_collect_into)]
 #![feature(box_vec_non_null)]
+#![feature(step_trait)]
+#![feature(new_range_api)]
+#![feature(maybe_uninit_uninit_array)]
+#![feature(const_maybe_uninit_uninit_array)]
 extern crate alloc;
 
 pub mod asm;

@@ -18,6 +18,7 @@ const NPROC: usize = 64;
 /// # Safety
 /// no one owns memory outside of kernel and bios regions,
 /// or it is declared in dtb's reserved regions
+#[allow(clippy::large_stack_frames, reason = "stack is reused")]
 pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     let xv6_mem = xv6_memory();
 
@@ -116,14 +117,24 @@ fn xv6_memory() -> Vec<(Region, Mode)> {
     ]
 }
 
+#[allow(clippy::large_stack_frames, reason = "it is fine")]
 fn proc_mapstacks(pt: &mut Pagetable) -> Result<(), PTError> {
     for i in 0..NPROC {
-        let page = KMEM
+        let page1 = KMEM
+            .lock()
+            .alloc("proc stack")
+            .map_err(PTError::AllocFail)?;
+        let page2 = KMEM
             .lock()
             .alloc("proc stack")
             .map_err(PTError::AllocFail)?;
         let va = KSTACK(i);
-        pt.map_page(va, page.into_box().leak().as_ptr() as usize, Mode::_RW_)?;
+        pt.map_page(va, page1.into_box().leak().as_ptr() as usize, Mode::_RW_)?;
+        pt.map_page(
+            va + PGSIZE,
+            page2.into_box().leak().as_ptr() as usize,
+            Mode::_RW_,
+        )?;
     }
     Ok(())
 }

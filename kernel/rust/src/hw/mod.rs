@@ -1,7 +1,7 @@
 use crate::kalloc::pages::page::Page;
 use crate::memlayout::{PGSIZE, VIRTIO0};
+use crate::println;
 use crate::vm::get_physical_address;
-use crate::{print, println};
 use alloc::vec::Vec;
 use bitflags::bitflags;
 use core::ptr::NonNull;
@@ -16,16 +16,20 @@ unsafe impl Hal for HalImpl {
     /// # Impl safety
     /// returns valid pointer.
     fn dma_alloc(pages: usize, direction: BufferDirection) -> (PhysAddr, NonNull<u8>) {
-        let mut buf = Vec::new();
-        buf.resize(pages, Page::zeroed());
+        let buf = Vec::<Page>::with_capacity(pages);
         let ptr = NonNull::from(buf.leak());
-        assert!(
+        debug_assert!(
             ptr.cast::<Page>().is_aligned(),
             "invalid allocation alignment"
         );
         let ptr: NonNull<u8> = ptr.cast();
 
-        print!("HAL: sharing allocated: ");
+        // SAFETY: ptr is valid for writes
+        unsafe {
+            ptr.write_bytes(0, pages * PGSIZE);
+        }
+
+        // print!("HAL: sharing allocated: ");
         // SAFETY: ptr is valid
         let pa = unsafe {
             Self::share(
@@ -37,8 +41,8 @@ unsafe impl Hal for HalImpl {
         (pa, ptr)
     }
 
-    unsafe fn dma_dealloc(paddr: PhysAddr, vaddr: NonNull<u8>, pages: usize) -> i32 {
-        println!("HAL: dealloc: {vaddr:?}@{paddr:0x}");
+    unsafe fn dma_dealloc(_paddr: PhysAddr, vaddr: NonNull<u8>, pages: usize) -> i32 {
+        // println!("HAL: dealloc: {vaddr:?}@{paddr:0x}");
 
         // SAFETY: we now own the [vaddr, vaddr+pages*PGSIZE)
         unsafe {
@@ -52,9 +56,9 @@ unsafe impl Hal for HalImpl {
     unsafe fn mmio_phys_to_virt(paddr: PhysAddr, size: usize) -> NonNull<u8> {
         assert!(VIRTIO0 <= paddr, "convert oob address");
         assert!(paddr + size <= VIRTIO0 + 0xff, "convert oob address");
-        println!("HAL: mmio2virt: {paddr:0x}");
+        // println!("HAL: mmio2virt: {paddr:0x}");
         assert_eq!(
-            get_physical_address(paddr).expect("MMIO is not vmmap'ed"),
+            get_physical_address(paddr).expect("MMIO is not kvmmap'ed"),
             paddr,
             "invalid kvm ptable"
         );
@@ -62,7 +66,7 @@ unsafe impl Hal for HalImpl {
     }
 
     unsafe fn share(buffer: NonNull<[u8]>, _direction: BufferDirection) -> PhysAddr {
-        println!("HAL: sharing {buffer:?}({:#x} bytes)", buffer.len());
+        // println!("HAL: sharing {buffer:?}({:#x} bytes)", buffer.len());
         // SAFETY: testing
         unsafe {
             let _ = buffer.as_ref()[0];
@@ -71,12 +75,13 @@ unsafe impl Hal for HalImpl {
         get_physical_address(ptr).expect("page is not mapped")
     }
 
-    unsafe fn unshare(paddr: PhysAddr, buffer: NonNull<[u8]>, _direction: BufferDirection) {
-        println!("HAL: unsharing {buffer:?}@{paddr:0x}");
+    unsafe fn unshare(_paddr: PhysAddr, _buffer: NonNull<[u8]>, _direction: BufferDirection) {
+        // println!("HAL: unsharing {buffer:?}@{paddr:0x}");
         // nothing to do
     }
 }
 
+#[allow(clippy::large_stack_frames, reason = "`VirtIOBlk` takes up 656 bytes")]
 unsafe fn dump() -> Result<(), Error> {
     // SAFETY: aligned and valid for the lifetime of this function by precondition
     let transport = unsafe {

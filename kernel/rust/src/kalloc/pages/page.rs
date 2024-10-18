@@ -7,21 +7,20 @@ type Origin = &'static Location<'static>;
 
 #[repr(C, align(4096))]
 #[must_use]
-#[derive(Copy, Clone)]
 pub struct Page(pub [u8; PGSIZE]);
 
 #[repr(C)]
 union PageWrap {
-    page: Page,
+    page: ManuallyDrop<Page>,
     handle: ManuallyDrop<Option<PageHandle>>,
 }
 
 impl Page {
-    pub const fn uninit() -> Self {
-        Self([0x93; PGSIZE])
+    pub fn memset(&mut self, value: u8) {
+        self.0.as_mut_slice().fill(value);
     }
-    pub const fn zeroed() -> Self {
-        Self([0; PGSIZE])
+    pub fn memzero(&mut self) {
+        self.memset(0);
     }
 }
 

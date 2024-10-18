@@ -20,8 +20,12 @@
 void dispatch(void);
 void timerinit(void);
 
+struct __attribute__((aligned(16))) stack {
+  char data[2 * PGSIZE];
+};
+
 // m_entry.S needs one stack per CPU.
-__attribute__((aligned(16))) char stack0[PGSIZE * NCPU];
+struct stack stack0[NCPU];
 
 // m_entry.S jumps here in machine mode on stack0.
 void start(void) {

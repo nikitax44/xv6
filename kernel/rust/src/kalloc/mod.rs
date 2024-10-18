@@ -3,6 +3,7 @@ use crate::kalloc::pages::KMEM;
 use crate::memlayout::PGSIZE;
 use crate::println;
 use core::alloc::{GlobalAlloc, Layout};
+use core::mem::MaybeUninit;
 use core::ptr;
 use core::ptr::NonNull;
 use spin::{Mutex, Once};
@@ -43,7 +44,7 @@ unsafe impl GlobalAlloc for SharedHeap {
     /// # Safety
     /// no panics can happen
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        static BASE: [Page; 32] = [Page::uninit(); 32];
+        static BASE: [MaybeUninit<Page>; 32] = MaybeUninit::uninit_array();
         static INIT: Once = Once::new();
 
         self.in_context(|heap| {

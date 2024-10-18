@@ -8,6 +8,7 @@ use spin::Mutex;
 /// `data` is linked list of page-aligned pointers
 /// `free_pages` is length of that list
 /// `KMem` has ownership over all pages in that list
+#[derive(Debug)]
 pub struct KMem {
     data: ManuallyDrop<Option<PageHandle>>,
     free_pages: usize,

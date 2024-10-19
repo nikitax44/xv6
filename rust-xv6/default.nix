@@ -4,11 +4,11 @@
   pkg-config,
   stdenv,
   craneLib,
-  cargoExtraArgs ? "",
+  withRustKalloc,
   CARGO_PROFILE ? "release",
 }: let
-  common = {
-    src = craneLib.cleanCargoSource ./.;
+  commonArgs = {
+    src = ./.;
     strictDeps = true;
 
     # See: https://github.com/NixOS/nixpkgs/pull/146583
@@ -31,21 +31,18 @@
     # See: https://doc.rust-lang.org/cargo/reference/config.html#target
     CARGO_TARGET_RISCV64GC_UNKNOWN_NONE_ELF_LINKER = "${stdenv.cc.targetPrefix}ld";
 
-    cargoExtraArgs = "--target riscv64gc-unknown-none-elf " + cargoExtraArgs;
+    cargoExtraArgs = "--target riscv64gc-unknown-none-elf" + (lib.optionalString withRustKalloc " --features rust_kalloc");
     cargoCheckExtraArgs = "";
 
     HOST_CC = "${stdenv.cc.nativePrefix}cc";
     TARGET_CC = "${stdenv.cc.targetPrefix}cc";
   };
-  cargoArtifacts = craneLib.buildDepsOnly (common
-    // {
-      pname = "rust-xv6-deps";
-    });
-  clippy = craneLib.cargoClippy (common
+  cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+  clippy = craneLib.cargoClippy (commonArgs
     // {
       inherit cargoArtifacts;
       cargoClippyExtraArgs = "-- --deny warnings";
     });
-  package = craneLib.buildPackage (common // {cargoArtifacts = clippy;});
+  package = craneLib.buildPackage (commonArgs // {cargoArtifacts = clippy;});
 in
   package

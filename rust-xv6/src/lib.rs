@@ -59,6 +59,7 @@
 #![feature(new_range_api)]
 #![feature(maybe_uninit_uninit_array)]
 #![feature(const_maybe_uninit_uninit_array)]
+#![feature(negative_impls)]
 extern crate alloc;
 
 pub mod asm;
@@ -71,6 +72,7 @@ pub mod panic;
 pub mod printf;
 pub mod util;
 pub mod vm;
+pub use crate::util::time::Instant;
 
 mod ffi {
     use crate::println;

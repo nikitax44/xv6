@@ -55,13 +55,9 @@
         OPENSBI_ENABLED = true;
         RUST_KALLOC_ENABLE = true;
 
-        rust-xv6 = crossPkgs.callPackage ./kernel/rust {
+        rust-xv6 = crossPkgs.callPackage ./rust-xv6 {
           inherit craneLib;
-          cargoExtraArgs =
-            if RUST_KALLOC_ENABLE
-            then "--features rust_kalloc"
-            else "";
-          #          CARGO_PROFILE = "";
+          withRustKalloc = RUST_KALLOC_ENABLE;
         };
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
@@ -92,7 +88,6 @@
 
         checks = {
           build-test = self'.packages.default;
-          inherit rust-xv6;
         };
 
         devShells.default = craneLib.devShell ({
@@ -105,21 +100,24 @@
           }
           // common);
 
-        packages.default = crossPkgs.stdenv.mkDerivation ({
-            src = ./.;
-            pname = "xv6";
-            version = "none";
-            preBuild = ''
-              cp ${rust-xv6}/lib/librust_xv6.a kernel/
-            '';
-            installPhase = ''
-              mkdir -p $out/bin
-              install -Dm 0444 kernel/kernel fs.img $out/
-              install -Dm 0555 qemu-script $out/bin/
-            '';
-            meta.mainProgram = "qemu-script";
-          }
-          // common);
+        packages = {
+          inherit rust-xv6;
+          default = crossPkgs.stdenv.mkDerivation ({
+              src = ./.;
+              pname = "xv6";
+              version = "none";
+              preBuild = ''
+                cp ${rust-xv6}/lib/librust_xv6.a kernel/
+              '';
+              installPhase = ''
+                mkdir -p $out/bin
+                install -Dm 0444 kernel/kernel fs.img $out/
+                install -Dm 0555 qemu-script $out/bin/
+              '';
+              meta.mainProgram = "qemu-script";
+            }
+            // common);
+        };
       };
     };
 }

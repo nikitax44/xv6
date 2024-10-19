@@ -24,7 +24,7 @@ void init_boot(void) {
   plicinit();      // set up interrupt controller
   plicinithart();  // ask PLIC for device interrupts
 
-  dump_blk_info();
+  // dump_blk_info();
 
   binit();            // buffer cache
   iinit();            // inode table

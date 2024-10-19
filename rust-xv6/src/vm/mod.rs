@@ -1,14 +1,12 @@
+use crate::asm::get_current_pt;
 use crate::kalloc::pages::KMEMError;
 use crate::vm::pagetable::Pagetable;
-use crate::vm::pt_inner::IPagetable;
-use core::arch::asm;
-use core::ptr::NonNull;
 
 mod ffi;
 mod kernel_map;
 pub mod mode;
 pub mod pagetable;
-mod pt_inner;
+pub(crate) mod pt_inner;
 pub mod pte;
 
 #[derive(Debug)]
@@ -21,19 +19,6 @@ pub enum PTError {
     InvalidMode,
     InvalidSize,
     NotPage,
-}
-
-#[must_use]
-pub fn get_current_pt() -> Option<NonNull<IPagetable>> {
-    let mut buf: usize;
-    // SAFETY: safe
-    unsafe {
-        asm!("csrr {}, satp", out(reg) buf);
-    }
-
-    (buf >> 60 == 8)
-        .then_some(())
-        .and_then(|()| NonNull::new((buf << 12) as *mut IPagetable))
 }
 
 /// # Panics

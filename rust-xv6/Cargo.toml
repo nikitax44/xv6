@@ -18,3 +18,4 @@ zerocopy = { version = "0.8.5", default-features = false, features = ["derive"] 
 virtio-drivers = "0.7.5"
 riscv = { version = "0.11.1", features = ["s-mode"] }
 bitflags = "2.6.0"
+attr-wrapper = { git = "https://github.com/nikitax44/attr-wrapper" }

@@ -69,9 +69,9 @@ endif ()
 
 add_custom_command(
         OUTPUT librust_xv6.a
-        COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/rust && cargo build ${CARGO_ARGUMENTS}
+        COMMAND cd ../rust-xv6 && cargo build ${CARGO_ARGUMENTS}
         COMMAND cp target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/rust/src/*
+        DEPENDS ${CMAKE_SOURCE_DIR}/rust-xv6/src/** ${CMAKE_SOURCE_DIR}/rust-xv6/Cargo.*
         COMMENT "Building rust part of xv6"
 )
 

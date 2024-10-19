@@ -32,6 +32,8 @@ impl Console {
     }
 }
 
+impl !Sync for Console {}
+
 pub static CONSOLE: Mutex<Console> = Mutex::new(Console {});
 
 impl fmt::Write for Console {
@@ -42,12 +44,20 @@ impl fmt::Write for Console {
     }
 }
 
+#[doc(hidden)]
+pub struct Wrap<'a>(pub &'a Mutex<Console>);
+
+impl fmt::Write for Wrap<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.0.lock().write_str(s)
+    }
+}
+
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {{
         use core::fmt::Write;
-        let mut _console = $crate::printf::CONSOLE.lock();
-        write!(_console, $($arg)*).ok();
+        write!($crate::printf::Wrap(&$crate::printf::CONSOLE), $($arg)*).ok();
     }};
 }
 
@@ -58,8 +68,7 @@ macro_rules! println {
     };
     ($($arg:tt)*) => {{
         use core::fmt::Write;
-        let mut _console = $crate::printf::CONSOLE.lock();
-        writeln!(_console, $($arg)*).ok();
+        writeln!($crate::printf::Wrap(&$crate::printf::CONSOLE), $($arg)*).ok();
     }};
 }
 

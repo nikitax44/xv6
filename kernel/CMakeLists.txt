@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD 11)
 
 # Define the source files (object files)
 set(OBJS
-        boot/main.c
+        main.c
 
         file/fs.c
         file/pipe.c
@@ -57,9 +57,9 @@ add_custom_command(
 set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 
 if (OPENSBI_ENABLED)
-    list(APPEND OBJS boot/sbi_entry.S boot/sbi_start.c)
+    set(BOOT boot/sbi_entry.S boot/sbi_start.c)
 else ()
-    list(APPEND OBJS boot/m_entry.S boot/m_start.c)
+    set(BOOT boot/m_entry.S boot/m_start.c)
 endif ()
 if (RUST_KALLOC_ENABLE)
     list(APPEND CARGO_ARGUMENTS --features rust_kalloc)
@@ -75,13 +75,19 @@ add_custom_command(
         COMMENT "Building rust part of xv6"
 )
 
-add_custom_target(RebuildOnDependency ALL DEPENDS _kernel.ld _initcode.h librust_xv6.a)
+add_custom_target(Initcode ALL DEPENDS _initcode.h)
+
+add_custom_target(KernelDeps ALL DEPENDS _kernel.ld librust_xv6.a)
 
 # Define the kernel target
-add_executable(kernel ${OBJS})
-target_link_libraries(kernel -lc ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
-add_dependencies(kernel RebuildOnDependency)
+add_library(kernelLib ${OBJS})
+target_link_libraries(kernelLib -lc)
+add_dependencies(kernelLib Initcode)
+
+add_executable(kernel ${BOOT})
+target_link_libraries(kernel kernelLib ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_BINARY_DIR}/_kernel.ld")
+add_dependencies(kernel KernelDeps)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 

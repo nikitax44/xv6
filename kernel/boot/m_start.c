@@ -1,5 +1,6 @@
 #include "kernel/defs.h"
 #include "kernel/hardware/riscv.h"
+#include "kernel/main.h"
 #include "kernel/param.h"
 #include "kernel/types.h"
 
@@ -27,7 +28,8 @@ struct __attribute__((aligned(16))) stack {
 // m_entry.S needs one stack per CPU.
 struct stack stack0[NCPU];
 
-// m_entry.S jumps here in machine mode on stack0.
+// m_entry.S jumps here in machine mode with
+// sp=stack0+(1+hartid)*sizeof(stack0). this code runs on all HARTs
 void start(void) {
   // set M Previous Privilege mode to Supervisor, for mret.
   u64 x = r_mstatus();
@@ -71,10 +73,6 @@ void timerinit(void) {
 }
 
 static volatile bool started = false;
-
-void init_boot(void);
-void init_other(void);
-void kernel_main(void);
 
 void dispatch(void) {
   if (cpuid() == 0) {

@@ -22,7 +22,7 @@ unsafe extern "C" fn parse_dtb(ptr: *const u8) {
 }
 
 #[no_mangle]
-extern "C" fn init_harts(init_hart: extern "C" fn(usize)) {
+extern "C" fn for_each_hart(init_hart: extern "C" fn(usize)) {
     let (fdt, _) = DTB.get().expect("static DTB must be set");
 
     #[expect(

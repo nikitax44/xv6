@@ -1,6 +1,8 @@
-#include "kernel/defs.h"
+#include "main.h"
+#include "defs.h"
 
-// start() jumps here in supervisor mode on all CPUs.
+// start() jumps here in supervisor mode on all HARTs after initializing
+// hardware and harts.
 void kernel_main(void) { scheduler(); }
 
 extern void dump_blk_info(void);

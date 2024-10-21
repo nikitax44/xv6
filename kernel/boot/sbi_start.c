@@ -1,21 +1,16 @@
 #include "kernel/defs.h"
 #include "kernel/hardware/riscv.h"
-#include "kernel/param.h"
+#include "kernel/main.h"
 #include "kernel/types.h"
 
-// main.c
-void kernel_main(void);
-void init_boot(void);
-void init_other(void);
-
 void parse_dtb(u8* ptr);
-void init_harts(void(u64));
+void for_each_hart(void(u64));
 
 // sbi_entry.S
 void _entry_other(u64 hartid);
 
 // implemented below
-void init_hart(u64 hartid);
+void spawn_hart(u64 hartid);
 
 // sbi_entry.S jumps here in supervisor mode on boot hart.
 void start_boot(u8* dtb) {
@@ -29,7 +24,7 @@ void start_boot(u8* dtb) {
 
   __sync_synchronize();
 
-  init_harts(init_hart);
+  for_each_hart(spawn_hart);
 
   kernel_main();
   panic("main exited on boot hart");
@@ -53,7 +48,7 @@ typedef __attribute__((aligned(PGSIZE))) struct {
 // sbi_entry.S needs one static stack.
 __attribute__((aligned(16))) u8 stack0[PGSIZE];
 
-void init_hart(u64 hartid) {
+void spawn_hart(u64 hartid) {
   if (hartid == cpuid()) {
     return;
   }
@@ -61,13 +56,15 @@ void init_hart(u64 hartid) {
   if (hartid * sizeof(u8*) > PGSIZE) {
     panic("allocate stack out of page bounds");
   }
+
+  // will be used for 'static by owning HART
   page_t* stack = kalloc();
   if (stack == NULL) {
     panic("failed to allocate stack");
   }
 
-  struct sbiret result;
-  result = sbi_hsm_hart_start(hartid, _entry_other, ((u64)stack) + PGSIZE);
+  struct sbiret result =
+      sbi_hsm_hart_start(hartid, _entry_other, ((u64)stack) + PGSIZE);
   if (result.error != 0) {
     printf("failed to start hart %lu: %ld\n", hartid, result.error);
   }

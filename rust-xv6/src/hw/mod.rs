@@ -58,7 +58,7 @@ unsafe impl Hal for HalImpl {
         assert!(paddr + size <= VIRTIO0 + 0xff, "convert oob address");
         // println!("HAL: mmio2virt: {paddr:0x}");
         assert_eq!(
-            get_physical_address(paddr).expect("MMIO is not kvmmap'ed"),
+            get_physical_address(paddr as *const ()).expect("VIRTIO MMIO is not kvmmap'ed"),
             paddr,
             "invalid kvm ptable"
         );
@@ -67,11 +67,7 @@ unsafe impl Hal for HalImpl {
 
     unsafe fn share(buffer: NonNull<[u8]>, _direction: BufferDirection) -> PhysAddr {
         // println!("HAL: sharing {buffer:?}({:#x} bytes)", buffer.len());
-        // SAFETY: testing
-        unsafe {
-            let _ = buffer.as_ref()[0];
-        };
-        let ptr = buffer.cast::<u8>().as_ptr() as usize;
+        let ptr = buffer.cast::<()>().as_ptr().cast_const();
         get_physical_address(ptr).expect("page is not mapped")
     }
 

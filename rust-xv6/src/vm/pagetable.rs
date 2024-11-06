@@ -6,6 +6,8 @@ use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
 use core::ops::IndexMut;
 
+// TODO: make Pagetable own the IPagetable
+
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct Pagetable<'inner> {
@@ -28,7 +30,7 @@ impl Pagetable<'static> {
 impl<'inner> Pagetable<'inner> {
     /// # Errors
     /// malloc failed
-    pub fn new(inner: &'inner mut IPagetable) -> Self {
+    pub(super) fn new(inner: &'inner mut IPagetable) -> Self {
         Self { inner }
     }
 

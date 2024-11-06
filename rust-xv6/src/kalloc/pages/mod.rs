@@ -7,5 +7,5 @@ pub use kmem::{KMem, KMEM};
 #[derive(Debug)]
 pub enum KMEMError {
     NoFreePages(usize),
-    NoInfo,
+    AllocFail(core::alloc::AllocError),
 }

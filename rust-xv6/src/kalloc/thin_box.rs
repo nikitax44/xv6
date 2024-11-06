@@ -1,7 +1,8 @@
 use crate::println;
+use alloc::boxed::Box;
 use core::any::type_name;
 use core::fmt::{Debug, Formatter};
-use core::mem::ManuallyDrop;
+use core::mem::{ManuallyDrop, MaybeUninit};
 use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
 
@@ -47,6 +48,28 @@ impl<T: ?Sized> ThinBox<T> {
     /// creates an aliased pointer for use in `ManuallyDrop` context
     pub fn inner(&mut self) -> NonNull<T> {
         self.inner
+    }
+}
+
+impl<T: 'static> ThinBox<MaybeUninit<T>> {
+    /// # Errors
+    /// out of memory
+    pub fn alloc() -> Result<Self, core::alloc::AllocError> {
+        Box::try_new_uninit().map(Box::leak).map(Self::from)
+    }
+}
+
+impl<T> ThinBox<MaybeUninit<T>> {
+    pub fn zero(mut self) -> Self {
+        MaybeUninit::as_bytes_mut(&mut self).fill(MaybeUninit::zeroed());
+        self
+    }
+
+    /// # Safety
+    /// value must be initialized
+    pub unsafe fn assume_init(self) -> ThinBox<T> {
+        // SAFETY: precondition
+        unsafe { self.cast() }
     }
 }
 

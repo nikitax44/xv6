@@ -25,7 +25,7 @@ impl KMem {
         Box::<Page>::try_new_uninit()
             .map(Box::leak)
             .map(|page| PageHandle::new_uninit(page, caller, purpose))
-            .map_err(|core::alloc::AllocError| KMEMError::NoInfo)
+            .map_err(KMEMError::AllocFail)
     }
 
     pub fn free(&mut self, page: PageHandle) {

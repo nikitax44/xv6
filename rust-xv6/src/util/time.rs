@@ -24,25 +24,28 @@ impl Instant {
 
 static FREQ: RwLock<Vec<Option<NonZeroU64>>> = RwLock::new(Vec::new());
 
+#[allow(clippy::large_stack_frames, reason = "no way to deal with it")]
 fn get_freq() -> u64 {
     let read = FREQ.upgradeable_read();
     let cpuid = cpuid() as usize;
     if let Some(Some(freq)) = read.get(cpuid) {
         return freq.get();
     }
-    if let Some((dtb, _)) = crate::dtb::DTB.get() {
-        let mut write = read.upgrade();
-        let cpu = dtb
-            .cpus()
-            .find(|cpu| cpu.ids().all().any(|id| id == cpuid))
-            .expect("invalid cpuid");
-        let old_sz = write.len();
-        write.resize(usize::max(old_sz, cpuid + 1), None);
-        let freq = NonZeroU64::new(cpu.timebase_frequency() as u64).expect("cpu frequency is 0");
-        write[cpuid] = Some(freq);
-        return freq.get();
-    }
-    10_000_000 // default value
+
+    let Some((dtb, _)) = crate::dtb::DTB.get() else {
+        return 10_000_000;
+    };
+
+    let mut write = read.upgrade();
+    let cpu = dtb
+        .cpus()
+        .find(|cpu| cpu.ids().all().any(|id| id == cpuid))
+        .expect("invalid cpuid");
+    let old_sz = write.len();
+    write.resize(usize::max(old_sz, cpuid + 1), None);
+    let freq = NonZeroU64::new(cpu.timebase_frequency() as u64).expect("cpu frequency is 0");
+    write[cpuid] = Some(freq);
+    freq.get()
 }
 
 impl Sub for Instant {

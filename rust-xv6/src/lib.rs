@@ -60,6 +60,8 @@
 #![feature(maybe_uninit_uninit_array)]
 #![feature(const_maybe_uninit_uninit_array)]
 #![feature(negative_impls)]
+#![feature(maybe_uninit_as_bytes)]
+#![feature(never_type)]
 extern crate alloc;
 
 pub mod asm;

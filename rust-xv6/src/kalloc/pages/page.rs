@@ -1,50 +1,47 @@
 use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::PGSIZE;
-use core::mem::ManuallyDrop;
+use core::mem::{ManuallyDrop, MaybeUninit};
 use core::panic::Location;
 
 type Origin = &'static Location<'static>;
 
 #[repr(C, align(4096))]
 #[must_use]
-pub struct Page(pub [u8; PGSIZE]);
-
-#[repr(C)]
-union PageWrap {
-    page: ManuallyDrop<Page>,
-    handle: ManuallyDrop<Option<PageHandle>>,
-}
+pub struct Page([u8; PGSIZE]);
 
 impl Page {
-    pub fn memset(&mut self, value: u8) {
-        self.0.as_mut_slice().fill(value);
-    }
-    pub fn memzero(&mut self) {
-        self.memset(0);
+    pub fn zeroed(&mut self) -> &mut [u8; PGSIZE] {
+        self.0.fill(0);
+        &mut self.0
     }
 }
 
 #[must_use]
 #[derive(Debug)]
 pub struct PageHandle {
-    in_use: bool,
-    ptr: Option<ThinBox<PageWrap>>,
+    ptr: Option<ThinBox<Page>>,
     origin: Origin,
     purpose: &'static str,
 }
 
 impl PageHandle {
     #[track_caller]
-    pub fn new(ptr: &'static mut Page, origin: Option<Origin>) -> Self {
+    pub fn new(ptr: &'static mut Page, origin: Origin, purpose: &'static str) -> Self {
         Self {
-            // TODO: maybe use bytemuck?
-            // SAFETY: transmuting Page to PageWrap is always sound
-            ptr: Some(unsafe { ThinBox::from(ptr).cast() }),
-            origin: origin.unwrap_or_else(Location::caller),
-            purpose: "unknown",
-            // indicates variant of ptr
-            in_use: true,
+            ptr: Some(ThinBox::from(ptr)),
+            origin,
+            purpose,
         }
+    }
+
+    #[track_caller]
+    pub fn new_uninit(
+        ptr: &'static mut MaybeUninit<Page>,
+        origin: Origin,
+        purpose: &'static str,
+    ) -> Self {
+        // SAFETY: Page is write-only until written to
+        Self::new(unsafe { ptr.assume_init_mut() }, origin, purpose)
     }
 
     pub fn set_origin(&mut self, origin: Origin, purpose: &'static str) {
@@ -53,46 +50,10 @@ impl PageHandle {
     }
 
     /// # Panics
-    /// if self is not in use
-    fn fill(&mut self, byte: u8) {
-        assert!(self.in_use, "attempt to fill `!in_use` `PageWrap`");
-        // SAFETY: tag is valid, any bit pattern is valid for Page
-        unsafe { &mut self.ptr.as_mut().unwrap().page }.0.fill(byte);
-    }
-
-    /// # Panics
-    /// if self is not in use
-    pub fn mark_freed(&mut self, next: Option<Self>) {
-        assert!(self.in_use, "attempt to free not allocated page");
-        self.fill(0x19);
-        self.in_use = false;
-        self.ptr.as_mut().unwrap().handle = ManuallyDrop::new(next);
-    }
-
-    /// # Panics
-    /// if self is already in use
-    pub fn mark_allocated(&mut self, origin: Origin, purpose: &'static str) -> Option<Self> {
-        assert!(!self.in_use, "attempt to get next_handle of in-use page");
-        // SAFETY: we but the value beforehand as stated by !self.in_use
-        let next = unsafe { &mut self.ptr.as_mut().unwrap().handle }.take();
-        self.in_use = true;
-        self.fill(0x1d);
-        self.set_origin(origin, purpose);
-        next
-    }
-
-    /// # Panics
-    /// if self is not in use
+    /// never
     pub fn into_box(self) -> ThinBox<Page> {
         let mut this = ManuallyDrop::new(self);
-        assert!(this.in_use, "attempt to leak the !in_use page");
-        // SAFETY: cast from PageWrap to Page is always sound
-        unsafe { this.ptr.take().unwrap().cast() }
-    }
-
-    pub fn zeroed(mut self) -> Self {
-        self.fill(0);
-        self
+        this.ptr.take().unwrap()
     }
 }
 

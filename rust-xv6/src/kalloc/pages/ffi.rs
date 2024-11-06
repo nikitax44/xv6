@@ -20,11 +20,9 @@ unsafe extern "C" fn kfree(ptr: Option<ptr::NonNull<Page>>) {
     let mut ptr = ptr.expect("kfree(NULL)");
     assert!(ptr.is_aligned(), "kfree(unaligned)");
 
-    // SAFETY:
-    // precondition
-    let rf = unsafe { ptr.as_mut() };
-    let mut page = PageHandle::new(rf, None);
-    page.set_origin(Location::caller(), "ffi free");
+    // SAFETY: we now own the page
+    let rf: &'static mut Page = unsafe { ptr.as_mut() };
+    let page = PageHandle::new(rf, Location::caller(), "ffi free");
     KMEM.lock().free(page);
 }
 

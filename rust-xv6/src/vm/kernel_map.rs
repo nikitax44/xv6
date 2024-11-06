@@ -1,8 +1,8 @@
 use crate::addrof_symbol;
 use crate::dtb::DTB;
-use crate::kalloc::pages::page::PageHandle;
 use crate::kalloc::pages::KMEM;
 use crate::kalloc::region::Region;
+use crate::kalloc::KALLOC;
 use crate::memlayout::{
     addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PGSIZE, PLIC, TEST0,
     TRAMPOLINE, UART0, VIRTIO0,
@@ -47,18 +47,14 @@ pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
         reg.size() != 0
     });
 
-    {
-        let mut kmem = KMEM.lock();
+    KALLOC.in_context(|heap| {
         for reg in &free {
-            reg.pages().for_each(|addr| {
-                kmem.free(PageHandle::new(
-                    // SAFETY: no one owns that memory by precondition
-                    unsafe { addr.cast_mut().as_mut().unwrap() },
-                    None,
-                ));
-            });
+            // SAFETY: no one owns that memory by precondition
+            unsafe {
+                crate::kalloc::add_region(heap, *reg);
+            }
         }
-    }
+    });
 
     // must be called after kfree's
     let mut pt = Pagetable::alloc()?;

@@ -17,8 +17,8 @@ impl IPagetable {
     pub fn alloc() -> Result<ThinBox<Self>, KMEMError> {
         KMEM.lock()
             .alloc("IPagetable::alloc()")
-            .map(|page| page.zeroed().into_box().leak_ref())
-            .map(|page| &mut page.0[..])
+            .map(|page| page.into_box().leak_ref())
+            .map(|page| &mut page.zeroed()[..])
             .map(Self::try_mut_from_bytes)
             .map(Result::unwrap)
             .map(ThinBox::from)

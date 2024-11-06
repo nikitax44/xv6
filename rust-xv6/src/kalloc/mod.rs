@@ -1,5 +1,5 @@
-use crate::kalloc::pages::page::{Page, PageHandle};
-use crate::kalloc::pages::KMEM;
+use crate::kalloc::pages::page::Page;
+use crate::kalloc::region::Region;
 use crate::memlayout::PGSIZE;
 use crate::println;
 use core::alloc::{GlobalAlloc, Layout};
@@ -26,16 +26,17 @@ impl SharedHeap {
         Self(Mutex::new(Heap::new()))
     }
 
-    fn in_context<T>(&self, op: impl FnOnce(&mut Heap) -> T) -> T {
+    pub fn in_context<T>(&self, op: impl FnOnce(&mut Heap) -> T) -> T {
         let mut lock = self.0.lock();
         op(&mut lock)
     }
 }
 
-fn add_page(heap: &mut Heap, page: PageHandle) {
-    let page = page.into_box().leak().as_ptr() as usize;
-    // SAFETY: we have the ownership
-    unsafe { heap.add_to_heap(page, page + PGSIZE) };
+/// # Safety
+/// caller transfers the ownership over the memory in that region
+pub unsafe fn add_region(heap: &mut Heap, region: Region) {
+    // SAFETY: we have the ownership by precondition
+    unsafe { heap.add_to_heap(region.start(), region.end()) };
 }
 
 /// # SAFETY:
@@ -55,18 +56,10 @@ unsafe impl GlobalAlloc for SharedHeap {
                     heap.add_to_heap(start, start + size_of_val(&BASE));
                 }
             });
-            if let Ok(ptr) = heap.alloc(layout) {
-                return ptr.as_ptr();
-            };
-            let Ok(page) = KMEM.lock().alloc("Buddy allocator") else {
-                return ptr::null_mut();
-            };
-            add_page(heap, page);
             heap.alloc(layout)
-                .map_err(|()| {
-                    println!("failed to allocate object larger than PGSIZE. TODO: use kvmmap");
-                })
-                .map_or(ptr::null_mut(), NonNull::as_ptr)
+                .map(NonNull::as_ptr)
+                .ok()
+                .unwrap_or_else(ptr::null_mut)
         })
     }
 

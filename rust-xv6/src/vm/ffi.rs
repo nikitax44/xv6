@@ -1,28 +1,49 @@
 use crate::errno::ErrNo;
 use crate::vm::kernel_map::make_kernel_map;
 use crate::vm::pagetable::Pagetable;
+use crate::vm::pt_inner::IPagetable;
 use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
+use spin::rwlock::RwLock;
+
+static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 
 /// # Safety
 /// no one owns memory outside of kernel and bios regions,
 /// or it is declared in dtb's reserved regions
 #[no_mangle]
-unsafe extern "C" fn kvmmake() -> Pagetable<'static> {
+unsafe extern "C" fn kvminit() {
     // SAFETY: precondition
-    unsafe { make_kernel_map() }.expect("failed to create kernel map")
+    let pt = unsafe { make_kernel_map() }.expect("failed to create kernel map");
+
+    let mut kpt = KERNEL_PAGETABLE.write();
+    if let Some(_old_pt) = kpt.replace(pt) {
+        panic!("KERNEL_PAGETABLE overwrite")
+    }
+}
+
+#[no_mangle]
+extern "C" fn with_kernel_pagetable(op: extern "C" fn(&mut IPagetable)) {
+    let mut kpt = KERNEL_PAGETABLE.write();
+    let kpt = kpt
+        .as_mut()
+        .expect("kernel pagetable was expected to be present");
+    op(kpt
+        .inner_mut()
+        .expect("mernel pagetable is the Pagetable::Ref variant"));
 }
 
 //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)
 #[no_mangle]
 extern "C" fn mappages(
-    mut pt: Pagetable,
+    pt: &mut IPagetable,
     virtual_address: usize,
     size: usize,
     physical_address: usize,
     perm: usize,
 ) -> ErrNo {
     let perm = perm.try_into().expect("invalid access mode");
+    let mut pt = Pagetable::from_mut(pt);
     let result = pt.map_pages(virtual_address, physical_address, size, perm);
     if let Err(err) = result {
         return match err {
@@ -38,8 +59,8 @@ extern "C" fn mappages(
 // Can only be used to look up user pages.
 // u64 walkaddr(pagetable_t pagetable, u64 va)
 #[no_mangle]
-extern "C" fn walkaddr(pagetable: Pagetable, virtual_address: usize) -> usize {
-    pagetable
+extern "C" fn walkaddr(pagetable: &IPagetable, virtual_address: usize) -> usize {
+    Pagetable::from_ref(pagetable)
         .walk(virtual_address)
         .ok()
         .as_ref()

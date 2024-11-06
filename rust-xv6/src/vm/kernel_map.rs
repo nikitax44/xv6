@@ -57,7 +57,7 @@ pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     });
 
     // must be called after kfree's
-    let mut pt = Pagetable::alloc()?;
+    let mut pt = Pagetable::new()?;
 
     for (reg, mode) in xv6_mem {
         pt.map_reg(reg, mode)?;

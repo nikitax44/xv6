@@ -9,26 +9,25 @@
 /*
  * the kernel's page table.
  */
-pagetable_t kernel_pagetable;
 
 extern char etext[]; // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
-
-extern pagetable_t kvmmake(void);
-
-// Initialize the one kernel_pagetable
-void kvminit(void) { kernel_pagetable = kvmmake(); }
+extern void with_kernel_pagetable(void(pagetable_t));
 
 pagetable_t kvmdebug(pagetable_t);
 
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
+void kvminithart_(pagetable_t KERNEL_PAGETABLE) {
+  w_satp(MAKE_SATP(KERNEL_PAGETABLE));
+}
+
 void kvminithart(void) {
   // wait for any previous writes to the page table memory to finish.
   sfence_vma();
 
-  w_satp(MAKE_SATP(kernel_pagetable));
+  with_kernel_pagetable(kvminithart_);
 
   // flush stale entries from the TLB.
   sfence_vma();

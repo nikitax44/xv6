@@ -17,7 +17,10 @@ pub struct ThinBox<T: ?Sized> {
 
 /// # SAFETY:
 /// by invariant we own the value, so no aliased accesses are allowed
-unsafe impl<T: ?Sized> Send for ThinBox<T> {}
+unsafe impl<T: Send + ?Sized> Send for ThinBox<T> {}
+/// # SAFETY:
+/// `&ThinBox<T>` is `Send`
+unsafe impl<T: Send + Sync + ?Sized> Sync for ThinBox<T> {}
 
 impl<T: ?Sized> ThinBox<T> {
     /// # Safety

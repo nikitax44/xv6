@@ -1,4 +1,5 @@
 use crate::kalloc::region::Region;
+use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::{PGSHIFT, PGSIZE};
 use crate::vm::mode::Mode;
 use crate::vm::pt_inner::IPagetable;
@@ -6,32 +7,27 @@ use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
 use core::ops::IndexMut;
 
-// TODO: make Pagetable own the IPagetable
-
-#[repr(transparent)]
 #[derive(Debug)]
 pub struct Pagetable<'inner> {
-    pub(super) inner: &'inner mut IPagetable,
+    inner: Inner<'inner>,
 }
 
-impl Pagetable<'static> {
-    #[track_caller]
-    /// # Errors
-    /// out of memory
-    pub fn alloc() -> Result<Self, PTError> {
-        Ok(Self::new(
-            IPagetable::alloc().map_err(PTError::AllocFail)?.leak_ref(),
-        ))
-    }
+#[derive(Debug)]
+enum Inner<'inner> {
+    Owned(ThinBox<IPagetable>),
+    Ref(&'inner IPagetable),
+    Mut(&'inner mut IPagetable),
 }
 
 // TODO: add support for megapages and gigapages
-
 impl<'inner> Pagetable<'inner> {
+    #[track_caller]
     /// # Errors
-    /// malloc failed
-    pub(super) fn new(inner: &'inner mut IPagetable) -> Self {
-        Self { inner }
+    /// out of memory
+    pub fn new() -> Result<Self, PTError> {
+        Ok(Self {
+            inner: Inner::Owned(IPagetable::alloc().map_err(PTError::AllocFail)?),
+        })
     }
 
     const PTELVLS: usize = 3;
@@ -54,12 +50,40 @@ impl<'inner> Pagetable<'inner> {
         Ok(())
     }
 
+    pub(super) fn inner_ref(&self) -> &IPagetable {
+        match &self.inner {
+            Inner::Owned(inner) => inner,
+            Inner::Ref(inner) => inner,
+            Inner::Mut(inner) => inner,
+        }
+    }
+
+    pub(super) fn inner_mut(&mut self) -> Option<&mut IPagetable> {
+        match &mut self.inner {
+            Inner::Owned(inner) => Some(inner),
+            Inner::Ref(_inner) => None,
+            Inner::Mut(inner) => Some(inner),
+        }
+    }
+
+    pub(super) const fn from_ref(inner: &'inner IPagetable) -> Self {
+        Self {
+            inner: Inner::Ref(inner),
+        }
+    }
+
+    pub(super) fn from_mut(inner: &'inner mut IPagetable) -> Self {
+        Self {
+            inner: Inner::Mut(inner),
+        }
+    }
+
     /// # Errors
     /// see `MMapError`
     pub fn walk(&self, virtual_address: usize) -> Result<PtEntry, PTError> {
         Self::verify_va(virtual_address)?;
 
-        let pt2 = &self.inner;
+        let pt2 = self.inner_ref();
         let pt1: &IPagetable = pt2[Self::get_idx(2, virtual_address)]
             .as_pt()
             .ok_or(PTError::NotMapped)?;
@@ -78,7 +102,8 @@ impl<'inner> Pagetable<'inner> {
     pub fn walk_mut(&mut self, virtual_address: usize) -> Result<&mut PtEntry, PTError> {
         Self::verify_va(virtual_address)?;
 
-        let pt_entry2: &mut PtEntry = &mut self.inner[Self::get_idx(2, virtual_address)];
+        let inner = self.inner_mut().ok_or(PTError::ROPagetable)?;
+        let pt_entry2: &mut PtEntry = &mut inner[Self::get_idx(2, virtual_address)];
         if !pt_entry2.is_set() {
             pt_entry2.set_pt(IPagetable::alloc().map_err(PTError::AllocFail)?);
         }
@@ -143,7 +168,7 @@ impl<'inner> Pagetable<'inner> {
     }
 
     /// # Errors
-    /// `size` is not page-aligned or zero
+    /// `size` is not page-aligned
     /// see `map_page`
     pub fn map_pages(
         &mut self,
@@ -152,7 +177,7 @@ impl<'inner> Pagetable<'inner> {
         size: usize,
         mode: Mode,
     ) -> Result<(), PTError> {
-        if size % PGSIZE != 0 || size == 0 {
+        if size % PGSIZE != 0 {
             return Err(PTError::InvalidSize);
         }
         (0usize..size).step_by(PGSIZE).try_for_each(|offset| {

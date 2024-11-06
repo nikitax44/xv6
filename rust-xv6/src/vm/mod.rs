@@ -8,6 +8,7 @@ pub(crate) mod pt_inner;
 pub mod pte;
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum PTError {
     Remap,
     AllocFail(KMEMError),
@@ -17,6 +18,7 @@ pub enum PTError {
     InvalidMode,
     InvalidSize,
     NotPage,
+    ROPagetable,
 }
 
 /// # Errors

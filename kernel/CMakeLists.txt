@@ -61,11 +61,6 @@ if (OPENSBI_ENABLED)
 else ()
     set(BOOT boot/m_entry.S boot/m_start.c)
 endif ()
-if (RUST_KALLOC_ENABLE)
-    list(APPEND CARGO_ARGUMENTS --features rust_kalloc)
-else ()
-    list(APPEND OBJS kalloc.c)
-endif ()
 
 add_custom_command(
         OUTPUT librust_xv6.a

@@ -76,16 +76,10 @@ pub use crate::util::time::Instant;
 
 mod ffi {
     use crate::println;
-
-    #[cfg(feature = "rust_kalloc")]
-    const KALLOC: &str = "rust";
-    #[cfg(not(feature = "rust_kalloc"))]
-    const KALLOC: &str = "C";
-
     #[no_mangle]
     extern "C" fn dumpconf() {
         println!("rust features:");
-        println!("  kalloc: {}", KALLOC);
+        println!("  none yet");
         println!();
     }
 

@@ -19,12 +19,6 @@ if (NOT DEFINED OPENSBI_ENABLED)
         set(OPENSBI_ENABLED true)
     endif ()
 endif ()
-if (NOT DEFINED RUST_KALLOC_ENABLE)
-    set(RUST_KALLOC_ENABLE $ENV{RUST_KALLOC_ENABLE})
-    if (NOT DEFINED RUST_KALLOC_ENABLE)
-        set(RUST_KALLOC_ENABLE true)
-    endif ()
-endif ()
 
 
 if (NOT DEFINED NEWLIB)

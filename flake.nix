@@ -53,11 +53,9 @@
         craneLib = (crane.mkLib crossPkgs).overrideToolchain (p: p.rust-bin.nightly.latest.default);
 
         OPENSBI_ENABLED = true;
-        RUST_KALLOC_ENABLE = true;
 
         rust-xv6 = crossPkgs.callPackage ./rust-xv6 {
           inherit craneLib;
-          withRustKalloc = RUST_KALLOC_ENABLE;
         };
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
@@ -81,7 +79,7 @@
         };
 
         common = {
-          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs RUST_KALLOC_ENABLE OPENSBI_ENABLED;
+          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs OPENSBI_ENABLED;
         };
       in {
         treefmt.config = import ./treefmt.nix;

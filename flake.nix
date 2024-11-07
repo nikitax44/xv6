@@ -52,7 +52,7 @@
 
         craneLib = (crane.mkLib crossPkgs).overrideToolchain (p: p.rust-bin.nightly.latest.default);
 
-        OPENSBI_ENABLED = true;
+        enableOpenSBI = false;
 
         rust-xv6 = crossPkgs.callPackage ./rust-xv6 {
           inherit craneLib;
@@ -79,7 +79,8 @@
         };
 
         common = {
-          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs OPENSBI_ENABLED;
+          inherit NEWLIB TOOLPREFIX buildInputs nativeBuildInputs;
+          OPENSBI_ENABLED = toString enableOpenSBI;
         };
       in {
         treefmt.config = import ./treefmt.nix;
@@ -112,6 +113,7 @@
                 install -Dm 0444 kernel/kernel fs.img $out/
                 install -Dm 0555 qemu-script $out/bin/
               '';
+              dontStrip = true;
               meta.mainProgram = "qemu-script";
             }
             // common);

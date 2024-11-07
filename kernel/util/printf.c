@@ -200,6 +200,12 @@ void reboot(void) {
 
 void printfinit(void) {
   initlock(&pr.lock, "pr");
+  if (panicked) {
+    panicked = 0;
+    printf("reboot after panic");
+    panicked = 1;
+    shutdown();
+  }
   pr.locking     = 1;
   pr.initialized = 1;
 }

@@ -4,7 +4,9 @@ use core::panic::Location;
 use core::ptr;
 
 #[no_mangle]
-const extern "C" fn kinit() {}
+extern "C" fn kinit() {
+    crate::kalloc::init();
+}
 
 #[no_mangle]
 extern "C" fn kalloc() -> *mut Page {

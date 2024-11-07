@@ -8,9 +8,12 @@ name = "rust_xv6"
 crate-type = ["staticlib"]
 
 [features]
+default = []
+talc = []
 
 [dependencies]
-buddy_system_allocator = { version = "0.11.0", default-features = false }
+buddy_system_allocator = "0.11.0"
+talc = { version = "4.4.2", features = ["counters"] }
 spin = "0.9.8"
 fdt = "0.1.5"
 zerocopy = { version = "0.8.5", default-features = false, features = ["derive"] }

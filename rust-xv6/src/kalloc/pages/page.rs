@@ -1,5 +1,6 @@
 use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::PGSIZE;
+use core::cell::UnsafeCell;
 use core::mem::{ManuallyDrop, MaybeUninit};
 use core::panic::Location;
 
@@ -7,14 +8,19 @@ type Origin = &'static Location<'static>;
 
 #[repr(C, align(4096))]
 #[must_use]
-pub struct Page([u8; PGSIZE]);
+/// `UnsafeCell` is used to indicate interior mutability
+pub struct Page(UnsafeCell<[u8; PGSIZE]>);
 
 impl Page {
     pub fn zeroed(&mut self) -> &mut [u8; PGSIZE] {
-        self.0.fill(0);
-        &mut self.0
+        self.0.get_mut().fill(0);
+        self.0.get_mut()
     }
 }
+
+/// # SAFETY:
+/// Page is accessible only through mutable reference
+unsafe impl Sync for Page {}
 
 #[must_use]
 #[derive(Debug)]

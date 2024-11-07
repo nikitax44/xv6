@@ -3,9 +3,11 @@ mod kmem;
 pub mod page;
 
 pub use kmem::{KMem, KMEM};
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum KMEMError {
-    NoFreePages(usize),
-    AllocFail(core::alloc::AllocError),
+    #[error("failed to allocate")]
+    AllocFail(#[from] core::alloc::AllocError),
 }

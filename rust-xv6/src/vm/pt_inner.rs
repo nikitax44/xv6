@@ -5,7 +5,7 @@ use crate::vm::pte::PtEntry;
 use core::fmt::{Debug, Formatter};
 use core::ops::{Index, IndexMut};
 
-#[repr(transparent)]
+#[repr(C, align(4096))]
 pub(super) struct IPagetable {
     pub entries: [PtEntry; Pagetable::PT_ENTRIES],
 }

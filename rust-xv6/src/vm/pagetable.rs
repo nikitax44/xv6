@@ -42,10 +42,10 @@ impl<'inner> Pagetable<'inner> {
 
     const fn verify_va(addr: usize) -> Result<(), PTError> {
         if addr >= Self::MAX_VA {
-            return Err(PTError::InvalidVirtualAddress);
+            return Err(PTError::InvalidVirtualAddress(addr));
         };
         if addr % PGSIZE != 0 {
-            return Err(PTError::InvalidVirtualAddress);
+            return Err(PTError::UnalignedVirtualAddress(addr));
         }
         Ok(())
     }
@@ -126,7 +126,7 @@ impl<'inner> Pagetable<'inner> {
     pub fn translate(&self, va: usize) -> Result<usize, PTError> {
         let page = va / PGSIZE * PGSIZE;
         self.walk(page)
-            .and_then(|pte| pte.addr().ok_or(PTError::NotPage))
+            .and_then(|pte| pte.addr())
             .map(|pa| pa + (va - page))
     }
 
@@ -178,7 +178,7 @@ impl<'inner> Pagetable<'inner> {
         mode: Mode,
     ) -> Result<(), PTError> {
         if size % PGSIZE != 0 {
-            return Err(PTError::InvalidSize);
+            return Err(PTError::UnalignedSize(size));
         }
         (0usize..size).step_by(PGSIZE).try_for_each(|offset| {
             self.map_page(virtual_address + offset, physical_address + offset, mode)

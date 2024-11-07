@@ -58,7 +58,7 @@ impl<T: 'static> ThinBox<MaybeUninit<T>> {
     /// # Errors
     /// out of memory
     pub fn alloc() -> Result<Self, core::alloc::AllocError> {
-        Box::try_new_uninit().map(Box::leak).map(Self::from)
+        Box::<T>::try_new_uninit().map(Box::leak).map(Self::from)
     }
 }
 

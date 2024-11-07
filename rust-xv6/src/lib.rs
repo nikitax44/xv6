@@ -1,7 +1,6 @@
 #![no_std]
 #![deny(
     // keep-sorted start
-    clippy::allow_attributes_without_reason,
     clippy::as_underscore,
     clippy::clone_on_ref_ptr,
     clippy::complexity,

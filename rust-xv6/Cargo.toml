@@ -18,3 +18,4 @@ virtio-drivers = "0.7.5"
 riscv = { version = "0.11.1", features = ["s-mode"] }
 bitflags = "2.6.0"
 attr-wrapper = { git = "https://github.com/nikitax44/attr-wrapper" }
+thiserror = { version = "2.0.0", default-features = false }

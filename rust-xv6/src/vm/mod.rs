@@ -1,4 +1,6 @@
 use crate::kalloc::pages::KMEMError;
+use core::fmt::{Debug, Formatter};
+use thiserror::Error;
 
 mod ffi;
 mod kernel_map;
@@ -7,18 +9,33 @@ pub mod pagetable;
 pub(crate) mod pt_inner;
 pub mod pte;
 
-#[derive(Debug)]
+#[derive(Error)]
 #[non_exhaustive]
 pub enum PTError {
+    #[error("this va is already mapped")]
     Remap,
-    AllocFail(KMEMError),
+    #[error("failed to allocate memory")]
+    AllocFail(#[from] KMEMError),
+    #[error("this va is not mapped")]
     NotMapped,
-    InvalidVirtualAddress,
-    InvalidPhysicalAddress,
-    InvalidMode,
-    InvalidSize,
-    NotPage,
+    #[error("invalid va: {0:#x}")]
+    InvalidVirtualAddress(usize),
+    #[error("the va {0:#x} does not point to the start of the Page")]
+    UnalignedVirtualAddress(usize),
+    #[error("the pa {0:#x} does not point to the start of the Page")]
+    UnalignedPhysicalAddress(usize),
+    #[error("the mode was `Mode::Table` when it wasn't expected")]
+    UnexpectedTable,
+    #[error("the size {0:#x} is not evenly divisible by PGSIZE")]
+    UnalignedSize(usize),
+    #[error("`Pagetable` is borrowed as readonly")]
     ROPagetable,
+}
+
+impl Debug for PTError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{self}")
+    }
 }
 
 /// # Errors

@@ -39,14 +39,14 @@ impl PtEntry {
     /// addr and mode must be valid
     pub fn set(&mut self, addr: usize, mode: Mode) -> Result<(), PTError> {
         if mode == Mode::Table {
-            return Err(PTError::InvalidMode);
+            return Err(PTError::UnexpectedTable);
         }
         self.set_raw(addr, mode)
     }
 
     fn set_raw(&mut self, addr: usize, mode: Mode) -> Result<(), PTError> {
         if addr % PGSIZE != 0 {
-            return Err(PTError::InvalidPhysicalAddress);
+            return Err(PTError::UnalignedPhysicalAddress(addr));
         }
         self.0 = ((addr / PGSIZE) << Mode::SHIFT) | (mode as usize) | Mode::VALID;
         Ok(())
@@ -65,11 +65,17 @@ impl PtEntry {
             .map(|ptr| unsafe { &*ptr })
     }
 
-    #[must_use]
-    pub fn addr(&self) -> Option<usize> {
+    /// # Errors
+    /// page is not mapped
+    /// mode is `Mode::Table`
+    pub fn addr(&self) -> Result<usize, PTError> {
         self.get()
-            .filter(|(_, mode)| *mode != Mode::Table)
-            .map(|(addr, _)| addr)
+            .ok_or(PTError::NotMapped)
+            .and_then(|(addr, mode)| {
+                (mode == Mode::Table)
+                    .then_some(addr)
+                    .ok_or(PTError::UnexpectedTable)
+            })
     }
 
     /// # Safety

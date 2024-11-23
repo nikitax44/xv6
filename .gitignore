@@ -11,6 +11,7 @@ _*
 *.img
 *.a
 *.elf
+*.tar
 
 kernel/kernel
 qemu-script

@@ -28,78 +28,44 @@ if (NOT DEFINED NEWLIB)
     endif ()
 endif ()
 
-
-# Set compiler flags
-set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra -Wold-style-definition")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_WARNINGS}")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -ggdb -gdwarf-2")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64g -static")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${CMAKE_CURRENT_SOURCE_DIR} -I ${NEWLIB}/include --specs=${NEWLIB}/lib/nano.specs")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -MD")
-set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-# Disable PIE if possible
-execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpspecs OUTPUT_VARIABLE DUMPSPECS)
-if (DUMPSPECS MATCHES "[^f]no-pie")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-pie -no-pie")
-endif ()
-if (DUMPSPECS MATCHES "[^f]nopie")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-pie -nopie")
-endif ()
-
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z max-page-size=4096 -L ${NEWLIB}/lib -nostdlib")
-
-# Define the programs
-list(APPEND UPROGS
-        _cat
-        _echo
-        _forktest
-        _grep
-        _init
-        _kill
-        _ln
-        _ls
-        _mkdir
-        _rm
-        _sh
-        _stressfs
-        _usertests
-        _grind
-        _wc
-        _zombie
-        _shutdown
-)
-
-list(APPEND PORTS
-        _test
-        _dump
-)
-
-separate_arguments(C_WARNINGS)
 # Add the mkfs target
 add_custom_command(
         OUTPUT mkfs.elf
-        COMMAND gcc ${C_WARNINGS} -o mkfs.elf ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND gcc -o mkfs.elf ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS mkfs/mkfs.c kernel/file/fs.h kernel/file/stat.h kernel/param.h kernel/types.h
         COMMENT "Building mkfs with host compiler"
 )
+
+set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
+add_custom_command(
+        OUTPUT librust_xv6.a
+        COMMAND cd ./rust-xv6 && cargo build ${CARGO_ARGUMENTS}
+        COMMAND cp ./target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
+        DEPENDS ./rust-xv6/src/** ./rust-xv6/Cargo.*
+        COMMENT "Building librust_xv6.a"
+)
+
+add_custom_target(GenerateLibRustXv6 ALL DEPENDS librust_xv6.a)
+
+add_library(RustXv6 STATIC IMPORTED)
+set_target_properties(RustXv6 PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
 
 
 add_subdirectory(kernel)
 add_subdirectory(user)
 
-set(UUPROGS ${UPROGS})
-list(TRANSFORM UUPROGS PREPEND "user/")
-set(PPORTS ${PORTS})
-list(TRANSFORM PPORTS PREPEND "user/")
-
 # Add the filesystem image target
 add_custom_command(
         OUTPUT fs.img
-        COMMAND ./mkfs.elf fs.img ${UUPROGS} ${PPORTS} "${CMAKE_CURRENT_SOURCE_DIR}/README"
-        DEPENDS mkfs.elf ${UUPROGS} ${PPORTS} "README"
+        COMMAND rm -rf temp_files && mkdir temp_files
+        COMMAND tar -C temp_files -xf ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar
+        COMMAND ./mkfs.elf fs.img temp_files/* "${CMAKE_CURRENT_SOURCE_DIR}/README"
+        COMMAND rm -rf temp_files
+        DEPENDS mkfs.elf Programs "README"
+)
+
+add_custom_target(mkfs ALL
+        DEPENDS mkfs.elf
 )
 
 add_custom_target(image ALL
@@ -109,8 +75,10 @@ add_custom_target(image ALL
 # Enable bios for qemu
 if (OPENSBI_ENABLED)
     set(QEMU_FLAGS "")
+    message("OpenSBI is enabled")
 else ()
     set(QEMU_FLAGS "-bios none")
+    message("OpenSBI is disabled")
 endif ()
 
 add_custom_command(

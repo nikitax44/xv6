@@ -39,9 +39,19 @@ set(OBJS
         kernelvec.S
 )
 
-# Set compiler flags
+# Set the compiler flags
+set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra -Wold-style-definition")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_WARNINGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -ggdb -gdwarf-2")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64g -static")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -nostdlib -nodefaultlibs")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${CMAKE_CURRENT_SOURCE_DIR}/../")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -MD")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffreestanding")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-builtin-log -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf -fno-builtin-putc")
+set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_custom_command(
         OUTPUT _initcode.h
@@ -54,7 +64,6 @@ add_custom_command(
         COMMENT "Generating _initcode.h from initcode.S"
 )
 
-set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 
 if (OPENSBI_ENABLED)
     set(BOOT boot/sbi_entry.S boot/sbi_start.c)
@@ -62,27 +71,26 @@ else ()
     set(BOOT boot/m_entry.S boot/m_start.c)
 endif ()
 
-add_custom_command(
-        OUTPUT librust_xv6.a
-        COMMAND cd ../rust-xv6 && cargo build ${CARGO_ARGUMENTS}
-        COMMAND cp target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
-        DEPENDS ${CMAKE_SOURCE_DIR}/rust-xv6/src/** ${CMAKE_SOURCE_DIR}/rust-xv6/Cargo.*
-        COMMENT "Building rust part of xv6"
-)
-
 add_custom_target(Initcode ALL DEPENDS _initcode.h)
 
-add_custom_target(KernelDeps ALL DEPENDS _kernel.ld librust_xv6.a)
+add_custom_target(KernelDeps ALL DEPENDS _kernel.ld)
 
 # Define the kernel target
-add_library(kernelLib ${OBJS})
-target_link_libraries(kernelLib -lc)
-add_dependencies(kernelLib Initcode)
+add_library(KernelLib ${OBJS})
+target_link_libraries(KernelLib -lc)
+add_dependencies(KernelLib Initcode)
+
+if (DEFINED RUST_XV6)
+    add_custom_target(GenerateLibRustXv6)
+
+    add_library(RustXv6 STATIC IMPORTED)
+    set_target_properties(RustXv6 PROPERTIES IMPORTED_LOCATION ${RUST_XV6})
+endif ()
 
 add_executable(kernel ${BOOT})
-target_link_libraries(kernel kernelLib ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
+target_link_libraries(kernel PRIVATE KernelLib RustXv6)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_BINARY_DIR}/_kernel.ld")
-add_dependencies(kernel KernelDeps)
+add_dependencies(kernel KernelDeps GenerateLibRustXv6)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -99,5 +107,3 @@ add_custom_command(
         DEPENDS kernel.ld.tmpl
 )
 
-if (OPENSBI_ENABLED)
-endif ()

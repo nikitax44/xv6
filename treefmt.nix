@@ -1,6 +1,9 @@
 {
   projectRootFile = ".git/config";
   settings = {
+    formatter.cmake-format = {
+      options = ["--dangle-parens" "--enable-sort" "--line-width" "120"];
+    };
   };
   programs = {
     # nix
@@ -10,6 +13,9 @@
 
     # C
     clang-format.enable = true;
+
+    # CMake
+    cmake-format.enable = true;
 
     # rust
     rustfmt.enable = true;

@@ -59,6 +59,7 @@ impl Region {
     /// # Panics
     /// one or more regions in `reserved` are not contained in `self`
     /// some of the regions in `reserved` intersect with each other
+    /// `reserved` is full.
     #[must_use]
     pub fn split_multiple(mut self, mut reserved: Vec<Self>) -> Vec<Self> {
         reserved.sort_unstable_by_key(|reg| reg.start);
@@ -75,7 +76,9 @@ impl Region {
             *reg = beg;
             self = rest;
         }
-        reserved.push(self);
+        reserved
+            .push_within_capacity(self)
+            .expect("`reserved` must have at least one empty space");
         reserved
     }
 

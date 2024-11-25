@@ -40,6 +40,7 @@ pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
         .map(|(reg, _)| *reg)
         .filter(|&reg| mem.contains(reg))
         .collect_into(&mut reserved);
+    reserved.try_reserve_exact(1).unwrap();
     let mut free = mem.split_multiple(reserved);
     free.retain_mut(|reg| {
         *reg = reg.align_shrink();

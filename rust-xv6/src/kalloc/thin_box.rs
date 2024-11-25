@@ -1,10 +1,13 @@
-use crate::println;
 use alloc::boxed::Box;
+use alloc::collections::TryReserveError;
+use alloc::vec::Vec;
 use core::any::type_name;
 use core::fmt::{Debug, Formatter};
 use core::mem::{ManuallyDrop, MaybeUninit};
 use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
+use log::error;
+use zerocopy::FromZeros;
 
 /// # Invariant
 /// inner is valid and properly aligned.
@@ -54,11 +57,17 @@ impl<T: ?Sized> ThinBox<T> {
     }
 }
 
-impl<T: 'static> ThinBox<MaybeUninit<T>> {
+impl<T: 'static> ThinBox<T> {
     /// # Errors
     /// out of memory
-    pub fn alloc() -> Result<Self, core::alloc::AllocError> {
-        Box::<T>::try_new_uninit().map(Box::leak).map(Self::from)
+    pub fn alloc() -> Result<ThinBox<MaybeUninit<T>>, core::alloc::AllocError> {
+        Box::<T>::try_new_uninit().map(Box::leak).map(From::from)
+    }
+
+    /// # Errors
+    /// failed to allocate memory
+    pub fn alloc_array(len: usize) -> Result<ThinBox<[MaybeUninit<T>]>, TryReserveError> {
+        Vec::try_with_capacity(len).map(Vec::leak).map(From::from)
     }
 }
 
@@ -73,6 +82,33 @@ impl<T> ThinBox<MaybeUninit<T>> {
     pub unsafe fn assume_init(self) -> ThinBox<T> {
         // SAFETY: precondition
         unsafe { self.cast() }
+    }
+
+    pub fn zeroed(self) -> ThinBox<T>
+    where
+        T: FromZeros,
+    {
+        // SAFETY: T is `FromZeros`
+        unsafe { self.zero().assume_init() }
+    }
+}
+
+// actually 'static is not a requirement, but for bow i'll leave it be
+impl<T: 'static> ThinBox<[MaybeUninit<T>]> {
+    /// # Safety
+    /// every element must be initialized
+    pub unsafe fn slice_assume_init_mut(self) -> ThinBox<[T]> {
+        // SAFETY: precondition
+        unsafe { MaybeUninit::slice_assume_init_mut(self.leak_ref()) }.into()
+    }
+
+    pub fn zeroed_array(mut self) -> ThinBox<[T]>
+    where
+        T: FromZeros,
+    {
+        self.deref_mut().fill_with(MaybeUninit::zeroed);
+        // SAFETY: T is `FromZeros`
+        unsafe { self.slice_assume_init_mut() }
     }
 }
 
@@ -102,8 +138,8 @@ impl<T: ?Sized> DerefMut for ThinBox<T> {
 
 impl<T: ?Sized> Drop for ThinBox<T> {
     fn drop(&mut self) {
-        println!(
-            "ThinBox<{}>@{:0x?} was dropped",
+        error!(
+            "memory leak: ThinBox<{}>@{:0x?} was dropped",
             type_name::<T>(),
             self.inner
         );

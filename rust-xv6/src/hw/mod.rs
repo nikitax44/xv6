@@ -1,14 +1,17 @@
 use crate::kalloc::pages::page::Page;
 use crate::memlayout::{PGSIZE, VIRTIO0};
-use crate::println;
 use crate::vm::get_physical_address;
 use alloc::vec::Vec;
 use bitflags::bitflags;
 use core::ptr::NonNull;
+use log::{error, info};
 use virtio_drivers::device::blk::{VirtIOBlk, SECTOR_SIZE};
 use virtio_drivers::transport::mmio::{MmioTransport, VirtIOHeader};
 use virtio_drivers::transport::Transport;
 use virtio_drivers::{BufferDirection, Error, Hal, PhysAddr};
+
+pub mod asm;
+pub mod console;
 
 pub struct HalImpl;
 // SAFETY: see Impl safety blocks in methods
@@ -16,7 +19,13 @@ unsafe impl Hal for HalImpl {
     /// # Impl safety
     /// returns valid pointer.
     fn dma_alloc(pages: usize, direction: BufferDirection) -> (PhysAddr, NonNull<u8>) {
-        let buf = Vec::<Page>::with_capacity(pages);
+        let buf = match Vec::<Page>::try_with_capacity(pages) {
+            Ok(val) => val,
+            Err(err) => {
+                error!("failed to allocate buffer in HalImpl: {:?}", err);
+                return (0, NonNull::dangling());
+            }
+        };
         let ptr = NonNull::from(buf.leak());
         debug_assert!(
             ptr.cast::<Page>().is_aligned(),
@@ -29,7 +38,7 @@ unsafe impl Hal for HalImpl {
             ptr.write_bytes(0, pages * PGSIZE);
         }
 
-        // print!("HAL: sharing allocated: ");
+        // trace!("HAL: sharing allocated: ");
         // SAFETY: ptr is valid
         let pa = unsafe {
             Self::share(
@@ -42,7 +51,7 @@ unsafe impl Hal for HalImpl {
     }
 
     unsafe fn dma_dealloc(_paddr: PhysAddr, vaddr: NonNull<u8>, pages: usize) -> i32 {
-        // println!("HAL: dealloc: {vaddr:?}@{paddr:0x}");
+        // trace!("HAL: dealloc: {vaddr:?}@{paddr:0x}");
 
         // SAFETY: we now own the [vaddr, vaddr+pages*PGSIZE)
         unsafe {
@@ -56,7 +65,7 @@ unsafe impl Hal for HalImpl {
     unsafe fn mmio_phys_to_virt(paddr: PhysAddr, size: usize) -> NonNull<u8> {
         assert!(VIRTIO0 <= paddr, "convert oob address");
         assert!(paddr + size <= VIRTIO0 + 0xff, "convert oob address");
-        // println!("HAL: mmio2virt: {paddr:0x}");
+        // trace!("HAL: mmio2virt: {paddr:0x}");
         assert_eq!(
             get_physical_address(paddr as *const ()).expect("VIRTIO MMIO is not kvmmap'ed"),
             paddr,
@@ -66,13 +75,13 @@ unsafe impl Hal for HalImpl {
     }
 
     unsafe fn share(buffer: NonNull<[u8]>, _direction: BufferDirection) -> PhysAddr {
-        // println!("HAL: sharing {buffer:?}({:#x} bytes)", buffer.len());
+        // trace!("HAL: sharing {buffer:?}({:#x} bytes)", buffer.len());
         let ptr = buffer.cast::<()>().as_ptr().cast_const();
         get_physical_address(ptr).expect("page is not mapped")
     }
 
     unsafe fn unshare(_paddr: PhysAddr, _buffer: NonNull<[u8]>, _direction: BufferDirection) {
-        // println!("HAL: unsharing {buffer:?}@{paddr:0x}");
+        // trace!("HAL: unsharing {buffer:?}@{paddr:0x}");
         // nothing to do
     }
 }
@@ -87,7 +96,7 @@ unsafe fn dump() -> Result<(), Error> {
 
     let disk = VirtIOBlk::<HalImpl, _>::new(transport)?;
 
-    println!(
+    info!(
         "VirtIO block device: {} kB",
         disk.capacity() * SECTOR_SIZE as u64 / 1024
     );

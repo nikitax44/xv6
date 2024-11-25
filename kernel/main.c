@@ -6,10 +6,13 @@
 void kernel_main(void) { scheduler(); }
 
 extern void dump_blk_info(void);
+extern void init_logger(void);
 
 void init_boot(void) {
   consoleinit();
   printfinit();
+  init_logger();
+
   printf("\n");
   printf("xv6 kernel is booting\n");
   printf("\n");

@@ -52,7 +52,10 @@
 
         inherit (nixpkgs) lib;
 
-        craneLib = (crane.mkLib crossPkgs).overrideToolchain (p: p.rust-bin.nightly.latest.default);
+        craneLib = (crane.mkLib crossPkgs).overrideToolchain (p:
+          p.rust-bin.nightly.latest.default.override {
+            extensions = ["rust-src"];
+          });
 
         enableOpenSBI = false;
 

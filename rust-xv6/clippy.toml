@@ -1,0 +1,14 @@
+msrv = "1.83.0"
+disallowed-methods = [
+    # panicking Box methods
+    "alloc::box::Box::new",
+    "alloc::box::Box::new_uninit",
+    "alloc::box::Box::new_zeroed",
+    # panicking Vec methods
+    "alloc::vec::Vec::reserve",
+    "alloc::vec::Vec::reserve_exact",
+    "alloc::vec::Vec::push",
+    "alloc::vec::Vec::push",
+    "alloc::vec::Vec::with_capacity",
+    #    "alloc::vec::Vec::extend_from_slice",
+]

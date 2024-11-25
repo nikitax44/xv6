@@ -61,27 +61,52 @@
 #![feature(negative_impls)]
 #![feature(maybe_uninit_as_bytes)]
 #![feature(never_type)]
+#![feature(try_with_capacity)]
+#![feature(maybe_uninit_slice)]
+#![feature(vec_push_within_capacity)]
 extern crate alloc;
 
-pub mod asm;
 pub mod dtb;
 pub mod errno;
+mod fs;
 pub mod hw;
 pub mod kalloc;
+mod log;
 pub mod memlayout;
 pub mod panic;
-pub mod printf;
 pub mod util;
 pub mod vm;
+
 pub use crate::util::time::Instant;
 
 mod ffi {
-    use crate::println;
+    use crate::log::XV6Logger;
+    use log::{error, info};
+
+    static LOGGER: XV6Logger = XV6Logger {
+        max_level: log::LevelFilter::Trace,
+    };
+
+    #[derive(Debug)]
+    struct Features {
+        // feature definitions
+    }
+
+    const FEATURES: Features = Features {
+        // features
+    };
+
+    #[no_mangle]
+    extern "C" fn init_logger() {
+        log::set_max_level(LOGGER.max_level);
+        if let Err(err) = log::set_logger(&LOGGER) {
+            error!("failed to set logger: {err}");
+        }
+    }
+
     #[no_mangle]
     extern "C" fn dumpconf() {
-        println!("rust features:");
-        println!("  none yet");
-        println!();
+        info!("rust features: {FEATURES:?}");
     }
 
     #[no_mangle]

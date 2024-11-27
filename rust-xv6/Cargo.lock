@@ -225,6 +225,7 @@ dependencies = [
  "attr-wrapper",
  "bitflags",
  "buddy_system_allocator",
+ "critical-section",
  "efs",
  "fdt",
  "log",

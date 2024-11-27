@@ -61,6 +61,14 @@ impl PageHandle {
         let mut this = ManuallyDrop::new(self);
         this.ptr.take().unwrap()
     }
+
+    pub const fn from_box(value: ThinBox<Page>, origin: Origin, purpose: &'static str) -> Self {
+        Self {
+            ptr: Some(value),
+            origin,
+            purpose,
+        }
+    }
 }
 
 impl Drop for PageHandle {

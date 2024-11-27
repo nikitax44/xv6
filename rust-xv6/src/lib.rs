@@ -67,10 +67,12 @@
 #![feature(const_nonnull_new)]
 #![feature(const_option)]
 #![feature(integer_sign_cast)]
+#![feature(const_pointer_is_aligned)]
 extern crate alloc;
 
 pub mod dtb;
 pub mod errno;
+pub mod ffi_interop;
 pub mod fs;
 pub mod hw;
 pub mod kalloc;

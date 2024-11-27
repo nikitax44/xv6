@@ -24,3 +24,4 @@ attr-wrapper = { git = "https://github.com/nikitax44/attr-wrapper" }
 thiserror = { version = "2.0.0", default-features = false }
 efs = { git = "https://codeberg.org/RatCornu/efs" }
 log = "0.4.22"
+critical-section = "1.2.0"

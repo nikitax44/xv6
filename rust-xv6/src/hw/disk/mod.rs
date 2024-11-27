@@ -1,13 +1,16 @@
 use crate::hw::hal::HalImpl;
+use crate::memlayout::VIRTIO0;
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut, Range};
 use core::ptr::NonNull;
 use core::str::from_utf8;
+use efs::celled::Celled;
 use efs::dev::sector::Address;
 use efs::dev::size::Size;
 use efs::dev::{Commit, Device, Slice};
 use efs::{dev::error::DevError, error::Error};
 use log::{error, info};
+use spin::Lazy;
 use virtio_drivers::device::blk;
 use virtio_drivers::device::blk::SECTOR_SIZE;
 use virtio_drivers::transport::mmio::{MmioTransport, VirtIOHeader};
@@ -87,6 +90,20 @@ impl From<VirtIOBlk> for Disk {
             buffer: Vec::new(),
         }
     }
+}
+
+pub static MAIN_DISK: Lazy<Celled<Disk>> = Lazy::new(|| {
+    // TODO: use dtb info
+    const DEFAULT_DISK: NonNull<VirtIOHeader> = NonNull::new(VIRTIO0 as *mut _).unwrap();
+
+    // SAFETY: in default qemu configuration `DEFAULT_DISK` points to disk's MMIO region
+    Celled::new(unsafe { init_disk(DEFAULT_DISK) }.unwrap().into())
+});
+
+#[no_mangle]
+extern "C" fn rs_disk_intr() {
+    let mut guard = MAIN_DISK.lock();
+    guard.ack_interrupt();
 }
 
 impl Deref for Disk {

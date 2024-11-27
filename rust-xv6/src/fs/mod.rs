@@ -1,4 +1,4 @@
-use crate::hw::HalImpl;
+use crate::hw::hal::HalImpl;
 use alloc::collections::TryReserveError;
 use alloc::vec::Vec;
 use core::ops::Range;

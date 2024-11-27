@@ -5,7 +5,6 @@
 // hardware and harts.
 void kernel_main(void) { scheduler(); }
 
-extern void dump_blk_info(void);
 extern void init_logger(void);
 
 void init_boot(void) {
@@ -28,8 +27,6 @@ void init_boot(void) {
   timerinithart(); // request timer interrupts
   plicinit();      // set up interrupt controller
   plicinithart();  // ask PLIC for device interrupts
-
-  // dump_blk_info();
 
   binit();            // buffer cache
   iinit();            // inode table

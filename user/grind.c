@@ -207,7 +207,7 @@ void go(int which_child) {
         _exit(1);
       }
       if (st.ino > 200) {
-        printf("grind: fstat reports crazy i-number %d\n", st.ino);
+        printf("grind: fstat reports crazy i-number %ld\n", st.ino);
         _exit(1);
       }
       _close(fd1);

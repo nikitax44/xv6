@@ -64,11 +64,14 @@
 #![feature(try_with_capacity)]
 #![feature(maybe_uninit_slice)]
 #![feature(vec_push_within_capacity)]
+#![feature(const_nonnull_new)]
+#![feature(const_option)]
+#![feature(integer_sign_cast)]
 extern crate alloc;
 
 pub mod dtb;
 pub mod errno;
-mod fs;
+pub mod fs;
 pub mod hw;
 pub mod kalloc;
 mod log;

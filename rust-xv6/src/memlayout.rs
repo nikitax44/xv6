@@ -22,17 +22,17 @@ pub struct Symbol {
 #[macro_export]
 macro_rules! extern_symbol {
     () => {};
-    ($(#[$attr:meta])* $vis:vis symbol $N:ident : $T:ty => $e:ident; $($t:tt)*) => {
+    ($(#[$attr:meta])* $vis:vis symbol $N:ident <- $e:ident; $($t:tt)*) => {
         $(#[$attr])*
         #[must_use]
-        $vis fn $N () -> $T {
-            type Target = $T;
+        $vis fn $N() -> usize {
             extern "C" {
-                static $e : $crate::memlayout::Symbol;
+                #[link_name = stringify!($e)]
+                static SYM: $crate::memlayout::Symbol;
             }
             // SAFETY: we only read address at runtime
-            let sym = unsafe {& ($e)};
-            ::core::ptr::from_ref(sym) as Target
+            let sym = unsafe { &SYM };
+            ::core::ptr::from_ref(sym) as usize
         }
         $crate::extern_symbol!($($t)*);
     };
@@ -42,14 +42,14 @@ macro_rules! extern_symbol {
 macro_rules! addrof_symbol {
     ($symbol: ident) => {{
         $crate::extern_symbol! {
-            symbol __read: usize => $symbol;
+            symbol __read <- $symbol;
         }
         __read()
     }};
 }
 
 extern_symbol! {
-    pub symbol addrof_kernel: usize => _entry;
-    pub symbol addrof_end_kernel: usize => end;
-    pub symbol addrof_end_text: usize => etext;
+    pub symbol addrof_kernel <- _entry;
+    pub symbol addrof_end_kernel <- end;
+    pub symbol addrof_end_text <- etext;
 }

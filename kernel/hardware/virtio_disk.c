@@ -86,12 +86,12 @@ u64 begin_init(u64 supported_features) {
   return negotiated_features;
 }
 
-extern void reset_blk(usize blk_mmio);
+// extern void reset_blk(usize blk_mmio);
 
 void virtio_disk_init(void) {
   u32 status;
 
-  reset_blk(VIRTIO0);
+  //  reset_blk(VIRTIO0);
 
   initlock(&disk.vdisk_lock, "virtio_disk");
 

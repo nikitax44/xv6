@@ -7,10 +7,10 @@
 #include "kernel/defs.h"
 #include "kernel/file/file.h"
 #include "kernel/hardware/memlayout.h"
-#include "kernel/proc.h"
 #include "kernel/types.h"
 #include "kernel/util/sleeplock.h"
 #include "kernel/util/spinlock.h"
+#include "scheduler/proc.h"
 
 volatile int panicked = 0;
 

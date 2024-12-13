@@ -2,6 +2,7 @@
 #include "hardware/riscv.h"
 #include "types.h"
 
+struct list;
 struct buf;
 struct context;
 struct file;
@@ -26,6 +27,14 @@ void        bunpin(struct buf*);
 void consoleinit(void);
 void consoleintr(int);
 void consputc(int);
+
+// list.c
+void  lst_init(struct list*);
+void  lst_remove(struct list*);
+void  lst_push(struct list*, void*);
+void* lst_pop(struct list*);
+void  lst_print(struct list*);
+int   lst_empty(struct list*);
 
 // exec.c
 // gcc does not recognize that they're the same
@@ -169,6 +178,7 @@ u64         walkaddr(pagetable_t, u64);
 int         copyout(pagetable_t, u64, const u8*, u64);
 int         copyin(pagetable_t, char*, u64, u64);
 int         copyinstr(pagetable_t, char*, u64, u64);
+int         map_stack(usize);
 
 // plic.c
 void plicinit(void);
@@ -189,6 +199,8 @@ void        testpanic(void);
 
 // kalloc
 extern void* kalloc(void);
+extern void* alloc(u64);
+extern void* free(u64, u64);
 extern void  kfree(void*);
 extern void  kinit(void);
 extern u64   free_pages(void);

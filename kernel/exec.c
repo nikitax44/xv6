@@ -3,7 +3,7 @@
 #include "errno.h"
 #include "hardware/riscv.h"
 #include "param.h"
-#include "proc.h"
+#include "scheduler/proc.h"
 #include "types.h"
 #include <string.h>
 

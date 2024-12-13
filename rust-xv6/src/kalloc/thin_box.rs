@@ -151,3 +151,29 @@ impl<T: ?Sized> Debug for ThinBox<T> {
         self.inner.fmt(f)
     }
 }
+
+///# Safity
+/// alloc for C
+#[no_mangle]
+unsafe extern "C" fn alloc(size: usize) -> Option<NonNull<u8>> {
+    let ptr: Result<ThinBox<[MaybeUninit<u64>]>, TryReserveError> =
+        ThinBox::alloc_array((size + 7) / 8);
+    match ptr {
+        // SAFETY: cast to primitive type so it is safe
+        Ok(x) => unsafe { Some(x.slice_assume_init_mut().leak().cast::<u8>()) },
+        Err(_e) => None,
+    }
+}
+
+///# Safity
+/// user must free pointer that he get from malloc, user must pass ther same size as in malloc
+#[no_mangle]
+unsafe extern "C" fn free(ptr: Option<NonNull<u8>>, size: usize) {
+    match ptr {
+        None => {}
+        // SAFETY: cast to primitive type so it is safe
+        Some(x) => unsafe {
+            NonNull::slice_from_raw_parts(x.cast::<u64>(), (size + 7) / 8).drop_in_place();
+        },
+    };
+}

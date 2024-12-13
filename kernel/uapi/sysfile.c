@@ -13,8 +13,8 @@
 #include "kernel/hardware/riscv.h"
 #include "kernel/mman.h"
 #include "kernel/param.h"
-#include "kernel/proc.h"
 #include "kernel/types.h"
+#include "scheduler/proc.h"
 #include <string.h>
 
 // Fetch the nth word-sized system call argument as a file descriptor

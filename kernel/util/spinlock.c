@@ -3,7 +3,7 @@
 #include "spinlock.h"
 #include "kernel/defs.h"
 #include "kernel/hardware/riscv.h"
-#include "kernel/proc.h"
+#include "scheduler/proc.h"
 
 void initlock(struct spinlock* lk, char* name) {
   lk->name   = name;

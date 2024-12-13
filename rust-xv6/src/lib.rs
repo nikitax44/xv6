@@ -81,7 +81,10 @@ pub use crate::util::time::Instant;
 
 mod ffi {
     use crate::log::XV6Logger;
+    use crate::memlayout::addrof_kernel;
+    use core::fmt::{Debug, Display, Formatter};
     use log::{error, info};
+    use spin::Lazy;
 
     static LOGGER: XV6Logger = XV6Logger {
         max_level: log::LevelFilter::Trace,
@@ -89,12 +92,19 @@ mod ffi {
 
     #[derive(Debug)]
     struct Features {
-        // feature definitions
+        start: usize,
     }
 
-    const FEATURES: Features = Features {
-        // features
-    };
+    static FEATURES: Lazy<Features> = Lazy::new(|| Features {
+        start: addrof_kernel(),
+    });
+
+    impl Display for Features {
+        fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+            writeln!(f)?;
+            writeln!(f, "  start: {:#x}", self.start)
+        }
+    }
 
     #[no_mangle]
     extern "C" fn init_logger() {
@@ -106,7 +116,7 @@ mod ffi {
 
     #[no_mangle]
     extern "C" fn dumpconf() {
-        info!("rust features: {FEATURES:?}");
+        info!("rust features: {}", Lazy::force(&FEATURES));
     }
 
     #[no_mangle]

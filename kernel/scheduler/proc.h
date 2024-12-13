@@ -1,5 +1,6 @@
 #pragma once
 #include "hardware/riscv.h"
+#include "list.h"
 #include "param.h"
 #include "types.h"
 #include "util/spinlock.h"
@@ -89,7 +90,11 @@ enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
+
   struct spinlock lock;
+
+  struct list proc_list;
+  struct list sib;
 
   // p->lock must be held when using these:
   enum procstate state;  // Process state
@@ -100,6 +105,7 @@ struct proc {
 
   // wait_lock must be held when using this:
   struct proc* parent; // Parent process
+  struct list  children;
 
   // these are private to the process, so p->lock need not be held.
   u64               kstack;        // Virtual address of kernel stack

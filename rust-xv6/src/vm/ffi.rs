@@ -1,5 +1,8 @@
 use crate::errno::ErrNo;
+use crate::kalloc::pages::{KMEMError, KMEM};
+use crate::memlayout::{KSTACK, PGSIZE};
 use crate::vm::kernel_map::make_kernel_map;
+use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::pt_inner::IPagetable;
 use crate::vm::pte::PtEntry;
@@ -7,6 +10,60 @@ use crate::vm::PTError;
 use spin::rwlock::RwLock;
 
 static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
+
+#[allow(clippy::large_stack_frames, reason = "it is fine")]
+#[no_mangle]
+extern "C" fn map_stack(pos: usize) -> ErrNo {
+    let page1 = KMEM.lock().alloc("proc stack");
+    if let Err(err) = page1 {
+        return match err {
+            KMEMError::AllocFail(_err) => ErrNo::ENOMEM,
+        };
+    }
+    let page2 = KMEM.lock().alloc("proc stack");
+    if let Err(err) = page2 {
+        return match err {
+            KMEMError::AllocFail(_err) => ErrNo::ENOMEM,
+        };
+    }
+    let va = KSTACK(pos);
+    let mres1 = KERNEL_PAGETABLE
+        .write()
+        .as_mut()
+        .expect("map_page on None")
+        .map_page(
+            va,
+            page1
+                .expect("something went wrong")
+                .into_box()
+                .leak()
+                .as_ptr() as usize,
+            Mode::_RW_,
+        );
+    if let Err(_x) = mres1 {
+        return ErrNo::ENOMEM;
+    }
+    let mres2 = KERNEL_PAGETABLE
+        .write()
+        .as_mut()
+        .expect("map_page on None")
+        .map_page(
+            va + PGSIZE,
+            page2
+                .expect("something went wrong")
+                .into_box()
+                .leak()
+                .as_ptr() as usize,
+            Mode::_RW_,
+        );
+    if let Err(err) = mres2 {
+        return match err {
+            PTError::AllocFail(_err) => ErrNo::ENOMEM,
+            _ => panic!("ffi::proc_map_one_stack: {:?}", err),
+        };
+    };
+    ErrNo::SUCCESS
+}
 
 /// # Safety
 /// no one owns memory outside of kernel and bios regions,
@@ -42,6 +99,10 @@ extern "C" fn mappages(
     physical_address: usize,
     perm: usize,
 ) -> ErrNo {
+    /*warn!(
+        "rwarn {:#x}, {:#x}",
+        pt as *const _ as usize, virtual_address
+    );*/
     let perm = perm.try_into().expect("invalid access mode");
     let mut pt = Pagetable::from_mut(pt);
     let result = pt.map_pages(virtual_address, physical_address, size, perm);

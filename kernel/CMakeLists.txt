@@ -20,6 +20,10 @@ set(OBJS
         hardware/virtio_disk.c
         hardware/plic.c
 
+        scheduler/free_stack.c
+        scheduler/list.c
+        scheduler/proc.c
+
         util/spinlock.c
         util/sleeplock.c
         util/printf.c
@@ -28,7 +32,6 @@ set(OBJS
 
         console.c
         vm.c
-        proc.c
         trap.c
         bio.c
         log.c
@@ -67,8 +70,10 @@ add_custom_command(
 
 if (OPENSBI_ENABLED)
     set(BOOT boot/sbi_entry.S boot/sbi_start.c)
+    set(KERNEL_ENTRY_START "0x80200000")
 else ()
     set(BOOT boot/m_entry.S boot/m_start.c)
+    set(KERNEL_ENTRY_START "0x80000000")
 endif ()
 
 add_custom_target(Initcode ALL DEPENDS _initcode.h)
@@ -93,13 +98,6 @@ target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_BINARY_DIR}/_kernel.ld")
 add_dependencies(kernel KernelDeps GenerateLibRustXv6)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-if (OPENSBI_ENABLED)
-    set(KERNEL_ENTRY_START "0x80200000")
-    add_compile_definitions(-DSBI_ENABLE)
-else ()
-    set(KERNEL_ENTRY_START "0x80000000")
-endif ()
 
 add_custom_command(
         OUTPUT _kernel.ld

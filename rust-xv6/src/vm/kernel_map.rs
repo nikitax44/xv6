@@ -3,7 +3,7 @@ use crate::dtb::DTB;
 use crate::kalloc::pages::KMEM;
 use crate::kalloc::region::Region;
 use crate::memlayout::{
-    addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PGSIZE, PLIC, TEST0,
+    addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PGSIZE, PLIC, SYSCON,
     TRAMPOLINE, UART0, VIRTIO0,
 };
 use crate::vm::mode::Mode;
@@ -90,7 +90,7 @@ fn xv6_memory() -> Vec<(Region, Mode)> {
     vec![
         page(UART0, Mode::_RW_),
         // sifive test0/test1
-        page(TEST0, Mode::_RW_),
+        page(SYSCON, Mode::_RW_),
         // qemu fw-cfg-mmio
         page(FW_CFG, Mode::_RW_),
         // virtio mmio disk interface

@@ -3,7 +3,7 @@ use crate::vm::pagetable::Pagetable;
 pub const PGSIZE: usize = 4096;
 pub const PGSHIFT: usize = 12;
 
-pub const TEST0: usize = 0x10_0000;
+pub const SYSCON: usize = 0x10_0000;
 pub const FW_CFG: usize = 0x1010_0000;
 pub const UART0: usize = 0x1000_0000;
 pub const VIRTIO0: usize = 0x1000_1000;

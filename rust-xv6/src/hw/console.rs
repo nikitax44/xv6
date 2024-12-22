@@ -1,4 +1,4 @@
-use core::ffi::c_int;
+use core::ffi::{c_int, CStr};
 use core::fmt;
 use spin::Mutex;
 
@@ -30,9 +30,18 @@ impl Console {
     pub fn puts(&mut self, s: &str) {
         s.as_bytes().iter().for_each(|&c| self.putc(c));
     }
-}
 
-impl !Sync for Console {}
+    pub fn putcs(&mut self, s: &CStr) {
+        s.to_bytes().iter().for_each(|&c| self.putc(c));
+    }
+
+    /// # Safety
+    /// actually always safe, but can lead to unreadable mess
+    #[must_use]
+    pub const unsafe fn get_async() -> Self {
+        Self {}
+    }
+}
 
 pub static CONSOLE: Mutex<Console> = Mutex::new(Console {});
 

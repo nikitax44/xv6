@@ -47,6 +47,10 @@
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]
 #![allow(
+    clippy::uninlined_format_args,
+    reason = "inlined ones are harder to see"
+)]
+#![allow(
     clippy::multiple_crate_versions,
     reason = "I need FromZeros 0.8 but virtio_drivers uses 0.7"
 )]
@@ -68,6 +72,7 @@
 #![feature(const_option)]
 #![feature(integer_sign_cast)]
 #![feature(const_pointer_is_aligned)]
+#![feature(c_variadic)]
 extern crate alloc;
 
 pub mod dtb;
@@ -79,6 +84,7 @@ pub mod kalloc;
 mod log;
 pub mod memlayout;
 pub mod panic;
+mod printf;
 pub mod util;
 pub mod vm;
 

@@ -1,3 +1,6 @@
+use crate::memlayout::SYSCON;
+use log::info;
+
 pub mod asm;
 pub mod console;
 pub mod disk;
@@ -20,5 +23,32 @@ mod __critical {
     extern "C" {
         fn push_off();
         fn pop_off();
+    }
+}
+
+const SYSCON_SHUTDOWN: u32 = 0x0000_5555;
+const SYSCON_REBOOT: u32 = 0x0000_7777;
+
+#[no_mangle]
+pub extern "C" fn shutdown() -> ! {
+    info!("shutting down...");
+    // SAFETY: SYSCON is mapped to that address
+    unsafe {
+        core::ptr::write_volatile(SYSCON as *mut u32, SYSCON_SHUTDOWN);
+    }
+    loop {
+        core::hint::spin_loop();
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn reboot() -> ! {
+    info!("rebooting...");
+    // SAFETY: SYSCON is mapped to that address
+    unsafe {
+        core::ptr::write_volatile(SYSCON as *mut u32, SYSCON_REBOOT);
+    }
+    loop {
+        core::hint::spin_loop();
     }
 }

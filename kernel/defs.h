@@ -76,13 +76,6 @@ void pipeclose(struct pipe*, int);
 int  piperead(struct pipe*, u64, int);
 int  pipewrite(struct pipe*, u64, int);
 
-// printf.c
-int  printf(str, ...) __attribute__((format(printf, 1, 2)));
-void tabulate(u32 n);
-void shutdown(void) __attribute__((noreturn));
-void reboot(void) __attribute__((noreturn));
-void printfinit(void);
-
 // proc.c
 u32          cpuid(void);
 void         exit(int);
@@ -183,9 +176,12 @@ void virtio_disk_intr(void);
 
 // #### Rust ####
 extern void dumpconf(void);
+extern int  printf(const char*, ...) __attribute__((format(printf, 1, 2)));
+extern void shutdown(void) __attribute__((noreturn));
+extern void reboot(void) __attribute__((noreturn));
 // panic
 extern void panic(char*) __attribute__((noreturn));
-void        testpanic(void);
+extern void testpanic(void) __attribute__((noreturn));
 
 // kalloc
 extern void* kalloc(void);

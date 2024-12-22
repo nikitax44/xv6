@@ -9,7 +9,6 @@ extern void init_logger(void);
 
 void init_boot(void) {
   consoleinit();
-  printfinit();
   init_logger();
 
   printf("\n");

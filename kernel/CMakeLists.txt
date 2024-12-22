@@ -22,7 +22,6 @@ set(OBJS
 
         util/spinlock.c
         util/sleeplock.c
-        util/printf.c
         util/string.c
         util/util.c
 

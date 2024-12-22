@@ -31,7 +31,7 @@ impl<T: ?Sized> ThinBox<T> {
     /// # Safety
     /// `inner` is valid, and you have ownership over its contents
     /// you transfer the ownership over the `inner` contents to `ThinBox`
-    pub const unsafe fn new(inner: NonNull<T>) -> Self
+    pub unsafe fn new(inner: NonNull<T>) -> Self
     where
         T: Sized,
     {

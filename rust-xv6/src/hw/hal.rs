@@ -1,9 +1,9 @@
 use crate::kalloc::pages::page::Page;
-use crate::memlayout::{PGSIZE, VIRTIO0};
+use crate::memlayout::{PGROUNDDOWN, PGSIZE, VIRTIO0};
 use crate::vm::get_physical_address;
 use alloc::vec::Vec;
 use core::ptr::NonNull;
-use log::{error, trace};
+use log::error;
 use virtio_drivers::{BufferDirection, Hal, PhysAddr};
 
 pub struct HalImpl;
@@ -31,7 +31,6 @@ unsafe impl Hal for HalImpl {
             ptr.write_bytes(0, pages * PGSIZE);
         }
 
-        trace!("HAL: sharing allocated: ");
         // SAFETY: ptr is valid
         let pa = unsafe {
             Self::share(
@@ -43,9 +42,7 @@ unsafe impl Hal for HalImpl {
         (pa, ptr)
     }
 
-    unsafe fn dma_dealloc(paddr: PhysAddr, vaddr: NonNull<u8>, pages: usize) -> i32 {
-        trace!("HAL: dealloc: {vaddr:?}@{paddr:0x}");
-
+    unsafe fn dma_dealloc(_paddr: PhysAddr, vaddr: NonNull<u8>, pages: usize) -> i32 {
         // SAFETY: we now own the [vaddr, vaddr+pages*PGSIZE)
         unsafe {
             let _ = Vec::from_parts(vaddr.cast::<Page>(), pages, pages);
@@ -58,7 +55,6 @@ unsafe impl Hal for HalImpl {
     unsafe fn mmio_phys_to_virt(paddr: PhysAddr, size: usize) -> NonNull<u8> {
         assert!(VIRTIO0 <= paddr, "convert oob address");
         assert!(paddr + size <= VIRTIO0 + 0xff, "convert oob address");
-        trace!("HAL: mmio2virt: {paddr:0x}");
         assert_eq!(
             get_physical_address(paddr as *const ()).expect("VIRTIO MMIO is not kvmmap'ed"),
             paddr,
@@ -68,13 +64,22 @@ unsafe impl Hal for HalImpl {
     }
 
     unsafe fn share(buffer: NonNull<[u8]>, _direction: BufferDirection) -> PhysAddr {
-        trace!("HAL: sharing {buffer:?}({:#x} bytes)", buffer.len());
+        let start = buffer.cast::<u8>().addr().get();
+        let sz = buffer.len();
+        assert_eq!(
+            PGROUNDDOWN(start),
+            PGROUNDDOWN(start + sz - 1),
+            "buffer spans multiple pages"
+        );
+
         let ptr = buffer.cast::<()>().as_ptr().cast_const();
-        get_physical_address(ptr).expect("page is not mapped")
+        match get_physical_address(ptr) {
+            Ok(addr) => addr,
+            Err(err) => panic!("failed to get physical address: {err}"),
+        }
     }
 
-    unsafe fn unshare(paddr: PhysAddr, buffer: NonNull<[u8]>, _direction: BufferDirection) {
-        trace!("HAL: unsharing {buffer:?}@{paddr:0x}");
+    unsafe fn unshare(_paddr: PhysAddr, _buffer: NonNull<[u8]>, _direction: BufferDirection) {
         // nothing to do
     }
 }

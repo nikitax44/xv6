@@ -1,26 +1,16 @@
 #pragma once
 #include "hardware/riscv.h"
+#include "kernel/errno.h"
 #include "types.h"
 
 struct buf;
 struct context;
 struct file;
-struct inode;
-struct pipe;
 struct proc;
 struct spinlock;
 struct sleeplock;
 struct stat;
-struct superblock;
-typedef enum { SEEK_SET, SEEK_CUR, SEEK_END } WHENCE;
-
-// bio.c
-void        binit(void);
-struct buf* bread(u32, u32);
-void        brelse(struct buf*);
-void        bwrite(struct buf*);
-void        bpin(struct buf*);
-void        bunpin(struct buf*);
+typedef enum { SEEK_SET = 0, SEEK_CUR = 1, SEEK_END = 2 } WHENCE;
 
 // console.c
 void consoleinit(void);
@@ -34,54 +24,11 @@ void consputc(int);
 int execve(str, str*, str*);
 #pragma GCC diagnostic pop
 
-// file.c
-struct file* filealloc(void);
-void         fileclose(struct file*);
-struct file* filedup(struct file*);
-void         fileinit(void);
-int          fileread(struct file*, u64, int n);
-int          filestat(struct file*, u64 addr);
-int          fileseek(struct file*, u64, WHENCE n);
-int          filewrite(struct file*, u64, int n);
-
-// fs.c
-void          fsinit(int);
-int           dirlink(struct inode*, char*, u32);
-struct inode* dirlookup(struct inode*, char*, u32*);
-struct inode* ialloc(u32, short);
-struct inode* idup(struct inode*);
-void          iinit(void);
-void          ilock(struct inode*);
-void          iput(struct inode*);
-void          iunlock(struct inode*);
-void          iunlockput(struct inode*);
-void          iupdate(struct inode*);
-int           namecmp(str, str);
-struct inode* namei(str);
-struct inode* nameiparent(char*, char*);
-u32           readi(struct inode*, int, u64, u32, u32);
-void          stati(struct inode*, struct stat*);
-u32           writei(struct inode*, int, u64, u32, u32);
-void          itrunc(struct inode*);
-
-// log.c
-void initlog(int, struct superblock*);
-void log_write(struct buf*);
-void begin_op(void);
-void end_op(void);
-
-// pipe.c
-int  pipealloc(struct file**, struct file**);
-void pipeclose(struct pipe*, int);
-int  piperead(struct pipe*, u64, int);
-int  pipewrite(struct pipe*, u64, int);
-
 // proc.c
 u32          cpuid(void);
 void         exit(int);
 int          fork(void);
 int          growproc(int);
-void         proc_mapstacks(pagetable_t);
 pagetable_t  proc_pagetable(struct proc*);
 void         proc_freepagetable(pagetable_t, u64);
 int          kill(int);
@@ -146,9 +93,7 @@ void uartputc_sync(char);
 int  uartgetc(void);
 
 // vm.c
-void        kvminit(void);
 void        kvminithart(void);
-int         mappages(pagetable_t, u64, u64, u64, int);
 pagetable_t uvmcreate(void);
 void        uvmfirst(pagetable_t, u8*, u32);
 u64         uvmalloc(pagetable_t, u64, u64, int);
@@ -158,7 +103,6 @@ void        uvmfree(pagetable_t, u64);
 void        uvmunmap(pagetable_t, u64, u64, int);
 void        uvmclear(pagetable_t, u64);
 pte_t*      walk(pagetable_t, u64, int);
-u64         walkaddr(pagetable_t, u64);
 int         copyout(pagetable_t, u64, const u8*, u64);
 int         copyin(pagetable_t, char*, u64, u64);
 int         copyinstr(pagetable_t, char*, u64, u64);
@@ -169,19 +113,42 @@ void plicinithart(void);
 int  plic_claim(void);
 void plic_complete(int);
 
-// virtio_disk.c
-void virtio_disk_init(void);
-void virtio_disk_rw(struct buf*, int);
-void virtio_disk_intr(void);
-
 // #### Rust ####
-extern void dumpconf(void);
-extern int  printf(const char*, ...) __attribute__((format(printf, 1, 2)));
-extern void shutdown(void) __attribute__((noreturn));
-extern void reboot(void) __attribute__((noreturn));
+void dumpconf(void);
+int  printf(const char*, ...) __attribute__((format(printf, 1, 2)));
+void shutdown(void) __attribute__((noreturn));
+void reboot(void) __attribute__((noreturn));
 // panic
-extern void panic(char*) __attribute__((noreturn));
-extern void testpanic(void) __attribute__((noreturn));
+void panic(char*) __attribute__((noreturn));
+void testpanic(void) __attribute__((noreturn));
+// fs
+errno_t rs_fs_create(const char* path);
+errno_t rs_fs_mkdir(const char* path);
+errno_t rs_fs_mknod(const char* path, u32 major, u32 minor);
+errno_t rs_fs_unlink(const char* path);
+errno_t rs_fs_hard_link(const char* old, const char* new);
+errno_t rs_fs_symbolic_link(const char* old, const char* new);
+
+// fs::pipe
+// returns pair
+errno_t rs_pipe_alloc(struct file** rp, struct file** wp);
+
+// fs::file
+struct file* rs_file_open(const char* path);
+void         rs_file_close(struct file* file);
+struct file* rs_file_dup(struct file* file);
+struct stat  rs_file_stat(struct file* file);
+usize        rs_file_read(struct file* file, u8* buf, usize len);
+usize        rs_file_write(struct file* file, const u8* buf, usize len);
+isize        rs_file_seek(struct file* file, i64 offset, WHENCE whence);
+
+// vm
+void kvminit(void);
+int  mappages(pagetable_t, u64, u64, u64, int);
+u64  walkaddr(pagetable_t, u64);
+
+// disk
+void rs_disk_intr(void);
 
 // kalloc
 extern void* kalloc(void);
@@ -194,7 +161,6 @@ usize strlen(const char*);
 void  memset(void*, u8, usize);
 void* memmove(void*, const void*, usize);
 char* strcpy(char*, const char*);
-int   strncmp(const char*, const char*, usize);
 char* strncpy(char*, const char*, usize);
 
 // number of elements in fixed-size array

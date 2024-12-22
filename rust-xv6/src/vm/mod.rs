@@ -1,6 +1,11 @@
 use crate::kalloc::pages::KMEMError;
+use crate::memlayout::PGROUNDDOWN;
+use crate::vm::pagetable::Pagetable;
 use core::fmt::{Debug, Formatter};
+use spin::rwlock::RwLock;
 use thiserror::Error;
+
+pub static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 
 mod ffi;
 mod kernel_map;
@@ -44,6 +49,11 @@ impl Debug for PTError {
     clippy::missing_const_for_fn,
     reason = "the result is meaningless in const context"
 )]
-pub fn get_physical_address(virtual_address: *const ()) -> Result<usize, !> {
-    Ok(virtual_address as usize)
+pub fn get_physical_address(virtual_address: *const ()) -> Result<usize, PTError> {
+    let guard = KERNEL_PAGETABLE.read();
+    let pt = guard.as_ref().ok_or(PTError::Remap)?;
+    let base = PGROUNDDOWN(virtual_address as usize);
+    let pte = pt.walk(base)?;
+    pte.addr()
+        .map(|addr| addr + (virtual_address as usize - base))
 }

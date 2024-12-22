@@ -10,7 +10,7 @@
 //
 
 #include "defs.h"
-#include "file/file.h"
+#include "kernel/file/file.h"
 #include "proc.h"
 #include "types.h"
 #include "util/spinlock.h"
@@ -193,6 +193,6 @@ void consoleinit(void) {
 
   // connect read and write system calls
   // to consoleread and consolewrite.
-  devsw[CONSOLE].read  = consoleread;
-  devsw[CONSOLE].write = consolewrite;
+  //  devsw[CONSOLE].read  = consoleread;
+  //  devsw[CONSOLE].write = consolewrite;
 }

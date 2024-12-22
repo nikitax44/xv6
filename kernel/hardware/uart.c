@@ -3,7 +3,6 @@
 //
 
 #include "kernel/defs.h"
-#include "kernel/types.h"
 #include "kernel/util/spinlock.h"
 #include "memlayout.h"
 

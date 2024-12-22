@@ -2,14 +2,14 @@
 target = "riscv64gc-unknown-none-elf"
 
 [target.riscv64gc-unknown-none-elf]
-linker = "riscv-none-eabi-ld"
+linker = "riscv64-unknown-none-elf-ld"
 
 [profile.dev]
-debug = "full"
+debug = true
 opt-level = 0
 lto = false
 
 [profile.release]
-debug = 2
-opt-level = "z"
+debug = true
+opt-level = 0
 lto = true

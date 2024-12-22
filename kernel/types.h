@@ -19,13 +19,10 @@ typedef u8 bool;
 typedef i64 time_t;
 typedef i64 suseconds_t;
 
-#ifndef __timeval_defined
-#define __timeval_devined 1
 struct timeval {
   time_t      tv_sec;  /* seconds */
   suseconds_t tv_usec; /* and microseconds */
 };
-#endif
 
 #ifndef NULL
 #define NULL ((void*)0)

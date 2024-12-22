@@ -4,8 +4,8 @@ use crate::kalloc::pages::KMEM;
 use crate::kalloc::region::Region;
 use crate::kalloc::{get_kalloc, Xv6Alloc};
 use crate::memlayout::{
-    addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PGSIZE, PLIC, SYSCON,
-    TRAMPOLINE, UART0, VIRTIO0,
+    addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PGSIZE, PLIC, STACK_SIZE,
+    SYSCON, TRAMPOLINE, UART0, VIRTIO0,
 };
 use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
@@ -18,35 +18,9 @@ const NPROC: usize = 64;
 /// # Safety
 /// no one owns memory outside of kernel and bios regions,
 /// or it is declared in dtb's reserved regions
-#[allow(clippy::large_stack_frames, reason = "stack is reused")]
 #[attr_wrapper::time_me]
 pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
-    let xv6_mem = xv6_memory();
-
-    let mem: Region;
-    let mut reserved;
-    if let Some((dtb, dtb_reg)) = DTB.get() {
-        let mems: Vec<Region> = dtb.memory().regions().map(Region::from).collect();
-        (mem, reserved) = Region::join_multiple(mems);
-        dtb.memory_reservations()
-            .map(Region::from)
-            .chain([Region::new(0x8000_0000, addrof_kernel()), *dtb_reg])
-            .collect_into(&mut reserved);
-    } else {
-        mem = Region::new(addrof_kernel(), 0x8800_0000);
-        reserved = vec![];
-    }
-    xv6_mem
-        .iter()
-        .map(|(reg, _)| *reg)
-        .filter(|&reg| mem.contains(reg))
-        .collect_into(&mut reserved);
-    reserved.try_reserve_exact(1).unwrap();
-    let mut free = mem.split_multiple(reserved);
-    free.retain_mut(|reg| {
-        *reg = reg.align_shrink();
-        reg.size() != 0
-    });
+    let (xv6_mem, free) = generate_memory_map();
 
     for reg in &free {
         // SAFETY: no one owns that memory by precondition
@@ -81,6 +55,36 @@ pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     Ok(pt)
 }
 
+fn generate_memory_map() -> (Vec<(Region, Mode)>, Vec<Region>) {
+    let xv6_mem = xv6_memory();
+
+    let mem: Region;
+    let mut reserved;
+    if let Some((dtb, dtb_reg)) = DTB.get() {
+        let mems: Vec<Region> = dtb.memory().regions().map(Region::from).collect();
+        (mem, reserved) = Region::join_multiple(mems);
+        dtb.memory_reservations()
+            .map(Region::from)
+            .chain([Region::new(0x8000_0000, addrof_kernel()), *dtb_reg])
+            .collect_into(&mut reserved);
+    } else {
+        mem = Region::new(addrof_kernel(), 0x8800_0000);
+        reserved = vec![];
+    }
+    xv6_mem
+        .iter()
+        .map(|(reg, _)| *reg)
+        .filter(|&reg| mem.contains(reg))
+        .collect_into(&mut reserved);
+    reserved.try_reserve_exact(1).unwrap();
+    let mut free = mem.split_multiple(reserved);
+    free.retain_mut(|reg| {
+        *reg = reg.align_shrink();
+        reg.size() != 0
+    });
+    (xv6_mem, free)
+}
+
 fn xv6_memory() -> Vec<(Region, Mode)> {
     const fn reg(start: usize, size: usize, mode: Mode) -> (Region, Mode) {
         (Region::new(start, start + size), mode)
@@ -113,24 +117,20 @@ fn xv6_memory() -> Vec<(Region, Mode)> {
     ]
 }
 
-#[allow(clippy::large_stack_frames, reason = "it is fine")]
 fn proc_mapstacks(pt: &mut Pagetable) -> Result<(), PTError> {
     for i in 0..NPROC {
-        let page1 = KMEM
-            .lock()
-            .alloc("proc stack")
-            .map_err(PTError::AllocFail)?;
-        let page2 = KMEM
-            .lock()
-            .alloc("proc stack")
-            .map_err(PTError::AllocFail)?;
-        let va = KSTACK(i);
-        pt.map_page(va, page1.into_box().leak().as_ptr() as usize, Mode::_RW_)?;
-        pt.map_page(
-            va + PGSIZE,
-            page2.into_box().leak().as_ptr() as usize,
-            Mode::_RW_,
-        )?;
+        let base = KSTACK(i);
+        for idx in 0..STACK_SIZE {
+            let va = base + idx * PGSIZE;
+            let page = KMEM
+                .lock()
+                .alloc("proc stack")
+                .map_err(PTError::AllocFail)?
+                .into_box()
+                .leak()
+                .as_ptr();
+            pt.map_page(va, page as usize, Mode::_RW_)?;
+        }
     }
     Ok(())
 }

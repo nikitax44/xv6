@@ -45,6 +45,7 @@ impl PtEntry {
     }
 
     fn set_raw(&mut self, addr: usize, mode: Mode) -> Result<(), PTError> {
+        assert_ne!(addr, 0, "memmap to NULL");
         if addr % PGSIZE != 0 {
             return Err(PTError::UnalignedPhysicalAddress(addr));
         }
@@ -68,14 +69,17 @@ impl PtEntry {
     /// # Errors
     /// page is not mapped
     /// mode is `Mode::Table`
+    /// # Panics
+    /// PTE invariant is broken
     pub fn addr(&self) -> Result<usize, PTError> {
-        self.get()
-            .ok_or(PTError::NotMapped)
-            .and_then(|(addr, mode)| {
-                (mode == Mode::Table)
-                    .then_some(addr)
-                    .ok_or(PTError::UnexpectedTable)
-            })
+        let (addr, mode) = self.get().ok_or(PTError::NotMapped)?;
+        assert_ne!(addr, 0, "stored address is null");
+
+        if mode == Mode::Table {
+            Err(PTError::UnexpectedTable)
+        } else {
+            Ok(addr)
+        }
     }
 
     /// # Safety

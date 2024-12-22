@@ -1,6 +1,5 @@
 #include "kernel/errno.h"
 #include "kernel/fcntl.h"
-#include "kernel/file/fs.h"
 #include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
 #include "kernel/param.h"
@@ -20,7 +19,10 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
-#define BUFSZ ((MAXOPBLOCKS + 2) * BSIZE)
+#define BSIZE   512
+#define MAXFILE 100
+#define DIRSIZ  14
+#define BUFSZ   ((MAXOPBLOCKS + 2) * BSIZE)
 
 char buf[BUFSZ];
 

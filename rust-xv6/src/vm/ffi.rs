@@ -3,10 +3,8 @@ use crate::vm::kernel_map::make_kernel_map;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::pt_inner::IPagetable;
 use crate::vm::pte::PtEntry;
-use crate::vm::PTError;
-use spin::rwlock::RwLock;
-
-static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
+use crate::vm::{PTError, KERNEL_PAGETABLE};
+use log::info;
 
 /// # Safety
 /// no one owns memory outside of kernel and bios regions,
@@ -15,6 +13,8 @@ static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 unsafe extern "C" fn kvminit() {
     // SAFETY: precondition
     let pt = unsafe { make_kernel_map() }.expect("failed to create kernel map");
+
+    info!("created kernel page table");
 
     let mut kpt = KERNEL_PAGETABLE.write();
     if let Some(_old_pt) = kpt.replace(pt) {

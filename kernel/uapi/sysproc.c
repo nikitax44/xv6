@@ -1,5 +1,4 @@
 #include "kernel/defs.h"
-#include "kernel/errno.h"
 #include "kernel/proc.h"
 #include "kernel/sysinfo.h"
 

@@ -18,26 +18,11 @@
 // end -- start of kernel page allocation area
 // PHYSTOP -- end RAM used by the kernel
 
-#define TEST0          0x100000L
-#define TEST0_SHUTDOWN 0x00005555
-#define TEST0_REBOOT   0x00007777
-
-#define FW_CFG           0x10100000L
-#define FW_CFG_SEL       (FW_CFG + 0x08)
-#define FW_CFG_DAT       (FW_CFG + 0x00)
-#define FW_CFG_DMA       (FW_CFG + 0x10)
-#define FW_CFG_MAGIC     0x554d4551         // "QEMU"
-#define FW_CFG_DMA_MAGIC 0x47464320554d4551 // "QEMU CFG"
-#define FW_CFG_SIGNATURE 0x0000
-#define FW_CFG_ID        0x0001
-#define FW_CFG_FILE_DIR  0x0019
-
 // qemu puts UART registers here in physical memory.
 #define UART0     0x10000000L
 #define UART0_IRQ 10
 
 // virtio mmio interface
-#define VIRTIO0     0x10001000
 #define VIRTIO0_IRQ 1
 
 // qemu puts platform-level interrupt controller (PLIC) here.
@@ -52,10 +37,6 @@
 // in both user and kernel space.
 #define TRAMPOLINE (MAXVA - PGSIZE)
 
-// map kernel stacks beneath the trampoline,
-// each surrounded by invalid guard pages.
-#define KSTACK(p) (TRAMPOLINE - ((p) + 1) * 3 * PGSIZE)
-
 // User memory layout.
 // Address zero first:
 //   text
@@ -66,3 +47,13 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
+
+#ifndef __ASSEMBLER__
+// map kernel stacks beneath the trampoline,
+// each surrounded by invalid guard pages.
+// pointer to the
+#include "kernel/types.h"
+extern usize STACK_SIZE;
+#define KSTACK_TOP(p)                                                          \
+  (TRAPFRAME - ((p) + 1) * (STACK_SIZE + 1) * PGSIZE + STACK_SIZE * PGSIZE)
+#endif

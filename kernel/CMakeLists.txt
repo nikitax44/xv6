@@ -2,35 +2,27 @@ cmake_minimum_required(VERSION 3.10)
 project(KernelProject C ASM)
 
 # Set the C standard
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 17)
 
 # Define the source files (object files)
 set(OBJS
         main.c
-
-        file/fs.c
-        file/pipe.c
-        file/file.c
 
         uapi/syscall.c
         uapi/sysproc.c
         uapi/sysfile.c
 
         hardware/uart.c
-        hardware/virtio_disk.c
         hardware/plic.c
 
         util/spinlock.c
         util/sleeplock.c
         util/string.c
-        util/util.c
 
         console.c
         vm.c
         proc.c
         trap.c
-        bio.c
-        log.c
         exec.c
 
         swtch.S

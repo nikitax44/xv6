@@ -7,12 +7,8 @@
  * the kernel's page table.
  */
 
-extern char etext[]; // kernel.ld sets this to end of kernel code.
-
 extern char trampoline[]; // trampoline.S
 extern void with_kernel_pagetable(void(pagetable_t));
-
-pagetable_t kvmdebug(pagetable_t);
 
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.

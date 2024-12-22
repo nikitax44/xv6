@@ -6,8 +6,8 @@
 #include "proc.h"
 #include "types.h"
 
-static int loadseg(pde_t*, u64, struct inode*, u32, u32);
-static int loaddata(pde_t*, u64, struct inode*, u32, u32);
+static int loadseg(pde_t*, u64, struct file*, u32, u32);
+static int loaddata(pde_t*, u64, struct file*, u32, u32);
 static u64 putargs(pde_t*, str* argv, u64* sp, u64 stackbase, u64* ustack,
                    u64* base);
 
@@ -27,22 +27,21 @@ int execve(str path, str* argv, str* envp) {
   u64            i, off;
   u64            argc, envc, sz = 0, sp, ustack[MAXARG], stackbase, base;
   struct elfhdr  elf;
-  struct inode*  ip;
   struct proghdr ph;
   pagetable_t    pagetable = 0, oldpagetable;
   struct proc*   p         = myproc();
   int            ret;
 
-  begin_op();
-
-  if ((ip = namei(path)) == 0) {
-    end_op();
-    return ENOENT;
+  struct file* f = rs_file_open(path);
+  if (f == 0) {
+    ret = ENOENT;
+    goto bad;
   }
-  ilock(ip);
+
+  // readi(struct inode* ip, int user_dst, u64 dst, u32 off, u32 n)
 
   // Check ELF header
-  if (readi(ip, 0, (u64)&elf, 0, sizeof(elf)) != sizeof(elf)) {
+  if (rs_file_read(f, (u8*)&elf, sizeof(elf)) != sizeof(elf)) {
     ret = ENOEXEC;
     goto bad;
   }
@@ -59,7 +58,8 @@ int execve(str path, str* argv, str* envp) {
 
   // Load program into memory.
   for (i = 0, off = elf.phoff; i < elf.phnum; i++, off += sizeof(ph)) {
-    if (readi(ip, 0, (u64)&ph, off, sizeof(ph)) != sizeof(ph)) {
+    rs_file_seek(f, off, SEEK_SET);
+    if (rs_file_read(f, (u8*)&ph, sizeof(ph)) != sizeof(ph)) {
       ret = ENOEXEC;
       goto bad;
     }
@@ -81,13 +81,10 @@ int execve(str path, str* argv, str* envp) {
       goto bad;
     }
     sz = sz1;
-    if ((ret = loaddata(pagetable, ph.vaddr, ip, ph.off, ph.filesz)) != 0) {
+    if ((ret = loaddata(pagetable, ph.vaddr, f, ph.off, ph.filesz)) != 0) {
       goto bad;
     }
   }
-  iunlockput(ip);
-  end_op();
-  ip = 0;
 
   p         = myproc();
   u64 oldsz = p->sz;
@@ -166,15 +163,11 @@ bad:
   if (pagetable) {
     proc_freepagetable(pagetable, sz);
   }
-  if (ip) {
-    iunlockput(ip);
-    end_op();
-  }
   return ret;
 }
 
 // allows unaligned loading
-static int loaddata(pagetable_t pagetable, u64 va, struct inode* ip, u32 offset,
+static int loaddata(pagetable_t pagetable, u64 va, struct file* f, u32 offset,
                     u32 sz) {
   u64 bt = PGROUNDUP(va);
 
@@ -190,13 +183,15 @@ static int loaddata(pagetable_t pagetable, u64 va, struct inode* ip, u32 offset,
     } else {
       n = sz;
     }
-    if (readi(ip, 0, (u64)pa + (va % PGSIZE), offset, n) != n) {
+    rs_file_seek(f, offset, SEEK_SET);
+
+    if (rs_file_read(f, (u8*)pa + (va % PGSIZE), n) != n) {
       return ENOEXEC;
     }
   }
 
   if (sz > diff) {
-    return loadseg(pagetable, bt, ip, offset + diff, sz - diff);
+    return loadseg(pagetable, bt, f, offset + diff, sz - diff);
   }
   return 0;
 }
@@ -205,7 +200,7 @@ static int loaddata(pagetable_t pagetable, u64 va, struct inode* ip, u32 offset,
 // va must be page-aligned
 // and the pages from va to va+sz must already be mapped.
 // Returns 0 on success, -1 on failure.
-static int loadseg(pagetable_t pagetable, u64 va, struct inode* ip, u32 offset,
+static int loadseg(pagetable_t pagetable, u64 va, struct file* f, u32 offset,
                    u32 sz) {
   u32 i, n;
   u64 pa;
@@ -220,7 +215,8 @@ static int loadseg(pagetable_t pagetable, u64 va, struct inode* ip, u32 offset,
     } else {
       n = PGSIZE;
     }
-    if (readi(ip, 0, (u64)pa, offset + i, n) != n) {
+    rs_file_seek(f, offset + i, SEEK_SET);
+    if (rs_file_read(f, (u8*)pa, n) != n) {
       return ENOEXEC;
     }
   }

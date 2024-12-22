@@ -52,10 +52,6 @@
 // in both user and kernel space.
 #define TRAMPOLINE (MAXVA - PGSIZE)
 
-// map kernel stacks beneath the trampoline,
-// each surrounded by invalid guard pages.
-#define KSTACK(p) (TRAMPOLINE - ((p) + 1) * 3 * PGSIZE)
-
 // User memory layout.
 // Address zero first:
 //   text
@@ -66,3 +62,13 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
+
+#ifndef __ASSEMBLER__
+// map kernel stacks beneath the trampoline,
+// each surrounded by invalid guard pages.
+// pointer to the
+#include "kernel/types.h"
+extern usize STACK_SIZE;
+#define KSTACK_TOP(p)                                                          \
+  (TRAPFRAME - ((p) + 1) * (STACK_SIZE + 1) * PGSIZE + STACK_SIZE * PGSIZE)
+#endif

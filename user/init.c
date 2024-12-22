@@ -1,7 +1,6 @@
 // init: The initial user-level program
 
 #include "kernel/fcntl.h"
-#include "kernel/file/file.h"
 #include "user/user.h"
 
 char* argv[] = {"sh", 0};
@@ -10,7 +9,7 @@ int main(void) {
   int pid, wpid;
 
   if (_open("console", O_RDWR) < 0) {
-    _mknod("console", CONSOLE, 0);
+    _mknod("console", 1, 0);
     _open("console", O_RDWR);
   }
   _dup(0); // stdout

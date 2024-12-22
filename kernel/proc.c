@@ -7,7 +7,6 @@
 #include "param.h"
 #include "types.h"
 #include "util/spinlock.h"
-#include <string.h>
 
 struct cpu cpus[NCPU];
 
@@ -38,7 +37,7 @@ void procinit(void) {
   for (p = proc; p < &proc[NPROC]; p++) {
     initlock(&p->lock, "proc");
     p->state  = UNUSED;
-    p->kstack = KSTACK((int)(p - proc));
+    p->kstack = KSTACK_TOP((int)(p - proc));
   }
 }
 
@@ -117,7 +116,7 @@ found:
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (u64)forkret;
-  p->context.sp = p->kstack + 2 * PGSIZE;
+  p->context.sp = p->kstack;
 
   *proc_out = p;
   return 0;
@@ -203,7 +202,7 @@ void userinit(void) {
   p->trapframe->sp  = PGSIZE; // user stack pointer
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
-  p->cwd = namei("/");
+  strncpy(p->cwd, "/", sizeof(p->cwd));
 
   p->state = RUNNABLE;
 
@@ -258,10 +257,11 @@ int fork(void) {
   // increment reference counts on open file descriptors.
   for (i = 0; i < NOFILE; i++) {
     if (p->ofile[i]) {
-      np->ofile[i] = filedup(p->ofile[i]);
+      np->ofile[i] = rs_file_dup(p->ofile[i]);
     }
   }
-  np->cwd = idup(p->cwd);
+
+  strcpy(np->cwd, p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
@@ -307,15 +307,12 @@ void exit(int status) {
   for (int fd = 0; fd < NOFILE; fd++) {
     if (p->ofile[fd]) {
       struct file* f = p->ofile[fd];
-      fileclose(f);
+      rs_file_close(f);
       p->ofile[fd] = 0;
     }
   }
 
-  begin_op();
-  iput(p->cwd);
-  end_op();
-  p->cwd = 0;
+  *p->cwd = 0;
 
   acquire(&wait_lock);
 
@@ -469,21 +466,8 @@ void yield(void) {
 // A fork child's very first scheduling by scheduler()
 // will swtch to forkret.
 void forkret(void) {
-  static int first = 1;
-
   // Still holding p->lock from scheduler.
   release(&myproc()->lock);
-
-  if (first) {
-    // File system initialization must be run in the context of a
-    // regular process (e.g., because it calls sleep), and thus cannot
-    // be run from main().
-    fsinit(ROOTDEV);
-
-    first = 0;
-    // ensure other cores see first=0.
-    __sync_synchronize();
-  }
 
   usertrapret();
 }

@@ -3,8 +3,7 @@
 #include "hardware/riscv.h"
 #include "types.h"
 
-#include <errno.h>
-#include <string.h>
+#include "errno.h"
 
 /*
  * the kernel's page table.

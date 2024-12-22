@@ -1,7 +1,9 @@
 #include "kernel/fcntl.h"
-#include "kernel/file/fs.h"
+#include "kernel/file/file.h"
 #include "kernel/file/stat.h"
 #include "user/user.h"
+
+#define DIRSIZ 14
 
 char* fmtname(char* path) {
   static char buf[DIRSIZ + 1];
@@ -22,10 +24,10 @@ char* fmtname(char* path) {
 }
 
 void ls(char* path) {
-  char          buf[512], *p;
-  int           fd;
-  struct dirent de;
-  struct stat   st;
+  char                buf[512], *p;
+  int                 fd;
+  struct linux_dirent de;
+  struct stat         st;
 
   if ((fd = _open(path, O_RDONLY)) < 0) {
     fdprintf(stderr, "ls: cannot open %s\n", path);
@@ -57,11 +59,10 @@ void ls(char* path) {
     p    = buf + strlen(buf);
     *p++ = '/';
     while (_read(fd, &de, sizeof(de)) == sizeof(de)) {
-      if (de.inum == 0) {
+      if (de.d_ino == 0) {
         continue;
       }
-      memmove(p, de.name, DIRSIZ);
-      p[DIRSIZ] = 0;
+      strncpy(p, de.d_name, DIRSIZ);
       if (stat(buf, &st) < 0) {
         printf("ls: cannot stat %s\n", buf);
         continue;

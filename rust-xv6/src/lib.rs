@@ -1,4 +1,5 @@
 #![no_std]
+#![no_main]
 #![deny(
     // keep-sorted start
     clippy::as_underscore,
@@ -61,18 +62,19 @@
 #![feature(step_trait)]
 #![feature(new_range_api)]
 #![feature(maybe_uninit_uninit_array)]
-#![feature(const_maybe_uninit_uninit_array)]
 #![feature(negative_impls)]
 #![feature(maybe_uninit_as_bytes)]
 #![feature(never_type)]
 #![feature(try_with_capacity)]
 #![feature(maybe_uninit_slice)]
 #![feature(vec_push_within_capacity)]
-#![feature(const_nonnull_new)]
-#![feature(const_option)]
 #![feature(integer_sign_cast)]
-#![feature(const_pointer_is_aligned)]
 #![feature(c_variadic)]
+#![feature(ptr_as_uninit)]
+#![feature(custom_test_frameworks)]
+#![feature(slice_as_chunks)]
+#![test_runner(test_runner)]
+
 extern crate alloc;
 
 pub mod dtb;
@@ -89,6 +91,9 @@ pub mod util;
 pub mod vm;
 
 pub use crate::util::time::Instant;
+
+#[cfg(test)]
+fn test_runner(_tests: &[&dyn Fn()]) {}
 
 mod ffi {
     use crate::log::XV6Logger;

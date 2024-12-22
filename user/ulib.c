@@ -1,6 +1,5 @@
 #include "kernel/fcntl.h"
 #include "kernel/file/stat.h"
-#include "kernel/types.h"
 #include "user/user.h"
 
 char* gets(char* buf, int max) {

@@ -2,12 +2,11 @@ use crate::fs::Dir;
 use efs::file::{File, Type, TypeWithFile};
 use efs::fs::ext2::error::Ext2Error;
 
-#[repr(C)]
 #[derive(Copy, Clone)]
 pub enum Whence {
-    Set = 1,
-    Head,
-    End,
+    Set = 0,
+    Head = 1,
+    End = 2,
 }
 
 #[derive(Copy, Clone)]

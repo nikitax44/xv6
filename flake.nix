@@ -50,6 +50,8 @@
           overlays = [(import rust-overlay)];
         };
 
+        crossEnv = crossPkgs.stdenv;
+
         inherit (nixpkgs) lib;
 
         craneLib = (crane.mkLib crossPkgs).overrideToolchain (p:
@@ -69,7 +71,7 @@
           inherit craneLib;
         };
 
-        kernel = crossPkgs.stdenv.mkDerivation {
+        kernel = crossEnv.mkDerivation {
           pname = "kernel";
           inherit (rust-xv6) version;
           src = (prefixDrv "kernel" ./kernel) + "/kernel";
@@ -83,7 +85,7 @@
           dontStrip = true;
         };
 
-        programs = crossPkgs.stdenv.mkDerivation ({
+        programs = crossEnv.mkDerivation ({
             pname = "programs.tar";
             version = "none";
             src = ./.;
@@ -96,34 +98,20 @@
           }
           // common);
 
-        mkfs = localPkgs.stdenv.mkDerivation ({
-            pname = "mkfs";
-            version = "none";
-            src = ./.;
-            buildFlags = "mkfs";
-            installPhase = ''
-              install -Dm 0555 mkfs.elf $out/bin/mkfs
-            '';
-          }
-          // common);
+        fsImg = localPkgs.runCommandNoCCLocal "fs.img" {} ''
+          ${localPkgs.guestfs-tools}/bin/virt-make-fs ${programs} $out
+        '';
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
-        platform = crossPkgs.stdenv.hostPlatform.config;
+        platform = crossEnv.hostPlatform.config;
         NEWLIB = "${newlib}/${platform}";
         nativeBuildInputs = [
-          localPkgs.stdenv.cc
           localPkgs.perl
           localPkgs.fd
           localPkgs.cmake
           localPkgs.unixtools.xxd
-          (localPkgs.writeShellScriptBin "get-busybox" "cp ${busybox}/bin/busybox ./_busybox")
         ];
         buildInputs = [newlib];
-        busybox = localPkgs.pkgsCross.riscv64.busybox.override {
-          enableStatic = true;
-          enableAppletSymlinks = false;
-          enableMinimal = true;
-        };
 
         common = {
           inherit NEWLIB buildInputs nativeBuildInputs;
@@ -142,32 +130,29 @@
               config.treefmt.build.wrapper
               localPkgs.gnumake
               localPkgs.clang-tools
+              localPkgs.guestfs-tools
             ];
           }
           // common);
 
         packages = {
-          inherit rust-xv6 kernel programs mkfs;
-          default = crossPkgs.stdenv.mkDerivation ({
-              src = ./.;
-              pname = "xv6";
-              version = "none";
-              preBuild = ''
-                cp ${kernel} kernel/kernel
-                cp ${programs} user/fs.tar
-                cp ${mkfs}/bin/mkfs mkfs.elf
-                chmod u+w kernel/kernel user/fs.tar mkfs.elf
-              '';
-              buildFlags = "-i";
-              installPhase = ''
-                mkdir -p $out/bin
-                install -Dm 0444 kernel/kernel fs.img $out/
-                install -Dm 0555 qemu-script $out/bin/
-              '';
-              dontStrip = true;
-              meta.mainProgram = "qemu-script";
-            }
-            // common);
+          inherit rust-xv6 kernel programs;
+          default = localPkgs.writeScriptBin "qemu-script" ''
+            #!/usr/bin/env zsh
+            set -e
+            FS="$(mktemp -p /tmp fs.XXXXXX.img)"
+            cp ${fsImg} "$FS"
+            echo "copied fs.img to $FS"
+            trap 'rm -vf "$FS"' EXIT
+
+            CPUS="''${CPUS:-3}"
+            qemu-system-riscv64                                            \
+                -machine virt -m 128M -smp "$CPUS" -nographic              \
+                -global virtio-mmio.force-legacy=false                     \
+                -drive file="$FS",if=none,format=raw,id=x0                 \
+                -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0   \
+                -kernel ${kernel} ${lib.optionalString (!enableOpenSBI) "-bios none"} "''${@[@]}"
+          '';
         };
       };
     };

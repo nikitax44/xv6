@@ -12,13 +12,14 @@ fn raw_panic(msg: Arguments) -> ! {
     // SAFETY: safe
     let mut console = unsafe { Console::get_async() };
 
+    console.newline();
     if old {
         console.puts("repanicking: ");
     } else {
         console.puts("panic: ");
     }
     console.write_fmt(msg).ok();
-    console.putc(b'\n');
+    console.newline();
     shutdown()
 }
 

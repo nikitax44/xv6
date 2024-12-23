@@ -2,6 +2,7 @@ use crate::addrof_symbol;
 use crate::dtb::DTB;
 use crate::kalloc::pages::KMEM;
 use crate::kalloc::region::Region;
+use crate::kalloc::{get_kalloc, Xv6Alloc};
 use crate::memlayout::{
     addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PGSIZE, PLIC, SYSCON,
     TRAMPOLINE, UART0, VIRTIO0,
@@ -50,7 +51,7 @@ pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     for reg in &free {
         // SAFETY: no one owns that memory by precondition
         unsafe {
-            crate::kalloc::add_region(*reg);
+            get_kalloc().add_region(*reg);
         }
     }
 

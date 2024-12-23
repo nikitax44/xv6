@@ -1,4 +1,5 @@
 #![no_std]
+#![no_main]
 #![deny(
     // keep-sorted start
     clippy::as_underscore,
@@ -46,6 +47,8 @@
 )]
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]
+#![allow(refining_impl_trait, reason = "more informative")]
+#![allow(internal_features, reason = "greatly simplifies debugging")]
 #![allow(
     clippy::uninlined_format_args,
     reason = "inlined ones are harder to see"
@@ -73,6 +76,13 @@
 #![feature(integer_sign_cast)]
 #![feature(const_pointer_is_aligned)]
 #![feature(c_variadic)]
+#![feature(ptr_as_uninit)]
+#![feature(custom_test_frameworks)]
+#![feature(slice_as_chunks)]
+#![feature(int_roundings)]
+#![feature(rustc_attrs)]
+#![test_runner(test_runner)]
+
 extern crate alloc;
 
 pub mod dtb;
@@ -89,6 +99,16 @@ pub mod util;
 pub mod vm;
 
 pub use crate::util::time::Instant;
+
+#[macro_export]
+macro_rules! static_assert {
+    ($e:expr) => (
+        const _: [(); { const ASSERT: bool = $e; ASSERT } as usize - 1] = [];
+    );
+}
+
+#[cfg(test)]
+fn test_runner(_tests: &[&dyn Fn()]) {}
 
 mod ffi {
     use crate::log::XV6Logger;

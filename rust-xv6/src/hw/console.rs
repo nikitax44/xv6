@@ -20,6 +20,10 @@ impl Console {
         }
     }
 
+    pub fn newline(&mut self) {
+        self.putc(b'\n');
+    }
+
     pub fn backspace(&mut self) {
         // SAFETY: c is in range
         unsafe {

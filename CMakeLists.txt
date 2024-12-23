@@ -35,7 +35,9 @@ add_custom_command(
   COMMENT "Building mkfs with host compiler"
 )
 
-set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
+set(CARGO_ARGUMENTS --release --frozen --lib)
+set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
+set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 add_custom_command(
   OUTPUT librust_xv6.a
   COMMAND cd ./rust-xv6 && cargo build ${CARGO_ARGUMENTS}

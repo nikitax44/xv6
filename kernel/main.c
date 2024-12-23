@@ -27,11 +27,11 @@ void init_boot(void) {
   plicinit();      // set up interrupt controller
   plicinithart();  // ask PLIC for device interrupts
 
-  binit();            // buffer cache
-  iinit();            // inode table
-  fileinit();         // file table
-  virtio_disk_init(); // emulated hard disk
-  userinit();         // first user process
+  userinit(); // first user process
+
+  printf("\n");
+  printf("init done\n");
+  printf("\n");
 }
 
 void init_other(void) {

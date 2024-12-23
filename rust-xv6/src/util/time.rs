@@ -24,7 +24,6 @@ impl Instant {
 
 static FREQ: RwLock<Vec<Option<NonZeroU64>>> = RwLock::new(Vec::new());
 
-#[allow(clippy::large_stack_frames, reason = "no way to deal with it")]
 fn get_freq() -> u64 {
     let read = FREQ.upgradeable_read();
     let cpuid = cpuid() as usize;

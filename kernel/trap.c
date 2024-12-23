@@ -113,9 +113,9 @@ void usertrapret(void) {
 
   // set up trapframe values that uservec will need when
   // the process next traps into the kernel.
-  p->trapframe->kernel_satp = r_satp();               // kernel page table
-  p->trapframe->kernel_sp   = p->kstack + 2 * PGSIZE; // process's kernel stack
-  p->trapframe->kernel_trap = (u64)usertrap;
+  p->trapframe->kernel_satp   = r_satp();  // kernel page table
+  p->trapframe->kernel_sp     = p->kstack; // process's kernel stack
+  p->trapframe->kernel_trap   = (u64)usertrap;
   p->trapframe->kernel_hartid = r_tp(); // hartid for cpuid()
 
   // set up the registers that trampoline.S's sret will use
@@ -230,7 +230,7 @@ int devintr(void) {
     if (irq == UART0_IRQ) {
       uartintr();
     } else if (irq == VIRTIO0_IRQ) {
-      virtio_disk_intr();
+      rs_disk_intr();
     } else if (irq) {
       printf("unexpected interrupt irq=%d\n", irq);
     }

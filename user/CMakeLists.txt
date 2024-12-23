@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 project(MyProject C ASM)
 
+set(CMAKE_C_STANDARD 17)
+
 # Define the programs
 list(APPEND UPROGS
         _cat
@@ -74,7 +76,7 @@ endforeach ()
 
 add_custom_command(
         OUTPUT fs.tar
-        COMMAND tar -cf fs.tar ${UPROGS} ${PORTS}
+        COMMAND tar -cf fs.tar --transform 's/^_//g' ${UPROGS} ${PORTS}
         COMMENT "Packing the programs to .tar"
         DEPENDS ${UPROGS} ${PORTS}
 )

@@ -1,15 +1,22 @@
 use crate::errno::ErrNo;
-use crate::errno::ErrNo::EINVAL;
 use crate::fs::types::Whence;
 use crate::kalloc::pages::page::{Page, PageHandle};
 use crate::kalloc::thin_box::ThinBox;
 use alloc::sync::Arc;
 use core::ffi::{c_char, CStr};
+use core::mem::MaybeUninit;
 use core::panic::Location;
 use core::ptr::NonNull;
-use efs::file::Type;
-use efs::fs::error::FsError;
-use log::{error, warn};
+use efs::path::{Path, UnixStr};
+
+pub trait FFICast {
+    type Safe: FFISafe;
+
+    fn into_ffi_cast(self) -> Self::Safe;
+    /// # Safety
+    /// implementation-specific
+    unsafe fn from_ffi_cast(value: Self::Safe) -> Self;
+}
 
 pub trait ToFFI {
     type Target: FFISafe;
@@ -18,64 +25,94 @@ pub trait ToFFI {
 
 pub trait FromFFI {
     type Source: FFISafe;
+
     /// # Safety
     /// implementation-specific
     unsafe fn from_ffi(value: Self::Source) -> Self;
 }
 
-pub trait FFISafe: Copy {}
+impl<T: FFICast> ToFFI for T {
+    type Target = T::Safe;
 
-impl<T: FFISafe> ToFFI for T {
-    type Target = T;
     fn into_ffi(self) -> Self::Target {
-        self
+        self.into_ffi_cast()
     }
 }
 
-impl<T: FFISafe> FromFFI for T {
-    type Source = T;
+impl<T: FFICast> FromFFI for T {
+    type Source = T::Safe;
+
     unsafe fn from_ffi(value: Self::Source) -> Self {
+        // SAFETY: precondition
+        unsafe { T::from_ffi_cast(value) }
+    }
+}
+
+pub trait FFISafe: Copy {}
+
+impl<T: FFISafe> FFICast for T {
+    type Safe = T;
+    fn into_ffi_cast(self) -> Self::Safe {
+        self
+    }
+
+    /// # Safety
+    /// safe
+    unsafe fn from_ffi_cast(value: Self::Safe) -> Self {
         value
     }
 }
 
-impl<T> ToFFI for Arc<T> {
-    type Target = *const T;
+impl<T> FFICast for Arc<T> {
+    type Safe = *const T;
 
-    fn into_ffi(self) -> Self::Target {
+    fn into_ffi_cast(self) -> Self::Safe {
         Self::into_raw(self)
     }
-}
 
-impl<T> FromFFI for Arc<T> {
-    type Source = *const T;
-
-    unsafe fn from_ffi(value: Self::Source) -> Self {
+    unsafe fn from_ffi_cast(value: Self::Safe) -> Self {
         // SAFETY: precondition
         unsafe { Self::from_raw(value) }
     }
 }
 
-impl FromFFI for &CStr {
-    type Source = *const c_char;
+impl<T> FFICast for Option<Arc<T>> {
+    type Safe = *const T;
 
-    unsafe fn from_ffi(value: Self::Source) -> Self {
+    fn into_ffi_cast(self) -> Self::Safe {
+        self.map_or(core::ptr::null(), Arc::into_raw)
+    }
+
+    unsafe fn from_ffi_cast(value: Self::Safe) -> Self {
+        if value.is_null() {
+            return None;
+        }
+        // SAFETY: precondition
+        unsafe { Some(Arc::from_raw(value)) }
+    }
+}
+
+impl FFICast for &CStr {
+    type Safe = *const c_char;
+
+    fn into_ffi_cast(self) -> Self::Safe {
+        self.as_ptr()
+    }
+
+    unsafe fn from_ffi_cast(value: Self::Safe) -> Self {
         // SAFETY: precondition
         unsafe { CStr::from_ptr(value) }
     }
 }
 
-impl ToFFI for Option<PageHandle> {
-    type Target = Option<NonNull<Page>>;
+impl FFICast for Option<PageHandle> {
+    type Safe = Option<NonNull<Page>>;
 
-    fn into_ffi(self) -> Self::Target {
+    fn into_ffi_cast(self) -> Self::Safe {
         self.map(|page| page.into_box().leak())
     }
-}
-impl FromFFI for Option<PageHandle> {
-    type Source = Option<NonNull<Page>>;
 
-    unsafe fn from_ffi(value: Self::Source) -> Self {
+    unsafe fn from_ffi_cast(value: Self::Safe) -> Self {
         value
             // SAFETY: precondition
             .map(|ptr| unsafe { ThinBox::new(ptr) })
@@ -86,11 +123,63 @@ impl FromFFI for Option<PageHandle> {
 impl FFISafe for () {}
 impl FFISafe for crate::fs::types::CStat {}
 impl FFISafe for usize {}
+impl FFISafe for u32 {}
 impl FFISafe for i64 {}
-impl FFISafe for Whence {}
+impl FFICast for Option<Whence> {
+    type Safe = u32;
+
+    fn into_ffi_cast(self) -> Self::Safe {
+        match self {
+            None | Some(Whence::Set) => 0,
+            Some(Whence::Head) => 1,
+            Some(Whence::End) => 2,
+        }
+    }
+
+    unsafe fn from_ffi_cast(value: Self::Safe) -> Self {
+        match value {
+            0 => Some(Whence::Set),
+            1 => Some(Whence::Head),
+            2 => Some(Whence::End),
+            _ => None,
+        }
+    }
+}
+
+impl<T> FromFFI for Option<&mut MaybeUninit<T>> {
+    type Source = Option<NonNull<T>>;
+
+    unsafe fn from_ffi(value: Self::Source) -> Self {
+        value.map(|ptr| {
+            assert!(ptr.is_aligned(), "ffi passed unaligned pointer");
+            // SAFETY: precondition
+            unsafe { ptr.as_uninit_mut() }
+        })
+    }
+}
 
 impl<T> FFISafe for Option<NonNull<T>> {}
 impl<T> FFISafe for *const T {}
+
+impl ToFFI for ErrNo {
+    type Target = u32;
+
+    fn into_ffi(self) -> Self::Target {
+        self as u32
+    }
+}
+
+impl FromFFI for Option<Path<'_>> {
+    type Source = *const c_char;
+
+    unsafe fn from_ffi(value: Self::Source) -> Self {
+        // SAFETY: precondition
+        let path = unsafe { <&CStr as FromFFI>::from_ffi(value) };
+        let path = path.to_str().ok()?;
+        let path = UnixStr::new(path).ok()?;
+        Some(Path::new(path))
+    }
+}
 
 impl ToFFI for Result<u64, crate::fs::Error> {
     type Target = i64;
@@ -102,39 +191,7 @@ impl ToFFI for Result<u64, crate::fs::Error> {
             }
             Err(err) => err,
         };
-        let err: ErrNo = match err {
-            err @ crate::fs::Error::Device(_) => {
-                panic!("disk error: {err:?}");
-            }
-            crate::fs::Error::Path(_) => EINVAL,
-
-            crate::fs::Error::IO(io) => {
-                error!("io error: {io:?}");
-                ErrNo::EIO
-            }
-            crate::fs::Error::Fs(FsError::EntryAlreadyExist(_)) => ErrNo::EEXIST,
-            crate::fs::Error::Fs(FsError::Loop(path)) => {
-                warn!("symlink loop found: {path:?}");
-                ErrNo::ELOOP
-            }
-            crate::fs::Error::Fs(FsError::NameTooLong(_)) => ErrNo::ENAMETOOLONG,
-            crate::fs::Error::Fs(FsError::NotDir(_)) => ErrNo::ENOTDIR,
-            crate::fs::Error::Fs(FsError::NoEnt(_)) => ErrNo::ENOLINK,
-            crate::fs::Error::Fs(FsError::NotFound(_)) => ErrNo::ENOENT,
-            crate::fs::Error::Fs(FsError::RemoveRefused) => ErrNo::EACCES,
-            crate::fs::Error::Fs(FsError::WrongFileType { expected, given }) => {
-                if expected == Type::Directory {
-                    ErrNo::ENOTDIR
-                } else if given == Type::Directory {
-                    ErrNo::EISDIR
-                } else {
-                    ErrNo::EOPNOTSUPP
-                }
-            }
-            err @ crate::fs::Error::Fs(FsError::Implementation(_)) => {
-                panic!("filesystem error: {err:?}");
-            }
-        };
+        let err: ErrNo = err.into();
         -i64::from(err as u32)
     }
 }

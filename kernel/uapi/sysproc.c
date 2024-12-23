@@ -5,7 +5,6 @@
 #include "kernel/sysinfo.h"
 #include "kernel/types.h"
 #include "kernel/util/spinlock.h"
-#include <sys/time.h>
 
 u64 sys_exit(void) {
   int n;

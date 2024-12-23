@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(Xv6 C ASM)
 
+set(CMAKE_C_STANDARD 17)
+
 if(NOT DEFINED GDBPORT)
   set(GDBPORT $ENV{GDBPORT})
   if(NOT DEFINED GDBPORT)
@@ -27,14 +29,6 @@ if(NOT DEFINED NEWLIB)
   endif()
 endif()
 
-# Add the mkfs target
-add_custom_command(
-  OUTPUT mkfs.elf
-  COMMAND gcc -o mkfs.elf ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS mkfs/mkfs.c kernel/file/fs.h kernel/file/stat.h kernel/param.h kernel/types.h
-  COMMENT "Building mkfs with host compiler"
-)
-
 set(CARGO_ARGUMENTS --release --frozen --lib --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 add_custom_command(
   OUTPUT librust_xv6.a
@@ -55,14 +49,9 @@ add_subdirectory(user)
 # Add the filesystem image target
 add_custom_command(
   OUTPUT fs.img
-  COMMAND rm -rf temp_files && mkdir temp_files
-  COMMAND tar -C temp_files -xf ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar
-  COMMAND ./mkfs.elf fs.img temp_files/* "${CMAKE_CURRENT_SOURCE_DIR}/README"
-  COMMAND rm -rf temp_files
-  DEPENDS mkfs.elf Programs "README"
+  COMMAND virt-make-fs ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar fs.img
+  DEPENDS Programs
 )
-
-add_custom_target(mkfs ALL DEPENDS mkfs.elf)
 
 add_custom_target(image ALL DEPENDS fs.img)
 

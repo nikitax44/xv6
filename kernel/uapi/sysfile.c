@@ -4,18 +4,14 @@
 // user code, and calls into file.c and fs.c.
 //
 
-#include "errno.h"
 #include "kernel/defs.h"
+#include "kernel/errno.h"
 #include "kernel/fcntl.h"
 #include "kernel/file/file.h"
-#include "kernel/file/fs.h"
 #include "kernel/file/stat.h"
-#include "kernel/hardware/riscv.h"
 #include "kernel/mman.h"
 #include "kernel/param.h"
 #include "kernel/proc.h"
-#include "kernel/types.h"
-#include <string.h>
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.

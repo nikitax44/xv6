@@ -1,10 +1,7 @@
 #include "defs.h"
-#include "hardware/memlayout.h"
+#include "errno.h"
 #include "hardware/riscv.h"
 #include "types.h"
-
-#include <errno.h>
-#include <string.h>
 
 /*
  * the kernel's page table.

@@ -7,7 +7,6 @@
 #include "param.h"
 #include "types.h"
 #include "util/spinlock.h"
-#include <string.h>
 
 struct cpu cpus[NCPU];
 

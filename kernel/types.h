@@ -16,11 +16,23 @@ typedef const i8* str;
 typedef usize     pde_t;
 typedef u8 bool;
 
-#ifndef NULL
-#define NULL 0
+typedef i64 time_t;
+typedef i64 suseconds_t;
+
+#ifndef __timeval_defined
+#define __timeval_devined 1
+struct timeval {
+  time_t      tv_sec;  /* seconds */
+  suseconds_t tv_usec; /* and microseconds */
+};
 #endif
 
-#ifndef true
-#define true  1
-#define false 0
+#ifndef NULL
+#define NULL ((void*)0)
 #endif
+
+#define true  ((bool)1)
+#define false ((bool)0)
+
+#define MIN(a, b) ((a) <= (b) ? (a) : (b))
+#define MAX(a, b) ((a) >= (b) ? (a) : (b))

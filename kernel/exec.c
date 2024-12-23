@@ -5,7 +5,6 @@
 #include "param.h"
 #include "proc.h"
 #include "types.h"
-#include <string.h>
 
 static int loadseg(pde_t*, u64, struct inode*, u32, u32);
 static int loaddata(pde_t*, u64, struct inode*, u32, u32);

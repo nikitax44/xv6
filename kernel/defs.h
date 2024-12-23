@@ -120,7 +120,7 @@ int  holdingsleep(struct sleeplock*);
 void initsleeplock(struct sleeplock*, char*);
 
 // string.c
-char* safestrcpy(char*, str, int);
+char* safestrcpy(char*, const char*, usize);
 
 // syscall.c
 void argint(int, int*);
@@ -188,6 +188,14 @@ extern void* kalloc(void);
 extern void  kfree(void*);
 extern void  kinit(void);
 extern u64   free_pages(void);
+
+// compiler builtins
+usize strlen(const char*);
+void  memset(void*, u8, usize);
+void* memmove(void*, const void*, usize);
+char* strcpy(char*, const char*);
+int   strncmp(const char*, const char*, usize);
+char* strncpy(char*, const char*, usize);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))

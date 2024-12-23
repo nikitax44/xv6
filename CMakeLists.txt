@@ -52,7 +52,7 @@ add_subdirectory(user)
 # Add the filesystem image target
 add_custom_command(
   OUTPUT fs.img
-  COMMAND virt-make-fs ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar fs.img
+  COMMAND virt-make-fs -s 64M ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar fs.img
   DEPENDS Programs
 )
 

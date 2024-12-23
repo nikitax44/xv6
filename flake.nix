@@ -99,7 +99,7 @@
           // common);
 
         fsImg = localPkgs.runCommandNoCCLocal "fs.img" {} ''
-          ${localPkgs.guestfs-tools}/bin/virt-make-fs ${programs} $out
+          ${localPkgs.guestfs-tools}/bin/virt-make-fs -s 64M ${programs} $out
         '';
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};

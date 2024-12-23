@@ -1,4 +1,5 @@
-use crate::hw::hal::HalImpl;
+mod virtio_blk;
+
 use crate::memlayout::VIRTIO0;
 use crate::util::Rounding;
 use alloc::borrow::ToOwned;
@@ -14,11 +15,12 @@ use efs::dev::{Commit, Device, Slice};
 use efs::{dev::error::DevError, error::Error};
 use log::{error, trace};
 use spin::Lazy;
-use virtio_drivers::device::blk;
 use virtio_drivers::device::blk::SECTOR_SIZE;
 use virtio_drivers::transport::mmio::{MmioTransport, VirtIOHeader};
+use zerocopy::IntoBytes;
 
-pub type VirtIOBlk = blk::VirtIOBlk<HalImpl, MmioTransport>;
+use crate::hw::disk::virtio_blk::{SectorData, SectorID, VirtIOBlkError};
+use virtio_blk::VirtIOBlk;
 
 /// # Safety
 /// `disk` must point to the valid MMIO region
@@ -28,7 +30,7 @@ pub type VirtIOBlk = blk::VirtIOBlk<HalImpl, MmioTransport>;
 /// failed to initialize disk
 /// failed to read disk id
 #[allow(clippy::large_stack_frames)]
-pub unsafe fn init_disk(disk: NonNull<VirtIOHeader>) -> Result<VirtIOBlk, virtio_drivers::Error> {
+pub unsafe fn init_disk(disk: NonNull<VirtIOHeader>) -> Result<VirtIOBlk, VirtIOBlkError> {
     trace!("init_disk({disk:?})");
     // SAFETY: aligned and valid for the lifetime of this function by precondition
     let transport = unsafe { MmioTransport::new(disk).expect("failed to create transport") };
@@ -41,7 +43,7 @@ pub unsafe fn init_disk(disk: NonNull<VirtIOHeader>) -> Result<VirtIOBlk, virtio
 
 pub struct Disk {
     dev: VirtIOBlk,
-    buffer: Vec<u8>,
+    buffer: Vec<SectorData>,
 }
 
 impl Disk {
@@ -51,61 +53,58 @@ impl Disk {
     /// disk returned invalid utf8
     pub fn get_name(&mut self) -> Result<String, virtio_drivers::Error> {
         let buf = &mut [0; 20];
-        let sz = self.device_id(buf)?;
-        let name = from_utf8(&buf[..sz]).expect("invalid disk name");
+        let name = self.device_id(buf)?;
+        let name = from_utf8(name).expect("invalid disk name");
         Ok(name.to_owned())
+    }
+
+    fn resize(&mut self, size: SectorID) -> Result<(), DevError> {
+        // trace!("reserving {size:?} for Disk IO");
+
+        self.buffer.clear();
+        self.buffer
+            .try_reserve(size.in_sectors())
+            .map_err(|err| {
+                error!(
+                    "failed to allocate buffer of size {:#x} sectors: {err}",
+                    size.in_sectors()
+                );
+            })
+            .map_err(|()| DevError::WriteZero)?;
+        self.buffer.resize(size.in_sectors(), SectorData::DUMMY);
+        Ok(())
     }
 }
 
 impl<FSE: core::error::Error> Device<u8, FSE> for Disk {
     fn size(&mut self) -> Size {
-        Size(self.dev.capacity() * u64::try_from(SECTOR_SIZE).unwrap())
+        Size(self.dev.capacity().in_bytes())
     }
 
     fn slice(&mut self, addr_range: Range<Address>) -> Result<Slice<'_, u8>, Error<FSE>> {
         // trace!("reading disk at {addr_range:#x?}");
-        let start = addr_range.start.index().round_down2(SECTOR_SIZE);
-        let end = addr_range.end.index().round_up2(SECTOR_SIZE);
+        let start = addr_range.start.index().round_down2(SECTOR_SIZE) as u64;
+        let end = addr_range.end.index().round_up2(SECTOR_SIZE) as u64;
 
-        let size = end - start;
-        self.buffer.clear();
-        self.buffer
-            .try_reserve_exact(size)
-            .map_err(|err| error!("failed to allocate buffer of size {size:#x}: {err}"))
-            .map_err(|()| DevError::WriteZero)?;
-        self.buffer.resize(size, 0x36);
+        let start_sector = SectorID::from_bytes(start);
+        let sectors = SectorID::from_bytes(end - start);
+        self.resize(sectors)?;
 
-        self.dev
-            .read_blocks(start / SECTOR_SIZE, self.buffer.as_mut_slice())
-            .map_err(|err| error!("failed to read blocks: {err}"))
-            .map_err(|()| DevError::WriteZero)?;
+        self.dev.read_blocks(start_sector, &mut self.buffer)?;
 
-        let size0 = (addr_range.end - addr_range.start).index();
+        let size0 = *(addr_range.end - addr_range.start);
         Ok(Slice::new(
-            &self.buffer[addr_range.start.index().modulo2(SECTOR_SIZE)..][..size0],
+            &self.buffer.as_bytes()[addr_range.start.index().modulo2(SECTOR_SIZE)..][..size0],
             addr_range.start,
         ))
     }
 
     fn commit(&mut self, commit: Commit<u8>) -> Result<(), Error<FSE>> {
-        let (chunks, rest) = commit.as_ref().as_chunks::<SECTOR_SIZE>();
-        let index = commit.addr().index();
-        for (i, chunk) in chunks.iter().enumerate() {
-            self.dev
-                .write_blocks(index + i, chunk)
-                .map_err(|err| error!("failed to write blocks: {err}"))
-                .map_err(|()| DevError::WriteZero)?;
-        }
-        if !rest.is_empty() {
-            let buf = &mut [0; SECTOR_SIZE];
-            let i = index + chunks.len();
-            buf[..rest.len()].copy_from_slice(rest);
-
-            self.dev
-                .write_blocks(i, buf)
-                .map_err(|err| error!("failed to write last block: {err}"))
-                .map_err(|()| DevError::WriteZero)?;
-        }
+        let start = *commit.addr();
+        let offset = commit.addr().modulo2(SECTOR_SIZE);
+        let bytes = commit.as_ref();
+        let sector = SectorID::from_bytes(start.round_down2(SECTOR_SIZE) as u64);
+        self.dev.write_data(sector, offset, bytes)?;
         Ok(())
     }
 }

@@ -1,3 +1,5 @@
+pub use efs::arch::u64_to_usize;
+
 pub mod lazy;
 pub mod string;
 pub mod time;

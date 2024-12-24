@@ -152,6 +152,7 @@ macro_rules! export_c_fn {
         $($tts:tt)*
     ) => {
         $(#[$($attrss)*])*
+        #[attr_wrapper::time_me]
         $(pub $($pub_)? )? $(unsafe $($unsafe_)? )? fn $name($($arg: $(& $($ref_)?)? $val),*)
             $(-> $ret)?
             $body

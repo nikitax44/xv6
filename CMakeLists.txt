@@ -40,6 +40,7 @@ set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
 set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 add_custom_command(
   OUTPUT librust_xv6.a
+  COMMAND cd ./rust-xv6 && cargo clippy --release --frozen --lib || true
   COMMAND cd ./rust-xv6 && cargo build ${CARGO_ARGUMENTS}
   COMMAND cp ./target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
   DEPENDS ./rust-xv6/src/** ./rust-xv6/Cargo.*
@@ -106,6 +107,6 @@ add_custom_target(
   qemu-gdb
   DEPENDS kernel .gdbinit fs.img qemu-script
   COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window."
-  COMMAND CPUS=${NPROC} KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
+  COMMAND CPUS=1 KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
           ./qemu-script -S -gdb "tcp::${GDBPORT}"
 )

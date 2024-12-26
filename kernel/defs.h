@@ -35,6 +35,7 @@ void  lst_push(struct list*, void*);
 void* lst_pop(struct list*);
 void  lst_print(struct list*);
 int   lst_empty(struct list*);
+void  lst_extend_move(struct list*, struct list*);
 
 // exec.c
 // gcc does not recognize that they're the same
@@ -179,6 +180,7 @@ int         copyout(pagetable_t, u64, const u8*, u64);
 int         copyin(pagetable_t, char*, u64, u64);
 int         copyinstr(pagetable_t, char*, u64, u64);
 int         map_stack(usize);
+void        unmap_stack(usize);
 
 // plic.c
 void plicinit(void);

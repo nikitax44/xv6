@@ -8,19 +8,20 @@
 struct {
   u64             max_sz;
   u64             sz;
-  u64             mapped_sz;
+  u64             mapped;
   u32*            buffer;
   struct spinlock lock;
 } free_stack;
 
+// TODO change kalloc
 void init_free_stack(void) {
   initlock(&free_stack.lock, "free_lock");
   if ((free_stack.buffer = kalloc()) == 0) {
     panic("bd_malloc");
   }
-  free_stack.max_sz    = START_STACK_SIZE;
-  free_stack.sz        = START_STACK_SIZE;
-  free_stack.mapped_sz = 0;
+  free_stack.mapped = 0;
+  free_stack.max_sz = START_STACK_SIZE;
+  free_stack.sz     = START_STACK_SIZE;
   for (u64 i = 0; i < START_STACK_SIZE; ++i) {
     free_stack.buffer[i] = START_STACK_SIZE - i - 1;
   }
@@ -44,20 +45,23 @@ int free_stack_pop(void) {
     free_stack.buffer = new_buffer;
   }
   int res = free_stack.buffer[--free_stack.sz];
-  if ((u64)res == free_stack.mapped_sz) {
-    if (map_stack(res) != 0) {
-      free_stack.sz++;
-      res = -1;
-    } else {
-      free_stack.mapped_sz++;
-    }
+  if (free_stack.mapped >= 100 || map_stack(res) != 0) {
+    printf("map_stack error\n");
+    free_stack.sz++;
+    free_stack.mapped--;
+    res = -1;
   }
+  free_stack.mapped++;
+  printf("map_stack: %d, mapped %d \n", res, (int)free_stack.mapped);
   release(&free_stack.lock);
   return res;
 }
 
 void free_stack_push(u32 val) {
   acquire(&free_stack.lock);
+  unmap_stack(val);
+  free_stack.mapped--;
+  printf("unmap_stack: %d, mapped: %d \n", val, (int)free_stack.mapped);
   free_stack.buffer[free_stack.sz++] = val;
   release(&free_stack.lock);
 }

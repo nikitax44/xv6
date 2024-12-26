@@ -18,7 +18,7 @@ extern "C" fn kalloc() -> *mut Page {
 /// # Safety
 /// ptr must point to page-aligned memory. it transfers the ownership over that page.
 #[no_mangle]
-unsafe extern "C" fn kfree(ptr: Option<ptr::NonNull<Page>>) {
+pub unsafe extern "C" fn kfree(ptr: Option<ptr::NonNull<Page>>) {
     let mut ptr = ptr.expect("kfree(NULL)");
     assert!(ptr.is_aligned(), "kfree(unaligned)");
 

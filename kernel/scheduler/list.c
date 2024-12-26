@@ -8,6 +8,11 @@
 // fast. circular simplifies code, because don't have to check for
 // empty list in insert and remove.
 
+void lst_link(struct list* a, struct list* b) {
+  a->next = b;
+  b->prev = a;
+}
+
 void lst_init(struct list* lst) {
   lst->next = lst;
   lst->prev = lst;
@@ -42,4 +47,10 @@ void lst_print(struct list* lst) {
     printf(" %p", (void*)p);
   }
   printf("\n");
+}
+
+void lst_extend_move(struct list* dst, struct list* src) {
+  lst_link(src->prev, dst->next);
+  lst_link(dst, src->next);
+  lst_init(src);
 }

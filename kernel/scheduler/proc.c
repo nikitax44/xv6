@@ -13,11 +13,11 @@
 
 struct cpu cpus[NCPU];
 
-// struct proc proc[NPROC];
-
 struct proc* initproc;
 
-struct list sentinel_proc_list;
+struct list sentinel_sched;
+
+struct list sentinel_sleep_list;
 
 int             nextpid = 1;
 struct spinlock pid_lock;
@@ -36,7 +36,8 @@ struct spinlock wait_lock;
 
 // initialize the proc table.
 void procinit(void) {
-  lst_init(&sentinel_proc_list);
+  lst_init(&sentinel_sched);
+  lst_init(&sentinel_sleep_list);
   init_free_stack();
 
   initlock(&pid_lock, "nextpid");
@@ -79,7 +80,7 @@ int allocpid(void) {
   return pid;
 }
 
-// Look in the process table for an UNUSED proc.
+// try to find UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
@@ -89,6 +90,10 @@ static int allocproc(struct proc** proc_out) {
     return ENOMEM;
   }
   memset(p, 0, sizeof(struct proc));
+  lst_init(&p->sched);
+  lst_init(&p->sleep_list);
+  lst_init(&p->children);
+  lst_init(&p->sib);
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe*)kalloc()) == 0) {
@@ -111,7 +116,6 @@ static int allocproc(struct proc** proc_out) {
   }
   p->kstack = KSTACK(stack_pos);
 
-  lst_init(&p->proc_list);
   initlock(&p->lock, "proc");
   p->pid   = allocpid();
   p->state = USED;
@@ -123,7 +127,7 @@ static int allocproc(struct proc** proc_out) {
 
   acquire(&wait_lock);
   acquire(&p->lock);
-  lst_push(sentinel_proc_list.prev, &p->proc_list);
+  lst_push(sentinel_sched.prev, &p->sched);
   release(&wait_lock);
   *proc_out = p;
   return 0;
@@ -141,7 +145,11 @@ static void freeproc(struct proc* p) {
   }
   if (p->kstack) {
     int pos = ((TRAMPOLINE - p->kstack) / (3 * PGSIZE)) - 1;
+    sfence_vma_address(p->kstack);
     free_stack_push(pos);
+  }
+  if (!lst_empty(&p->children)) {
+    panic("free children");
   }
   kfree(p);
 }
@@ -246,7 +254,7 @@ int fork(void) {
   if ((res = uvmcopy(p->pagetable, np->pagetable, p->sz)) != 0) {
     release(&np->lock);
     acquire(&wait_lock);
-    lst_remove(&np->proc_list);
+    lst_remove(&np->sched);
     freeproc(np);
     release(&wait_lock);
     return -res;
@@ -275,6 +283,7 @@ int fork(void) {
 
   acquire(&wait_lock);
   np->parent = p;
+  lst_push(&p->children, &np->sib);
   release(&wait_lock);
 
   acquire(&np->lock);
@@ -288,15 +297,17 @@ int fork(void) {
 // Caller must hold wait_lock.
 void reparent(struct proc* p) {
   struct proc* pp;
-  struct list* it;
+  struct list* sib;
 
-  for (it = sentinel_proc_list.next; it != &sentinel_proc_list; it = it->next) {
-    pp = (struct proc*)((char*)it - offsetof(struct proc, proc_list));
-    if (pp->parent == p) {
-      pp->parent = initproc;
-      wakeup_base(initproc, 1);
+  for (sib = p->children.next; sib != &p->children; sib = sib->next) {
+    pp = (struct proc*)((char*)sib - offsetof(struct proc, sib));
+    if (pp->parent != p) {
+      panic("reparent: wrong parent");
     }
+    pp->parent = initproc;
+    wakeup_base(initproc, 1);
   }
+  lst_extend_move(&initproc->children, &p->children);
 }
 
 // Exit the current process.  Does not return.
@@ -335,6 +346,7 @@ void exit(int status) {
 
   p->xstate = status;
   p->state  = ZOMBIE;
+  // lst_remove(&p->sched);
 
   release(&wait_lock);
 
@@ -347,44 +359,57 @@ void exit(int status) {
 // Return -1 if this process has no children.
 int wait(u64 addr) {
   struct proc* pp;
-  int          havekids, pid;
+  int          pid;
   struct proc* p = myproc();
-  struct list* it;
+  struct list* sib;
 
   acquire(&wait_lock);
 
   for (;;) {
-    // Scan through table looking for exited children.
-    havekids = 0;
-    for (it = sentinel_proc_list.next; it != &sentinel_proc_list;
-         it = it->next) {
-      pp = (struct proc*)((char*)it - offsetof(struct proc, proc_list));
-      if (pp->parent == p) {
-        // make sure the child isn't still in exit() or swtch().
-        acquire(&pp->lock);
-
-        havekids = 1;
-        if (pp->state == ZOMBIE) {
-          // Found one.
-          pid = pp->pid;
-          if (addr != 0 && copyout(p->pagetable, addr, (const u8*)&pp->xstate,
-                                   sizeof(pp->xstate)) < 0) {
-            release(&pp->lock);
-            release(&wait_lock);
-            return -1;
-          }
-          lst_remove(&pp->proc_list);
-          release(&pp->lock);
-          freeproc(pp);
-          release(&wait_lock);
-          return pid;
-        }
-        release(&pp->lock);
-      }
+    // No point waiting if we don't have any children.
+    if (lst_empty(&p->children)) {
+      release(&wait_lock);
+      return -1;
     }
 
-    // No point waiting if we don't have any children.
-    if (!havekids || killed(p)) {
+    // Scan through table looking for exited children.
+    for (sib = p->children.next; sib != &p->children; sib = sib->next) {
+      pp = (struct proc*)((char*)sib - offsetof(struct proc, sib));
+      if (pp->parent != p) {
+        panic("wait: wrong parent");
+      }
+
+      // make sure the child isn't still in exit() or swtch().
+      acquire(&pp->lock);
+
+      if (pp->state == ZOMBIE) {
+        // Found one.
+        pid = pp->pid;
+
+        if (!lst_empty(&pp->children)) {
+          panic("stale ZOMBIE's children");
+        }
+
+        if (addr != 0 && copyout(p->pagetable, addr, (const u8*)&pp->xstate,
+                                 sizeof(pp->xstate)) < 0) {
+          release(&pp->lock);
+          release(&wait_lock);
+          return -1;
+        }
+
+        // cut zombie from children list
+        lst_remove(&pp->sib);
+
+        lst_remove(&pp->sched);
+        release(&pp->lock);
+        freeproc(pp);
+        release(&wait_lock);
+        return pid;
+      }
+      release(&pp->lock);
+    }
+
+    if (killed(p)) {
       release(&wait_lock);
       return -1;
     }
@@ -394,7 +419,7 @@ int wait(u64 addr) {
   }
 }
 
-// u64 max_shead_cycles = 100;
+u64 max_shead_cycles = 100;
 
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -408,33 +433,32 @@ void scheduler(void) {
   struct cpu*  c = mycpu();
   struct list* lst_ptr;
 
-  c->proc = 0;
-  // u64 count   = 0;
-  // int has_job = 0;
+  c->proc     = 0;
+  u64 count   = 0;
+  int has_job = 0;
   for (;;) {
-    //    count++;
-    //    if (count == max_shead_cycles) {
-    //      if (!has_job) {
-    //        intr_on();
-    //        asm volatile("wfi");
-    //      }
-    //      count   = 0;
-    //      has_job = 0;
-    //    }
+    count++;
+    if (count == max_shead_cycles) {
+      if (!has_job) {
+        intr_on();
+        asm volatile("wfi");
+      }
+      count   = 0;
+      has_job = 0;
+    }
     // The most recent process to run may have had interrupts
     // turned off; enable them to avoid a deadlock if all
     // processes are waiting.
     intr_on();
-    p = 0;
     acquire(&wait_lock);
-    if (sentinel_proc_list.next == &sentinel_proc_list) {
+    if (sentinel_sched.next == &sentinel_sched) {
       release(&wait_lock);
       continue;
     }
-    lst_ptr = sentinel_proc_list.next;
+    lst_ptr = sentinel_sched.next;
     lst_remove(lst_ptr);
-    lst_push(sentinel_proc_list.prev, lst_ptr);
-    p = (struct proc*)((char*)lst_ptr - offsetof(struct proc, proc_list));
+    lst_push(sentinel_sched.prev, lst_ptr);
+    p = (struct proc*)((char*)lst_ptr - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->state != RUNNABLE) {
       release(&p->lock);
@@ -442,12 +466,14 @@ void scheduler(void) {
       continue;
     }
     release(&wait_lock);
-    // has_job = 1;
+    has_job = 1;
     //  Switch to chosen process.  It is the process's job
     //  to release its lock and then reacquire it
     //  before jumping back to us.
     p->state = RUNNING;
     c->proc  = p;
+    // flush TLB for kstack
+    sfence_vma_address(p->kstack);
     swtch(&c->context, &p->context);
 
     // Process is done running for now.
@@ -528,10 +554,8 @@ void sleep(void* chan, struct spinlock* lk) {
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
   // so it's okay to release lk.
-
   acquire(&p->lock); // DOC: sleeplock1
   release(lk);
-
   // Go to sleep.
   p->chan  = chan;
   p->state = SLEEPING;
@@ -556,8 +580,8 @@ void wakeup_base(void* chan, int has_wait_lock) {
   if (!has_wait_lock) {
     acquire(&wait_lock);
   }
-  for (it = sentinel_proc_list.next; it != &sentinel_proc_list; it = it->next) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, proc_list));
+  for (it = sentinel_sched.next; it != &sentinel_sched; it = it->next) {
+    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     if (p != myproc()) {
       acquire(&p->lock);
       if (p->state == SLEEPING && p->chan == chan) {
@@ -583,8 +607,8 @@ int kill(int pid) {
   struct list* it;
 
   acquire(&wait_lock);
-  for (it = sentinel_proc_list.next; it != &sentinel_proc_list; it = it->next) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, proc_list));
+  for (it = sentinel_sched.next; it != &sentinel_sched; it = it->next) {
+    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->pid == pid) {
       p->killed = 1;
@@ -608,8 +632,8 @@ void kill_all(void) {
   struct list* it;
 
   acquire(&wait_lock);
-  for (it = sentinel_proc_list.next; it != &sentinel_proc_list; it = it->next) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, proc_list));
+  for (it = sentinel_sched.next; it != &sentinel_sched; it = it->next) {
+    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->pid > 1) {
       p->killed = 1;
@@ -677,8 +701,8 @@ void procdump(void) {
 
   printf("\n");
   acquire(&wait_lock);
-  for (it = sentinel_proc_list.next; it != &sentinel_proc_list; it = it->next) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, proc_list));
+  for (it = sentinel_sched.next; it != &sentinel_sched; it = it->next) {
+    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     if (p->state == UNUSED) {
       continue;
     }

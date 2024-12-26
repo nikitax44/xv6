@@ -93,7 +93,8 @@ struct proc {
 
   struct spinlock lock;
 
-  struct list proc_list;
+  struct list sched;
+  struct list sleep_list;
   struct list sib;
 
   // p->lock must be held when using these:

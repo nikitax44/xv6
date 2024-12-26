@@ -2,6 +2,7 @@ mod ffi;
 mod kmem;
 pub mod page;
 
+pub use ffi::kfree;
 pub use kmem::{KMem, KMEM};
 use thiserror::Error;
 

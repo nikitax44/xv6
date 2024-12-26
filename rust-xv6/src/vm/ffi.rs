@@ -14,55 +14,51 @@ static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 #[allow(clippy::large_stack_frames, reason = "it is fine")]
 #[no_mangle]
 extern "C" fn map_stack(pos: usize) -> ErrNo {
-    let page1 = KMEM.lock().alloc("proc stack");
-    if let Err(err) = page1 {
-        return match err {
-            KMEMError::AllocFail(_err) => ErrNo::ENOMEM,
-        };
-    }
-    let page2 = KMEM.lock().alloc("proc stack");
-    if let Err(err) = page2 {
-        return match err {
-            KMEMError::AllocFail(_err) => ErrNo::ENOMEM,
-        };
-    }
     let va = KSTACK(pos);
-    let mres1 = KERNEL_PAGETABLE
-        .write()
-        .as_mut()
-        .expect("map_page on None")
-        .map_page(
-            va,
-            page1
-                .expect("something went wrong")
-                .into_box()
-                .leak()
-                .as_ptr() as usize,
-            Mode::_RW_,
-        );
-    if let Err(_x) = mres1 {
-        return ErrNo::ENOMEM;
-    }
-    let mres2 = KERNEL_PAGETABLE
-        .write()
-        .as_mut()
-        .expect("map_page on None")
-        .map_page(
-            va + PGSIZE,
-            page2
-                .expect("something went wrong")
-                .into_box()
-                .leak()
-                .as_ptr() as usize,
-            Mode::_RW_,
-        );
-    if let Err(err) = mres2 {
-        return match err {
-            PTError::AllocFail(_err) => ErrNo::ENOMEM,
-            _ => panic!("ffi::proc_map_one_stack: {:?}", err),
+    for i in 0..2 {
+        let page = KMEM.lock().alloc("proc stack");
+        if let Err(err) = page {
+            return match err {
+                KMEMError::AllocFail(_err) => ErrNo::ENOMEM,
+            };
+        }
+        let mres = KERNEL_PAGETABLE
+            .write()
+            .as_mut()
+            .expect("map_page on None")
+            .map_page(
+                va + PGSIZE * i,
+                page.expect("something went wrong")
+                    .into_box()
+                    .leak()
+                    .as_ptr() as usize,
+                Mode::_RW_,
+            );
+        if let Err(err) = mres {
+            return match err {
+                PTError::AllocFail(_err) => ErrNo::ENOMEM,
+                _ => panic!("ffi::proc_map_one_stack: {:?}", err),
+            };
         };
-    };
+    }
     ErrNo::SUCCESS
+}
+
+#[allow(clippy::large_stack_frames, reason = "it is fine")]
+#[no_mangle]
+extern "C" fn unmap_stack(pos: usize) {
+    let va = KSTACK(pos);
+    for i in 0..2 {
+        // Safety: address is allocated so it's safe
+        unsafe {
+            KERNEL_PAGETABLE
+                .write()
+                .as_mut()
+                .expect("unmap_page on None")
+                .unmap_page_and_free(va + i * PGSIZE)
+                .expect("no errors are expected");
+        }
+    }
 }
 
 /// # Safety
@@ -87,7 +83,7 @@ extern "C" fn with_kernel_pagetable(op: extern "C" fn(&mut IPagetable)) {
         .expect("kernel pagetable was expected to be present");
     op(kpt
         .inner_mut()
-        .expect("mernel pagetable is the Pagetable::Ref variant"));
+        .expect("kernel pagetable is the Pagetable::Ref variant"));
 }
 
 //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)

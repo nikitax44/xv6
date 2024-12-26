@@ -313,7 +313,7 @@ int fork(void) {
 }
 
 // Pass p's abandoned children to init.
-// Caller must hold wait_lock.
+// Caller must hold wait_lock and p->lock.
 void reparent(struct proc* p) {
   struct proc* pp;
   struct list* sib;
@@ -326,7 +326,9 @@ void reparent(struct proc* p) {
     pp->parent = initproc;
   }
   wakeup_base(initproc, 1);
+  acquire(&initproc->lock);
   lst_extend_move(&initproc->children, &p->children);
+  release(&initproc->lock);
 }
 
 // Exit the current process.  Does not return.
@@ -355,13 +357,13 @@ void exit(int status) {
 
   acquire(&wait_lock);
 
-  // Give any children to init.
-  reparent(p);
-
   // Parent might be sleeping in wait().
   wakeup_base(p->parent, 1);
 
   acquire(&p->lock);
+
+  // Give any children to init.
+  reparent(p);
 
   p->xstate = status;
   p->state  = ZOMBIE;
@@ -374,6 +376,7 @@ void exit(int status) {
   panic("zombie exit");
 }
 
+struct spinlock random_lock;
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int wait(u64 addr) {
@@ -381,13 +384,14 @@ int wait(u64 addr) {
   int          pid;
   struct proc* p = myproc();
   struct list* sib;
-
-  acquire(&wait_lock);
+  // acquire(&p->lock);
+  acquire(&random_lock);
 
   for (;;) {
+    release(&random_lock);
     // No point waiting if we don't have any children.
     if (lst_empty(&p->children)) {
-      release(&wait_lock);
+      // release(&p->lock);
       return -1;
     }
 
@@ -412,29 +416,33 @@ int wait(u64 addr) {
         if (addr != 0 && copyout(p->pagetable, addr, (const u8*)&pp->xstate,
                                  sizeof(pp->xstate)) < 0) {
           release(&pp->lock);
-          release(&wait_lock);
+          // release(&p->lock);
           return -1;
         }
 
         // cut zombie from children list
         lst_remove(&pp->sib);
+        release(&pp->lock);
+        // release(&p->lock);
 
+        acquire(&wait_lock);
+        acquire(&pp->lock);
         lst_remove(&pp->sched);
         release(&pp->lock);
-        freeproc(pp);
         release(&wait_lock);
+        freeproc(pp);
         return pid;
       }
       release(&pp->lock);
     }
 
-    if (killed(p)) {
-      release(&wait_lock);
+    if (p->killed) {
+      // release(&p->lock);
       return -1;
     }
-
     // Wait for a child to exit.
-    sleep(p, &wait_lock); // DOC: wait-sleep
+    acquire(&random_lock);
+    sleep(p, &random_lock); // DOC: wait-sleep
   }
 }
 
@@ -577,8 +585,12 @@ void sleep(void* chan, struct spinlock* lk) {
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
   // so it's okay to release lk.
-  acquire(&p->lock); // DOC: sleeplock1
-  release(lk);
+  if (lk != &p->lock) {
+    acquire(&p->lock); // DOC: sleeplock1
+  }
+  if (lk != &p->lock) {
+    release(lk);
+  }
   // Go to sleep.
   p->chan  = chan;
   p->state = SLEEPING;
@@ -589,8 +601,12 @@ void sleep(void* chan, struct spinlock* lk) {
   p->chan = 0;
 
   // Reacquire original lock.
-  release(&p->lock);
-  acquire(lk);
+  if (lk != &p->lock) {
+    release(&p->lock);
+  }
+  if (lk != &p->lock) {
+    acquire(lk);
+  }
 }
 
 // Wake up all processes sleeping on chan.

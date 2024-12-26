@@ -46,13 +46,13 @@ int free_stack_pop(void) {
   }
   int res = free_stack.buffer[--free_stack.sz];
   if (free_stack.mapped >= 100 || map_stack(res) != 0) {
-    printf("map_stack error\n");
+    // printf("map_stack error\n");
     free_stack.sz++;
     free_stack.mapped--;
     res = -1;
   }
   free_stack.mapped++;
-  printf("map_stack: %d, mapped %d \n", res, (int)free_stack.mapped);
+  // printf("map_stack: %d, mapped %d \n", res, (int)free_stack.mapped);
   release(&free_stack.lock);
   return res;
 }
@@ -61,7 +61,7 @@ void free_stack_push(u32 val) {
   acquire(&free_stack.lock);
   unmap_stack(val);
   free_stack.mapped--;
-  printf("unmap_stack: %d, mapped: %d \n", val, (int)free_stack.mapped);
+  // printf("unmap_stack: %d, mapped: %d \n", val, (int)free_stack.mapped);
   free_stack.buffer[free_stack.sz++] = val;
   release(&free_stack.lock);
 }

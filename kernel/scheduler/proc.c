@@ -17,7 +17,8 @@ struct proc* initproc;
 
 struct list sentinel_sched;
 
-struct list sentinel_sleep_list;
+struct list     sentinel_sleep_list;
+struct spinlock random_lock;
 
 int             nextpid = 1;
 struct spinlock pid_lock;
@@ -52,6 +53,7 @@ void procinit(void) {
   init_free_stack();
 
   initlock(&pid_lock, "nextpid");
+  initlock(&random_lock, "random_lock");
   initlock(&wait_lock, "wait_lock");
 }
 
@@ -355,10 +357,10 @@ void exit(int status) {
   end_op();
   p->cwd = 0;
 
+  acquire(&random_lock);
   acquire(&wait_lock);
 
-  // Parent might be sleeping in wait().
-  wakeup_base(p->parent, 1);
+  // wakeup_base(p->parent, 1);
 
   acquire(&p->lock);
 
@@ -367,16 +369,28 @@ void exit(int status) {
 
   p->xstate = status;
   p->state  = ZOMBIE;
+  release(&p->lock);
   // lst_remove(&p->sched);
 
+  // Parent might be sleeping in wait().
+  acquire(&p->parent->lock);
+  if (p->parent->state == SLEEPING) {
+    p->parent->state = RUNNABLE;
+    lst_remove(&p->parent->sched);
+    lst_push(sentinel_sched.prev, &p->parent->sched);
+  }
+  release(&p->parent->lock);
+
   release(&wait_lock);
+  release(&random_lock);
+
+  acquire(&p->lock);
 
   // Jump into the scheduler, never to return.
   sched();
   panic("zombie exit");
 }
 
-struct spinlock random_lock;
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int wait(u64 addr) {
@@ -388,10 +402,10 @@ int wait(u64 addr) {
   acquire(&random_lock);
 
   for (;;) {
-    release(&random_lock);
     // No point waiting if we don't have any children.
     if (lst_empty(&p->children)) {
       // release(&p->lock);
+      release(&random_lock);
       return -1;
     }
 
@@ -417,6 +431,7 @@ int wait(u64 addr) {
                                  sizeof(pp->xstate)) < 0) {
           release(&pp->lock);
           // release(&p->lock);
+          release(&random_lock);
           return -1;
         }
 
@@ -431,6 +446,7 @@ int wait(u64 addr) {
         release(&pp->lock);
         release(&wait_lock);
         freeproc(pp);
+        release(&random_lock);
         return pid;
       }
       release(&pp->lock);
@@ -438,10 +454,10 @@ int wait(u64 addr) {
 
     if (p->killed) {
       // release(&p->lock);
+      release(&random_lock);
       return -1;
     }
     // Wait for a child to exit.
-    acquire(&random_lock);
     sleep(p, &random_lock); // DOC: wait-sleep
   }
 }

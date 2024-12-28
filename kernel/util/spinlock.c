@@ -11,6 +11,14 @@ void initlock(struct spinlock* lk, char* name) {
   lk->cpu    = 0;
 }
 
+extern struct spinlock wait_lock;
+
+int wait_lock_cnt  = 0;
+int wait_lock_cnt2 = 1;
+
+int allcnt  = 0;
+int waitcnt = 0;
+
 // Acquire the lock.
 // Loops (spins) until the lock is acquired.
 void acquire(struct spinlock* lk) {
@@ -23,8 +31,26 @@ void acquire(struct spinlock* lk) {
   //   a5 = 1
   //   s1 = &lk->locked
   //   amoswap.w.aq a5, a5, (s1)
-  while (__sync_lock_test_and_set(&lk->locked, 1) != 0)
-    ;
+
+  //__sync_fetch_and_add(&allcnt, 1);
+  // int cnt = 0;
+  while (true) {
+    while (lk->locked == 1)
+      ;
+    if (__sync_lock_test_and_set(&lk->locked, 1) == 0) {
+      break;
+    }
+    // cnt++;
+  }
+
+  //  if (lk == &wait_lock) {
+  //    __sync_fetch_and_add(&wait_lock_cnt, cnt);
+  //    __sync_fetch_and_add(&waitcnt, 1);
+  //    if (waitcnt % 2000 == 0) {
+  //      printf(" L%d WC%d W%d ", wait_lock_cnt / waitcnt, wait_lock_cnt,
+  //      waitcnt); printf(" A%d W%d ", allcnt, waitcnt);
+  //    }
+  //  }
 
   // Tell the C compiler and the processor to not move loads or stores
   // past this point, to ensure that the critical section's memory

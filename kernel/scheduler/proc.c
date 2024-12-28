@@ -15,10 +15,13 @@ struct cpu cpus[NCPU];
 
 struct proc* initproc;
 
+// list for procces that may has arbitrary state, mostly it has runnable state
 struct list sentinel_sched;
 
-struct list     sentinel_sleep_list;
-struct spinlock random_lock;
+// list for procces that has state different from runnable
+// if process switch your status to runnable it must add yourself to
+// sentinel_sched list and delete yourself from current list
+struct list sentinel_other;
 
 int             nextpid = 1;
 struct spinlock pid_lock;
@@ -26,35 +29,38 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void freeproc(struct proc* p);
 void        wakeup_base(void*, int);
+void        wakeup_process(struct proc*);
 
 extern char trampoline[]; // trampoline.S
 
-// helps ensure that wakeups of wait()ing
-// parents are not lost. helps obey the
-// memory model when using p->parent.
-// must be acquired before any p->lock.
+// we must acquire this lock if want to iterate sentinel_sched list of
+// sentinel_other list must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+// we must held this lock if want to use children list or p->parent of some
+// process must be acquired before wait_lock and any p->lock.
+struct spinlock parent_lock;
+
 // wait_lock must be aquired
-// iterate all proccesses in shedule list, and not shedule list
-// it returns &sentinel_sleep_list if itr wal last element
-struct list* iterate_next(struct list* itr) {
-  if (itr->next == &sentinel_sched) {
-    return sentinel_sleep_list.next;
+// iterate all proccesses in sentinel_sched list, and sentinel_other list
+// it returns &sentinel_other if iter wal last element
+struct list* iterate_next(struct list* iter) {
+  if (iter->next == &sentinel_sched) {
+    return sentinel_other.next;
   } else {
-    return itr->next;
+    return iter->next;
   }
 }
 
 // initialize the proc table.
 void procinit(void) {
   lst_init(&sentinel_sched);
-  lst_init(&sentinel_sleep_list);
+  lst_init(&sentinel_other);
   init_free_stack();
 
   initlock(&pid_lock, "nextpid");
-  initlock(&random_lock, "random_lock");
   initlock(&wait_lock, "wait_lock");
+  initlock(&parent_lock, "parent_lock");
 }
 
 // Must be called with interrupts disabled,
@@ -104,7 +110,6 @@ static int allocproc(struct proc** proc_out) {
   }
   memset(p, 0, sizeof(struct proc));
   lst_init(&p->sched);
-  lst_init(&p->sleep_list);
   lst_init(&p->children);
   lst_init(&p->sib);
 
@@ -140,7 +145,7 @@ static int allocproc(struct proc** proc_out) {
 
   acquire(&wait_lock);
   acquire(&p->lock);
-  lst_push(sentinel_sleep_list.prev, &p->sched);
+  lst_push(sentinel_other.prev, &p->sched);
   release(&wait_lock);
   *proc_out = p;
   return 0;
@@ -299,11 +304,13 @@ int fork(void) {
 
   release(&np->lock);
 
-  acquire(&wait_lock);
-  acquire(&np->lock);
+  acquire(&parent_lock);
   np->parent = p;
   lst_push(&p->children, &np->sib);
+  release(&parent_lock);
 
+  acquire(&wait_lock);
+  acquire(&np->lock);
   np->state = RUNNABLE;
   lst_remove(&np->sched);
   lst_push(sentinel_sched.prev, &np->sched);
@@ -315,11 +322,11 @@ int fork(void) {
 }
 
 // Pass p's abandoned children to init.
-// Caller must hold wait_lock and p->lock.
 void reparent(struct proc* p) {
   struct proc* pp;
   struct list* sib;
 
+  acquire(&parent_lock);
   for (sib = p->children.next; sib != &p->children; sib = sib->next) {
     pp = (struct proc*)((char*)sib - offsetof(struct proc, sib));
     if (pp->parent != p) {
@@ -327,10 +334,11 @@ void reparent(struct proc* p) {
     }
     pp->parent = initproc;
   }
-  wakeup_base(initproc, 1);
-  acquire(&initproc->lock);
   lst_extend_move(&initproc->children, &p->children);
-  release(&initproc->lock);
+  release(&parent_lock);
+  acquire(&wait_lock);
+  wakeup_process(initproc);
+  release(&wait_lock);
 }
 
 // Exit the current process.  Does not return.
@@ -357,34 +365,22 @@ void exit(int status) {
   end_op();
   p->cwd = 0;
 
-  acquire(&random_lock);
-  acquire(&wait_lock);
-
-  // wakeup_base(p->parent, 1);
-
-  acquire(&p->lock);
-
   // Give any children to init.
   reparent(p);
 
+  acquire(&parent_lock);
+  acquire(&wait_lock);
+  acquire(&p->lock);
   p->xstate = status;
   p->state  = ZOMBIE;
   release(&p->lock);
-  // lst_remove(&p->sched);
 
   // Parent might be sleeping in wait().
-  acquire(&p->parent->lock);
-  if (p->parent->state == SLEEPING) {
-    p->parent->state = RUNNABLE;
-    lst_remove(&p->parent->sched);
-    lst_push(sentinel_sched.prev, &p->parent->sched);
-  }
-  release(&p->parent->lock);
-
-  release(&wait_lock);
-  release(&random_lock);
+  wakeup_process(p->parent);
 
   acquire(&p->lock);
+  release(&wait_lock);
+  release(&parent_lock);
 
   // Jump into the scheduler, never to return.
   sched();
@@ -398,14 +394,13 @@ int wait(u64 addr) {
   int          pid;
   struct proc* p = myproc();
   struct list* sib;
-  // acquire(&p->lock);
-  acquire(&random_lock);
+
+  acquire(&parent_lock);
 
   for (;;) {
     // No point waiting if we don't have any children.
     if (lst_empty(&p->children)) {
-      // release(&p->lock);
-      release(&random_lock);
+      release(&parent_lock);
       return -1;
     }
 
@@ -430,35 +425,33 @@ int wait(u64 addr) {
         if (addr != 0 && copyout(p->pagetable, addr, (const u8*)&pp->xstate,
                                  sizeof(pp->xstate)) < 0) {
           release(&pp->lock);
-          // release(&p->lock);
-          release(&random_lock);
+          release(&parent_lock);
           return -1;
         }
 
-        // cut zombie from children list
-        lst_remove(&pp->sib);
         release(&pp->lock);
-        // release(&p->lock);
-
         acquire(&wait_lock);
         acquire(&pp->lock);
+        // cut zombie from children list
+        lst_remove(&pp->sib);
+
         lst_remove(&pp->sched);
         release(&pp->lock);
-        release(&wait_lock);
         freeproc(pp);
-        release(&random_lock);
+        release(&wait_lock);
+        release(&parent_lock);
         return pid;
       }
       release(&pp->lock);
     }
 
-    if (p->killed) {
-      // release(&p->lock);
-      release(&random_lock);
+    if (killed(p)) {
+      release(&parent_lock);
       return -1;
     }
+
     // Wait for a child to exit.
-    sleep(p, &random_lock); // DOC: wait-sleep
+    sleep(p, &parent_lock); // DOC: wait-sleep
   }
 }
 
@@ -500,7 +493,7 @@ void scheduler(void) {
     }
     lst_ptr = sentinel_sched.next;
     lst_remove(lst_ptr);
-    lst_push(sentinel_sleep_list.prev, lst_ptr);
+    lst_push(sentinel_other.prev, lst_ptr);
     p = (struct proc*)((char*)lst_ptr - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->state != RUNNABLE) {
@@ -601,12 +594,8 @@ void sleep(void* chan, struct spinlock* lk) {
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
   // so it's okay to release lk.
-  if (lk != &p->lock) {
-    acquire(&p->lock); // DOC: sleeplock1
-  }
-  if (lk != &p->lock) {
-    release(lk);
-  }
+  acquire(&p->lock); // DOC: sleeplock1
+  release(lk);
   // Go to sleep.
   p->chan  = chan;
   p->state = SLEEPING;
@@ -617,12 +606,8 @@ void sleep(void* chan, struct spinlock* lk) {
   p->chan = 0;
 
   // Reacquire original lock.
-  if (lk != &p->lock) {
-    release(&p->lock);
-  }
-  if (lk != &p->lock) {
-    acquire(lk);
-  }
+  release(&p->lock);
+  acquire(lk);
 }
 
 // Wake up all processes sleeping on chan.
@@ -634,8 +619,7 @@ void wakeup_base(void* chan, int has_wait_lock) {
   if (!has_wait_lock) {
     acquire(&wait_lock);
   }
-  for (it = sentinel_sched.next; it != &sentinel_sleep_list;
-       it = iterate_next(it)) {
+  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     if (p != myproc()) {
       acquire(&p->lock);
@@ -652,6 +636,18 @@ void wakeup_base(void* chan, int has_wait_lock) {
   }
 }
 
+// wakeup one given process
+// user must acquire p->lock and wait_lock
+void wakeup_process(struct proc* p) {
+  acquire(&p->lock);
+  if (p->state == SLEEPING) {
+    p->state = RUNNABLE;
+    lst_remove(&p->sched);
+    lst_push(sentinel_sched.prev, &p->sched);
+  }
+  release(&p->lock);
+}
+
 // Wake up all processes sleeping on chan.
 // Must be called without any p->lock.
 void wakeup(void* chan) { wakeup_base(chan, 0); }
@@ -664,8 +660,7 @@ int kill(int pid) {
   struct list* it;
 
   acquire(&wait_lock);
-  for (it = sentinel_sched.next; it != &sentinel_sleep_list;
-       it = iterate_next(it)) {
+  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->pid == pid) {
@@ -692,8 +687,7 @@ void kill_all(void) {
   struct list* it;
 
   acquire(&wait_lock);
-  for (it = sentinel_sched.next; it != &sentinel_sleep_list;
-       it = iterate_next(it)) {
+  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->pid > 1) {
@@ -764,8 +758,7 @@ void procdump(void) {
 
   printf("\n");
   acquire(&wait_lock);
-  for (it = sentinel_sched.next; it != &sentinel_sleep_list;
-       it = iterate_next(it)) {
+  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     if (p->state == UNUSED) {
       continue;

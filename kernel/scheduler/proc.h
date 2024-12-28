@@ -94,7 +94,6 @@ struct proc {
   struct spinlock lock;
 
   struct list sched;
-  struct list sleep_list;
   struct list sib;
 
   // p->lock must be held when using these:

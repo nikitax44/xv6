@@ -167,6 +167,10 @@ impl<'inner> Pagetable<'inner> {
         Ok(())
     }
 
+    ///# Panics
+    /// if va is valid, then cannot panic
+    ///# Errors
+    /// see `MMapError`
     /// # Safety
     /// mapped page must be allocated
     pub unsafe fn unmap_page_and_free(&mut self, virtual_address: usize) -> Result<(), PTError> {

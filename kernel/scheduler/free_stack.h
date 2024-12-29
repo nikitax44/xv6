@@ -3,7 +3,7 @@
 
 #include "defs.h"
 
-#define START_STACK_SIZE 4
+#define START_STACK_SIZE 1024
 
 void init_free_stack(void);
 

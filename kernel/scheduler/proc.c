@@ -52,6 +52,15 @@ struct list* iterate_next(struct list* iter) {
   }
 }
 
+// wait_lock must be aquired
+// used to get first proced in merged list
+struct list* iterate_begin(void) {
+  if (lst_empty(&sentinel_sched)) {
+    return sentinel_other.next;
+  }
+  return sentinel_sched.next;
+}
+
 // initialize the proc table.
 void procinit(void) {
   lst_init(&sentinel_sched);
@@ -619,7 +628,7 @@ void wakeup_base(void* chan, int has_wait_lock) {
   if (!has_wait_lock) {
     acquire(&wait_lock);
   }
-  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
+  for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     if (p != myproc()) {
       acquire(&p->lock);
@@ -660,7 +669,7 @@ int kill(int pid) {
   struct list* it;
 
   acquire(&wait_lock);
-  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
+  for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->pid == pid) {
@@ -687,7 +696,7 @@ void kill_all(void) {
   struct list* it;
 
   acquire(&wait_lock);
-  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
+  for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     acquire(&p->lock);
     if (p->pid > 1) {
@@ -758,7 +767,7 @@ void procdump(void) {
 
   printf("\n");
   acquire(&wait_lock);
-  for (it = sentinel_sched.next; it != &sentinel_other; it = iterate_next(it)) {
+  for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
     p = (struct proc*)((char*)it - offsetof(struct proc, sched));
     if (p->state == UNUSED) {
       continue;

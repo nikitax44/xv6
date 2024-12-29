@@ -13,7 +13,6 @@ struct {
   struct spinlock lock;
 } free_stack;
 
-// TODO change kalloc
 void init_free_stack(void) {
   initlock(&free_stack.lock, "free_lock");
   if ((free_stack.buffer = kalloc()) == 0) {
@@ -31,28 +30,28 @@ void init_free_stack(void) {
 int free_stack_pop(void) {
   acquire(&free_stack.lock);
   if (free_stack.sz == 0) {
-    u32* new_buffer = kalloc();
-    if (new_buffer == 0) {
-      release(&free_stack.lock);
-      return -1;
-    }
-    for (u64 i = 0; i < free_stack.max_sz; ++i) {
-      new_buffer[i] = 2 * free_stack.max_sz - i - 1;
-    }
-    free_stack.sz = free_stack.max_sz;
-    kfree(free_stack.buffer);
-    free_stack.max_sz *= 2;
-    free_stack.buffer = new_buffer;
+    //    u32* new_buffer = kalloc();
+    //    if (new_buffer == 0) {
+    //      release(&free_stack.lock);
+    //      return -1;
+    //    }
+    //    for (u64 i = 0; i < free_stack.max_sz; ++i) {
+    //      new_buffer[i] = 2 * free_stack.max_sz - i - 1;
+    //    }
+    //    free_stack.sz = free_stack.max_sz;
+    //    kfree(free_stack.buffer);
+    //    free_stack.max_sz *= 2;
+    //    free_stack.buffer = new_buffer;
+    release(&free_stack.lock);
+    return -1;
   }
   int res = free_stack.buffer[--free_stack.sz];
-  if (free_stack.mapped >= 100 || map_stack(res) != 0) {
-    // printf("map_stack error\n");
+  if (map_stack(res) != 0) {
     free_stack.sz++;
     free_stack.mapped--;
     res = -1;
   }
   free_stack.mapped++;
-  // printf("map_stack: %d, mapped %d \n", res, (int)free_stack.mapped);
   release(&free_stack.lock);
   return res;
 }
@@ -61,7 +60,6 @@ void free_stack_push(u32 val) {
   acquire(&free_stack.lock);
   unmap_stack(val);
   free_stack.mapped--;
-  // printf("unmap_stack: %d, mapped: %d \n", val, (int)free_stack.mapped);
   free_stack.buffer[free_stack.sz++] = val;
   release(&free_stack.lock);
 }

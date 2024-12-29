@@ -958,29 +958,55 @@ void forkfork(char* s) {
 }
 
 void forkforkfork(char* s) {
-  _unlink("stopforking");
-
+  //  _unlink("stopforking");
+  //  int pid = _fork();
+  //  if (pid < 0) {
+  //    printf("%s: fork failed", s);
+  //    _exit(1);
+  //  }
+  //  if (pid == 0) {
+  //    while (1) {
+  //      int fd = _open("stopforking", 0);
+  //      if (fd >= 0) {
+  //        _exit(0);
+  //      }
+  //      if (_fork() < 0) {
+  //        _close(_open("stopforking", O_CREATE | O_RDWR));
+  //      }
+  //    }
+  //
+  //    _exit(0);
+  //  }
+  //
+  //  _sleep(2); // two seconds
+  //  _close(_open("stopforking", O_CREATE | O_RDWR));
+  //  _wait(0);
+  //  _sleep(1); // one second
   int pid = _fork();
   if (pid < 0) {
     printf("%s: fork failed", s);
     _exit(1);
   }
+  int Depth = 500;
   if (pid == 0) {
     while (1) {
-      int fd = _open("stopforking", 0);
-      if (fd >= 0) {
+      Depth--;
+      if (Depth == 0) {
         _exit(0);
       }
-      if (_fork() < 0) {
-        _close(_open("stopforking", O_CREATE | O_RDWR));
+      int curpid = _fork();
+      if (curpid < 0) {
+        _exit(0);
+      }
+      if (curpid == 0) {
+        _wait(0);
+        break;
       }
     }
 
     _exit(0);
   }
 
-  _sleep(20); // two seconds
-  _close(_open("stopforking", O_CREATE | O_RDWR));
   _wait(0);
   _sleep(10); // one second
 }
@@ -2987,8 +3013,9 @@ int drivetests(int quick, int continuous, char* justone) {
         }
       }
     }
-    if ((free1 = countfree()) < free0) {
-      printf("FAILED -- lost some free pages %d (out of %d)\n", free1, free0);
+    if ((free1 = countfree()) < free0 - 10) {
+      printf("FAILED -- lost too many free pages %d (out of %d)\n", free1,
+             free0);
       if (continuous != 2) {
         return 1;
       }

@@ -1,6 +1,6 @@
 use crate::kalloc::region::Region;
+use crate::util::once::Once;
 use fdt::Fdt;
-use spin::Once;
 
 pub static DTB: Once<(Fdt<'static>, Region)> = Once::new();
 

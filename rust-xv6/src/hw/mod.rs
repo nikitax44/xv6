@@ -36,9 +36,7 @@ pub extern "C" fn shutdown() -> ! {
     unsafe {
         core::ptr::write_volatile(SYSCON as *mut u32, SYSCON_SHUTDOWN);
     }
-    loop {
-        core::hint::spin_loop();
-    }
+    halt_hart()
 }
 
 #[no_mangle]
@@ -48,7 +46,11 @@ pub extern "C" fn reboot() -> ! {
     unsafe {
         core::ptr::write_volatile(SYSCON as *mut u32, SYSCON_REBOOT);
     }
+    halt_hart()
+}
+
+pub fn halt_hart() -> ! {
     loop {
-        core::hint::spin_loop();
+        riscv::asm::wfi();
     }
 }

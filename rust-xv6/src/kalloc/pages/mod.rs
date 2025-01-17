@@ -5,7 +5,7 @@ pub mod page;
 pub use kmem::{KMem, KMEM};
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 #[non_exhaustive]
 pub enum KMEMError {
     #[error("failed to allocate")]

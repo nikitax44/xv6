@@ -29,16 +29,24 @@ if(NOT DEFINED NEWLIB)
   endif()
 endif()
 
-set(CARGO_ARGUMENTS --release --frozen --lib)
-set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
+set(CARGO_ARGUMENTS --release --frozen)
+set(XV6_FEATURES --features talc)
 set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 add_custom_command(
   OUTPUT librust_xv6.a
   COMMAND cd ./rust-xv6 && cargo clippy --release --frozen --lib || true
-  COMMAND cd ./rust-xv6 && cargo build ${CARGO_ARGUMENTS}
+  COMMAND cd ./rust-xv6 && cargo build --lib ${CARGO_ARGUMENTS} ${XV6_FEATURES}
   COMMAND cp ./target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
   DEPENDS ./rust-xv6/src/** ./rust-xv6/Cargo.*
   COMMENT "Building librust_xv6.a"
+)
+
+add_custom_command(
+  OUTPUT tar2fs.elf
+  COMMAND cd ./tar2fs && cargo build ${CARGO_ARGUMENTS}
+  COMMAND cp ./target/release/tar2fs ./tar2fs.elf
+  DEPENDS ./tar2fs/src/** ./tar2fs/Cargo.*
+  COMMENT "Building tar2fs"
 )
 
 add_custom_target(GenerateLibRustXv6 ALL DEPENDS librust_xv6.a)
@@ -52,11 +60,12 @@ add_subdirectory(user)
 # Add the filesystem image target
 add_custom_command(
   OUTPUT fs.img
-  COMMAND virt-make-fs -s 64M ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar fs.img
-  DEPENDS Programs
+  COMMAND ./tar2fs.elf ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar fs.img
+  DEPENDS Programs tar2fs.elf
+  COMMENT "Converting to .img"
 )
 
-add_custom_target(image ALL DEPENDS fs.img)
+add_custom_target(Image ALL DEPENDS fs.img)
 
 # Enable bios for qemu
 if(OPENSBI_ENABLED)
@@ -79,7 +88,7 @@ add_custom_target(script ALL DEPENDS qemu-script)
 # Add the QEMU target
 add_custom_target(
   qemu
-  DEPENDS kernel fs.img qemu-script
+  DEPENDS kernel Image qemu-script
   COMMAND CPUS=${NPROC} KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
           ./qemu-script
 )
@@ -94,8 +103,8 @@ add_custom_command(
 # Add the GDB target
 add_custom_target(
   qemu-gdb
-  DEPENDS kernel .gdbinit fs.img qemu-script
-  COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window."
+  DEPENDS kernel .gdbinit Image qemu-script
+  COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window. port =" ${GDBPORT}
   COMMAND CPUS=1 KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
           ./qemu-script -S -gdb "tcp::${GDBPORT}"
 )

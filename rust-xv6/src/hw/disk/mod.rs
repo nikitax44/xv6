@@ -1,25 +1,18 @@
-mod virtio_blk;
+pub mod virtio_blk;
 
 use crate::memlayout::VIRTIO0;
-use crate::util::Rounding;
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::ops::{Deref, DerefMut, Range};
+use block_device::BlockDevice;
 use core::ptr::NonNull;
 use core::str::from_utf8;
-use efs::celled::Celled;
-use efs::dev::sector::Address;
-use efs::dev::size::Size;
-use efs::dev::{Commit, Device, Slice};
-use efs::{dev::error::DevError, error::Error};
-use log::{error, trace};
-use spin::Lazy;
-use virtio_drivers::device::blk::SECTOR_SIZE;
+use log::trace;
 use virtio_drivers::transport::mmio::{MmioTransport, VirtIOHeader};
-use zerocopy::IntoBytes;
 
 use crate::hw::disk::virtio_blk::{SectorData, SectorID, VirtIOBlkError};
+use crate::util::lazy::Lazy;
+use crate::util::mutex::Mutex;
 use virtio_blk::VirtIOBlk;
 
 /// # Safety
@@ -41,9 +34,9 @@ pub unsafe fn init_disk(disk: NonNull<VirtIOHeader>) -> Result<VirtIOBlk, VirtIO
     Ok(disk)
 }
 
+#[derive(Copy, Clone)]
 pub struct Disk {
-    dev: VirtIOBlk,
-    buffer: Vec<SectorData>,
+    dev: &'static Mutex<VirtIOBlk>,
 }
 
 impl Disk {
@@ -51,101 +44,110 @@ impl Disk {
     /// driver returned error
     /// # Panics
     /// disk returned invalid utf8
-    pub fn get_name(&mut self) -> Result<String, virtio_drivers::Error> {
+    pub fn get_name(&self) -> Result<String, virtio_drivers::Error> {
         let buf = &mut [0; 20];
-        let name = self.device_id(buf)?;
+        let name = self.dev.lock().device_id(buf)?;
         let name = from_utf8(name).expect("invalid disk name");
         Ok(name.to_owned())
     }
 
-    fn resize(&mut self, size: SectorID) -> Result<(), DevError> {
-        // trace!("reserving {size:?} for Disk IO");
+    pub const fn new(dev: &'static Mutex<VirtIOBlk>) -> Self {
+        Self { dev }
+    }
 
-        self.buffer.clear();
-        self.buffer
-            .try_reserve(size.in_sectors())
-            .map_err(|err| {
-                error!(
-                    "failed to allocate buffer of size {:#x} sectors: {err}",
-                    size.in_sectors()
-                );
-            })
-            .map_err(|()| DevError::WriteZero)?;
-        self.buffer.resize(size.in_sectors(), SectorData::DUMMY);
-        Ok(())
+    pub const fn inner(&self) -> &Mutex<VirtIOBlk> {
+        self.dev
     }
 }
 
-impl<FSE: core::error::Error> Device<u8, FSE> for Disk {
-    fn size(&mut self) -> Size {
-        Size(self.dev.capacity().in_bytes())
+impl BlockDevice for Disk {
+    type Error = VirtIOBlkError;
+
+    fn read(
+        &self,
+        buf: &mut [u8],
+        address: usize,
+        number_of_blocks: usize,
+    ) -> Result<(), Self::Error> {
+        assert_eq!(
+            buf.len(),
+            number_of_blocks * Self::BLOCK_SIZE as usize,
+            "size mismatch"
+        );
+
+        assert_eq!(
+            address % Self::BLOCK_SIZE as usize,
+            0,
+            "address is not BLOCK-aligned"
+        );
+
+        if let Ok(slice) = bytemuck::try_cast_slice_mut(buf) {
+            self.dev
+                .lock()
+                .read_blocks(SectorID::from_bytes(address as u64), slice)
+        } else {
+            let mut buffer = Vec::try_with_capacity(number_of_blocks)?;
+            buffer.resize(number_of_blocks, SectorData::DUMMY);
+            self.dev
+                .lock()
+                .read_blocks(SectorID::from_bytes(address as u64), &mut buffer)?;
+            buf.copy_from_slice(bytemuck::cast_slice(&buffer));
+            Ok(())
+        }
     }
 
-    fn slice(&mut self, addr_range: Range<Address>) -> Result<Slice<'_, u8>, Error<FSE>> {
-        // trace!("reading disk at {addr_range:#x?}");
-        let start = addr_range.start.index().round_down2(SECTOR_SIZE) as u64;
-        let end = addr_range.end.index().round_up2(SECTOR_SIZE) as u64;
+    fn write(
+        &self,
+        buf: &[u8],
+        address: usize,
+        number_of_blocks: usize,
+    ) -> Result<(), Self::Error> {
+        assert_eq!(
+            buf.len(),
+            number_of_blocks * Self::BLOCK_SIZE as usize,
+            "size mismatch"
+        );
 
-        let start_sector = SectorID::from_bytes(start);
-        let sectors = SectorID::from_bytes(end - start);
-        self.resize(sectors)?;
+        assert_eq!(
+            address % Self::BLOCK_SIZE as usize,
+            0,
+            "address is not BLOCK-aligned"
+        );
 
-        self.dev.read_blocks(start_sector, &mut self.buffer)?;
-
-        let size0 = *(addr_range.end - addr_range.start);
-        Ok(Slice::new(
-            &self.buffer.as_bytes()[addr_range.start.index().modulo2(SECTOR_SIZE)..][..size0],
-            addr_range.start,
-        ))
-    }
-
-    fn commit(&mut self, commit: Commit<u8>) -> Result<(), Error<FSE>> {
-        let start = *commit.addr();
-        let offset = commit.addr().modulo2(SECTOR_SIZE);
-        let bytes = commit.as_ref();
-        let sector = SectorID::from_bytes(start.round_down2(SECTOR_SIZE) as u64);
-        self.dev.write_data(sector, offset, bytes)?;
-        Ok(())
-    }
-}
-
-impl From<VirtIOBlk> for Disk {
-    fn from(value: VirtIOBlk) -> Self {
-        Self {
-            dev: value,
-            buffer: Vec::new(),
+        if let Ok(slice) = bytemuck::try_cast_slice(buf) {
+            self.dev
+                .lock()
+                .write_blocks(SectorID::from_bytes(address as u64), slice)
+        } else {
+            let mut buffer = Vec::try_with_capacity(number_of_blocks)?;
+            buffer.resize(number_of_blocks, SectorData::DUMMY);
+            bytemuck::cast_slice_mut(&mut buffer).copy_from_slice(buf);
+            self.dev
+                .lock()
+                .write_blocks(SectorID::from_bytes(address as u64), &buffer)?;
+            Ok(())
         }
     }
 }
 
-#[allow(clippy::large_stack_frames)]
-pub static MAIN_DISK: Lazy<Celled<Disk>> = Lazy::new(|| {
-    // TODO: use dtb info
-    const DEFAULT_DISK: NonNull<VirtIOHeader> = NonNull::new(VIRTIO0 as *mut _).unwrap();
+pub static MAIN_DISK: Lazy<Disk> = Lazy::new(|| {
+    #[allow(clippy::large_stack_frames)]
+    static MAIN_DISK_: Lazy<Mutex<VirtIOBlk>> = Lazy::new(|| {
+        // TODO: use dtb info
+        const DEFAULT_DISK: NonNull<VirtIOHeader> = NonNull::new(VIRTIO0 as *mut _).unwrap();
 
-    trace!("MAIN_DISK init");
-    // SAFETY: in default qemu configuration `DEFAULT_DISK` points to disk's MMIO region
-    Celled::new(unsafe { init_disk(DEFAULT_DISK) }.unwrap().into())
+        trace!("MAIN_DISK init");
+        // SAFETY: in default qemu configuration `DEFAULT_DISK` points to disk's MMIO region
+        let disk = unsafe { init_disk(DEFAULT_DISK) }.unwrap();
+        Mutex::new(disk)
+    });
+    Disk::new(&MAIN_DISK_)
 });
 
 #[no_mangle]
 extern "C" fn rs_disk_intr() {
     MAIN_DISK
+        .inner()
         .try_lock()
-        .as_mut()
-        .map(|disk| disk.ack_interrupt());
-}
-
-impl Deref for Disk {
-    type Target = VirtIOBlk;
-
-    fn deref(&self) -> &Self::Target {
-        &self.dev
-    }
-}
-
-impl DerefMut for Disk {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.dev
-    }
+        .map(|mut disk| disk.ack_interrupt());
 }

@@ -1,9 +1,9 @@
 use crate::hw::asm::{cpuid, ticks};
+use crate::util::rw_lock::RwLock;
 use alloc::vec::Vec;
 use core::num::NonZeroU64;
 use core::ops::Sub;
 use core::time::Duration;
-use spin::RwLock;
 
 #[derive(Copy, Clone)]
 pub struct Instant {

@@ -71,7 +71,10 @@ u64 sys_read(void) {
     return -1;
   }
 
-  usize r = rs_file_read(f, buf, MIN((usize)n, sizeof(buf)));
+  isize r = rs_file_read(f, buf, MIN((usize)n, sizeof(buf)));
+  if (r < 0) {
+    return -1;
+  }
   copyout(myproc()->pagetable, p, buf, r);
 
   return r;
@@ -102,9 +105,11 @@ u64 sys_write(void) {
     return -1;
   }
 
-  int r = copyin(myproc()->pagetable, buf, p, MIN((usize)n, sizeof(buf)));
+  if (copyin(myproc()->pagetable, buf, p, MIN((usize)n, sizeof(buf))) < 0) {
+    return -1;
+  }
 
-  usize o = rs_file_write(f, (u8*)buf, r);
+  usize o = rs_file_write(f, (u8*)buf, n);
 
   return o;
 }
@@ -169,9 +174,11 @@ u64 sys_open(void) {
   }
 
   if (omode & O_CREATE) {
-    rs_fs_create(path);
+    if (rs_fs_create(path) != 0) {
+      return -1;
+    }
   }
-  if ((f = rs_file_open(path)) == 0) {
+  if (IS_ERR(f = rs_fs_open(path))) {
     return -1;
   }
 

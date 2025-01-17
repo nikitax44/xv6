@@ -6,6 +6,7 @@ pub mod pages;
 pub mod region;
 pub mod thin_box;
 
+use crate::util::once::Once;
 use core::alloc::Layout;
 use core::fmt::Debug;
 use core::mem::MaybeUninit;
@@ -13,7 +14,6 @@ use core::panic::Location;
 use core::ptr;
 use pages::page::Page;
 use region::Region;
-use spin::Once;
 
 #[derive(Debug)]
 pub struct MemoryInfo {

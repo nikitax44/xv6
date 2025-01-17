@@ -1,8 +1,8 @@
 use crate::kalloc::pages::KMEMError;
 use crate::memlayout::PGROUNDDOWN;
+use crate::util::rw_lock::RwLock;
 use crate::vm::pagetable::Pagetable;
 use core::fmt::{Debug, Formatter};
-use spin::rwlock::RwLock;
 use thiserror::Error;
 
 pub static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
@@ -14,7 +14,7 @@ pub mod pagetable;
 pub(crate) mod pt_inner;
 pub mod pte;
 
-#[derive(Error)]
+#[derive(Error, PartialEq)]
 #[non_exhaustive]
 pub enum PTError {
     #[error("this va is already mapped")]

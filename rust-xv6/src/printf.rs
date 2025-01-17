@@ -59,6 +59,20 @@ unsafe extern "C" fn printf(format: *const c_char, ap: ...) -> core::ffi::c_int 
                     State::Normal
                 }
 
+                (State::Format { long: false }, b'x') => {
+                    // SAFETY: precondition
+                    let ptr: u32 = unsafe { ap.arg() };
+                    write!(console, "{:x}", ptr)?;
+                    State::Normal
+                }
+
+                (State::Format { long: true }, b'x') => {
+                    // SAFETY: precondition
+                    let ptr: u64 = unsafe { ap.arg() };
+                    write!(console, "{:x}", ptr)?;
+                    State::Normal
+                }
+
                 (State::Format { long: false }, b's') => {
                     // SAFETY: precondition
                     let msg: *const c_char = unsafe { ap.arg() };

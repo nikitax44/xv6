@@ -7,7 +7,6 @@ use core::ffi::{c_char, CStr};
 use core::mem::MaybeUninit;
 use core::panic::Location;
 use core::ptr::NonNull;
-use efs::path::{Path, UnixStr};
 
 pub trait FFICast {
     type Safe: FFISafe;
@@ -48,7 +47,7 @@ impl<T: FFICast> FromFFI for T {
     }
 }
 
-pub trait FFISafe: Copy {}
+pub trait FFISafe: Copy + Sized {}
 
 impl<T: FFISafe> FFICast for T {
     type Safe = T;
@@ -71,6 +70,8 @@ impl<T> FFICast for Arc<T> {
     }
 
     unsafe fn from_ffi_cast(value: Self::Safe) -> Self {
+        assert!(!value.is_null(), "attempt to convert null to Arc");
+        assert!(value.is_aligned(), "attempt to convert {value:?} to Arc");
         // SAFETY: precondition
         unsafe { Self::from_raw(value) }
     }
@@ -122,9 +123,12 @@ impl FFICast for Option<PageHandle> {
 
 impl FFISafe for () {}
 impl FFISafe for crate::fs::types::CStat {}
+impl FFISafe for isize {}
 impl FFISafe for usize {}
+impl FFISafe for i32 {}
 impl FFISafe for u32 {}
 impl FFISafe for i64 {}
+impl FFISafe for u64 {}
 impl FFICast for Option<Whence> {
     type Safe = u32;
 
@@ -158,43 +162,61 @@ impl<T> FromFFI for Option<&mut MaybeUninit<T>> {
     }
 }
 
-impl<T> FFISafe for Option<NonNull<T>> {}
-impl<T> FFISafe for *const T {}
-
-impl ToFFI for ErrNo {
-    type Target = u32;
-
-    fn into_ffi(self) -> Self::Target {
-        self as u32
-    }
-}
-
-impl FromFFI for Option<Path<'_>> {
-    type Source = *const c_char;
-
-    unsafe fn from_ffi(value: Self::Source) -> Self {
-        // SAFETY: precondition
-        let path = unsafe { <&CStr as FromFFI>::from_ffi(value) };
-        let path = path.to_str().ok()?;
-        let path = UnixStr::new(path).ok()?;
-        Some(Path::new(path))
-    }
-}
-
-impl ToFFI for Result<u64, crate::fs::Error> {
+impl ToFFI for Result<u64, ErrNo> {
     type Target = i64;
 
     fn into_ffi(self) -> Self::Target {
-        let err = match self {
-            Ok(val) => {
-                return i64::try_from(val).expect("failed to convert u64 to i64");
-            }
-            Err(err) => err,
-        };
-        let err: ErrNo = err.into();
-        -i64::from(err as u32)
+        match self {
+            Ok(val) => val.try_into().ok().unwrap_or_else(|| {
+                log::error!("ffi cast overflow");
+                -(ErrNo::EOVERFLOW as i64)
+            }),
+            Err(err) => -(err as i64),
+        }
     }
 }
+
+impl ToFFI for Result<usize, ErrNo> {
+    type Target = isize;
+
+    fn into_ffi(self) -> Self::Target {
+        match self {
+            Ok(val) => val.try_into().ok().unwrap_or_else(|| {
+                log::error!("ffi cast overflow");
+                -(ErrNo::EOVERFLOW as isize)
+            }),
+            Err(err) => -(err as isize),
+        }
+    }
+}
+
+impl ToFFI for Result<(), ErrNo> {
+    type Target = i32;
+
+    fn into_ffi(self) -> Self::Target {
+        match self {
+            Ok(()) => 0,
+            Err(err) => -(err as i32),
+        }
+    }
+}
+
+impl<U: Sized, T: ToFFI<Target = *const U>> ToFFI for Result<T, ErrNo> {
+    type Target = *const U;
+
+    fn into_ffi(self) -> Self::Target {
+        match self {
+            Ok(val) => val.into_ffi(),
+            Err(err) => {
+                log::error!("passing error to C: {:?}", err);
+                (-(err as i64)) as *const U
+            }
+        }
+    }
+}
+
+impl<T> FFISafe for Option<NonNull<T>> {}
+impl<T> FFISafe for *const T {}
 
 #[macro_export]
 macro_rules! export_c_fn {
@@ -209,7 +231,7 @@ macro_rules! export_c_fn {
         $($tts:tt)*
     ) => {
         $(#[$($attrss)*])*
-        #[attr_wrapper::time_me]
+        // #[attr_wrapper::time_me]
         $(pub $($pub_)? )? $(unsafe $($unsafe_)? )? fn $name($($arg: $(& $($ref_)?)? $val),*)
             $(-> $ret)?
             $body

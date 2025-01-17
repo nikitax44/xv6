@@ -72,6 +72,8 @@ int holding(struct spinlock* lk) {
   return r;
 }
 
+u32 int_info(void) { return mycpu()->noff; }
+
 // push_off/pop_off are like intr_off()/intr_on() except that they are matched:
 // it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
 // are initially off, then push_off, pop_off leaves them off.

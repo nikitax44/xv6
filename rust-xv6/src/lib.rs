@@ -36,7 +36,6 @@
     clippy::pedantic,
     clippy::perf,
     clippy::pub_without_shorthand,
-    clippy::ref_patterns,
     clippy::renamed_function_params,
     clippy::same_name_method,
     clippy::style,

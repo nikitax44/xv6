@@ -1,9 +1,11 @@
 use crate::kalloc::region::Region;
 use crate::kalloc::{MemoryInfo, Xv6Alloc};
-use efs::arch::u64_to_usize;
+use crate::util::mutex::Mutex;
+use crate::util::u64_to_usize;
+use critical_section::RestoreState;
 use talc::{ErrOnOom, Span, Talc};
 
-type Heap = talc::Talck<spin::Mutex<()>, ErrOnOom>;
+type Heap = talc::Talck<Mutex<RestoreState>, ErrOnOom>;
 
 #[global_allocator]
 pub(super) static KALLOC: Heap = Talc::new(ErrOnOom).lock();

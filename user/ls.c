@@ -3,7 +3,7 @@
 #include "kernel/file/stat.h"
 #include "user/user.h"
 
-#define DIRSIZ 14
+#define DIRSIZ 24
 
 char* fmtname(char* path) {
   static char buf[DIRSIZ + 1];
@@ -24,10 +24,10 @@ char* fmtname(char* path) {
 }
 
 void ls(char* path) {
-  char                buf[512], *p;
-  int                 fd;
-  struct linux_dirent de;
-  struct stat         st;
+  char          buf[512], *p;
+  int           fd;
+  struct dirent de;
+  struct stat   st;
 
   if ((fd = _open(path, O_RDONLY)) < 0) {
     fdprintf(stderr, "ls: cannot open %s\n", path);
@@ -59,6 +59,7 @@ void ls(char* path) {
     p    = buf + strlen(buf);
     *p++ = '/';
     while (_read(fd, &de, sizeof(de)) == sizeof(de)) {
+      printf("entry\n");
       if (de.d_ino == 0) {
         continue;
       }

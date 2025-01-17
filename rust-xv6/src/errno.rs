@@ -1,7 +1,4 @@
-use crate::fs::Error;
-use efs::file::Type;
-use efs::fs::error::FsError;
-use log::{error, warn};
+use core::alloc::AllocError;
 
 #[allow(clippy::large_stack_frames)]
 #[derive(Copy, Clone, Debug)]
@@ -272,47 +269,8 @@ pub enum ErrNo {
     EHWPOISON = 133,
 }
 
-#[allow(clippy::fallible_impl_from, reason = "unrecoverable error")]
-impl From<crate::fs::Error> for ErrNo {
-    fn from(value: crate::fs::Error) -> Self {
-        match value {
-            err @ crate::fs::Error::Device(_) => {
-                panic!("disk error: {err:?}");
-            }
-            crate::fs::Error::Path(_) => Self::EINVAL,
-
-            crate::fs::Error::IO(io) => {
-                error!("io error: {io:?}");
-                Self::EIO
-            }
-            crate::fs::Error::Fs(FsError::EntryAlreadyExist(_)) => Self::EEXIST,
-            crate::fs::Error::Fs(FsError::Loop(path)) => {
-                warn!("symlink loop found: {path:?}");
-                Self::ELOOP
-            }
-            crate::fs::Error::Fs(FsError::NameTooLong(_)) => Self::ENAMETOOLONG,
-            crate::fs::Error::Fs(FsError::NotDir(_)) => Self::ENOTDIR,
-            crate::fs::Error::Fs(FsError::NoEnt(_)) => Self::ENOLINK,
-            crate::fs::Error::Fs(FsError::NotFound(_)) => Self::ENOENT,
-            crate::fs::Error::Fs(FsError::RemoveRefused) => Self::EACCES,
-            crate::fs::Error::Fs(FsError::WrongFileType { expected, given }) => {
-                if expected == Type::Directory {
-                    Self::ENOTDIR
-                } else if given == Type::Directory {
-                    Self::EISDIR
-                } else {
-                    Self::EOPNOTSUPP
-                }
-            }
-            err @ crate::fs::Error::Fs(FsError::Implementation(_)) => {
-                panic!("filesystem error: {err:?}");
-            }
-        }
-    }
-}
-
-impl From<Result<(), crate::fs::Error>> for ErrNo {
-    fn from(value: Result<(), Error>) -> Self {
-        value.err().map_or(Self::SUCCESS, Self::from)
+impl From<AllocError> for ErrNo {
+    fn from(_value: AllocError) -> Self {
+        Self::ENOMEM
     }
 }

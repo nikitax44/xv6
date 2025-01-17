@@ -46,32 +46,15 @@ struct {
 } cons;
 
 //
-// user write()s to the console go here.
-//
-int consolewrite(int user_src, u64 src, u32 n) {
-  u32 i;
-
-  for (i = 0; i < n; i++) {
-    char c;
-    if (either_copyin(&c, user_src, src + i, 1) == -1) {
-      break;
-    }
-    uartputc(c);
-  }
-
-  return i;
-}
-
-//
 // user read()s from the console go here.
 // copy (up to) a whole input line to dst.
 // user_dist indicates whether dst is a user
 // or kernel address.
 //
-int consoleread(int user_dst, u64 dst, u32 n) {
-  u32  target;
-  int  c;
-  char cbuf;
+usize consoleread(bool user_dst, u64 dst, usize n) {
+  usize target;
+  int   c;
+  char  cbuf;
 
   target = n;
   acquire(&cons.lock);

@@ -32,9 +32,9 @@ int execve(str path, str* argv, str* envp) {
   struct proc*   p         = myproc();
   int            ret;
 
-  struct file* f = rs_file_open(path);
-  if (f == 0) {
-    ret = ENOENT;
+  struct file* f = rs_fs_open(path);
+  if (IS_ERR(f)) {
+    ret = GET_ERR(f);
     goto bad;
   }
 

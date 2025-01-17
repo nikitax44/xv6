@@ -574,7 +574,7 @@ int killed(struct proc* p) {
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
-int either_copyout(int user_dst, u64 dst, void* src, u64 len) {
+int either_copyout(bool user_dst, u64 dst, void* src, u64 len) {
   struct proc* p = myproc();
   if (user_dst) {
     return copyout(p->pagetable, dst, src, len);
@@ -587,7 +587,7 @@ int either_copyout(int user_dst, u64 dst, void* src, u64 len) {
 // Copy from either a user address, or kernel address,
 // depending on usr_src.
 // Returns 0 on success, -1 on error.
-int either_copyin(void* dst, int user_src, u64 src, u64 len) {
+int either_copyin(void* dst, bool user_src, u64 src, u64 len) {
   struct proc* p = myproc();
   if (user_src) {
     return copyin(p->pagetable, dst, src, len);

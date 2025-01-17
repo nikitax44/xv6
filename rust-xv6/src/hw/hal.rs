@@ -66,11 +66,14 @@ unsafe impl Hal for HalImpl {
     unsafe fn share(buffer: NonNull<[u8]>, _direction: BufferDirection) -> PhysAddr {
         let start = buffer.cast::<u8>().addr().get();
         let sz = buffer.len();
-        assert_eq!(
-            PGROUNDDOWN(start),
-            PGROUNDDOWN(start + sz - 1),
-            "buffer spans multiple pages"
-        );
+
+        if get_physical_address(start as *const ()) != Ok(start) {
+            assert_eq!(
+                PGROUNDDOWN(start),
+                PGROUNDDOWN(start + sz - 1),
+                "buffer spans multiple pages"
+            );
+        }
 
         let ptr = buffer.cast::<()>().as_ptr().cast_const();
         match get_physical_address(ptr) {

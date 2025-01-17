@@ -1,6 +1,6 @@
+use crate::util::mutex::Mutex;
 use core::ffi::{c_int, CStr};
 use core::fmt;
-use spin::Mutex;
 
 pub struct Console {}
 
@@ -32,17 +32,19 @@ impl Console {
     }
 
     pub fn puts(&mut self, s: &str) {
-        s.as_bytes().iter().for_each(|&c| self.putc(c));
+        self.put_bytes(s.as_bytes());
     }
 
     pub fn putcs(&mut self, s: &CStr) {
-        s.to_bytes().iter().for_each(|&c| self.putc(c));
+        self.put_bytes(s.to_bytes());
     }
 
-    /// # Safety
-    /// actually always safe, but can lead to unreadable mess
+    pub fn put_bytes(&mut self, s: &[u8]) {
+        s.iter().for_each(|&c| self.putc(c));
+    }
+
     #[must_use]
-    pub const unsafe fn get_async() -> Self {
+    pub const fn get_async() -> Self {
         Self {}
     }
 }

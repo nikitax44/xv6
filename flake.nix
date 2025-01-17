@@ -43,6 +43,7 @@
 
         localPkgs = import nixpkgs {
           inherit localSystem;
+          overlays = [(import rust-overlay)];
         };
 
         crossPkgs = import nixpkgs {
@@ -54,10 +55,11 @@
 
         inherit (nixpkgs) lib;
 
-        craneLib = (crane.mkLib crossPkgs).overrideToolchain (p:
-          p.rust-bin.nightly.latest.default.override {
-            extensions = ["rust-src"];
-          });
+        craneLibFor = pkgs:
+          (crane.mkLib pkgs).overrideToolchain (p:
+            p.rust-bin.nightly.latest.default.override {
+              extensions = ["rust-src"];
+            });
 
         enableOpenSBI = false;
 
@@ -68,7 +70,11 @@
           '';
 
         rust-xv6 = crossPkgs.callPackage ./rust-xv6 {
-          inherit craneLib;
+          craneLib = craneLibFor crossPkgs;
+        };
+
+        tar2fs = localPkgs.callPackage ./tar2fs {
+          craneLib = craneLibFor localPkgs;
         };
 
         kernel = crossEnv.mkDerivation {
@@ -99,7 +105,7 @@
           // common);
 
         fsImg = localPkgs.runCommandNoCCLocal "fs.img" {} ''
-          ${localPkgs.guestfs-tools}/bin/virt-make-fs -s 64M ${programs} $out
+          ${tar2fs}/bin/tar2fs ${programs} $out
         '';
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
@@ -124,7 +130,7 @@
           build-test = self'.packages.default;
         };
 
-        devShells.default = craneLib.devShell ({
+        devShells.default = (craneLibFor crossPkgs).devShell ({
             inputsFrom = [rust-xv6];
             packages = [
               config.treefmt.build.wrapper
@@ -136,7 +142,7 @@
           // common);
 
         packages = {
-          inherit rust-xv6 kernel programs;
+          inherit rust-xv6 kernel programs tar2fs;
           default = localPkgs.writeScriptBin "qemu-script" ''
             #!/usr/bin/env zsh
             set -e

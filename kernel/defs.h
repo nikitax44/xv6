@@ -13,9 +13,10 @@ struct stat;
 typedef enum { SEEK_SET = 0, SEEK_CUR = 1, SEEK_END = 2 } WHENCE;
 
 // console.c
-void consoleinit(void);
-void consoleintr(int);
-void consputc(int);
+void  consoleinit(void);
+void  consoleintr(int);
+void  consputc(int);
+usize consoleread(bool user_dst, u64 dst, usize n);
 
 // exec.c
 // gcc does not recognize that they're the same
@@ -45,8 +46,8 @@ void         userinit(void);
 int          wait(u64);
 void         wakeup(void*);
 void         yield(void);
-int          either_copyout(int user_dst, u64 dst, void* src, u64 len);
-int          either_copyin(void* dst, int user_src, u64 src, u64 len);
+int          either_copyout(bool user_dst, u64 dst, void* src, u64 len);
+int          either_copyin(void* dst, bool user_src, u64 src, u64 len);
 void         procdump(void);
 
 // swtch.S
@@ -122,24 +123,24 @@ void reboot(void) __attribute__((noreturn));
 void panic(char*) __attribute__((noreturn));
 void testpanic(void) __attribute__((noreturn));
 // fs
-errno_t rs_fs_create(const char* path);
-errno_t rs_fs_mkdir(const char* path);
-errno_t rs_fs_mknod(const char* path, u32 major, u32 minor);
-errno_t rs_fs_unlink(const char* path);
-errno_t rs_fs_hard_link(const char* old, const char* new);
-errno_t rs_fs_symbolic_link(const char* old, const char* new);
+struct file* rs_fs_open(const char* path);
+errno_t      rs_fs_create(const char* path);
+errno_t      rs_fs_mkdir(const char* path);
+errno_t      rs_fs_mknod(const char* path, u32 major, u32 minor);
+errno_t      rs_fs_unlink(const char* path);
+errno_t      rs_fs_hard_link(const char* old, const char* new);
+errno_t      rs_fs_symbolic_link(const char* old, const char* new);
 
 // fs::pipe
 // returns pair
 errno_t rs_pipe_alloc(struct file** rp, struct file** wp);
 
 // fs::file
-struct file* rs_file_open(const char* path);
 void         rs_file_close(struct file* file);
 struct file* rs_file_dup(struct file* file);
 struct stat  rs_file_stat(struct file* file);
-usize        rs_file_read(struct file* file, u8* buf, usize len);
-usize        rs_file_write(struct file* file, const u8* buf, usize len);
+isize        rs_file_read(struct file* file, u8* buf, usize len);
+isize        rs_file_write(struct file* file, const u8* buf, usize len);
 isize        rs_file_seek(struct file* file, i64 offset, WHENCE whence);
 
 // vm
@@ -166,3 +167,6 @@ char* strncpy(char*, const char*, usize);
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))
 #define TODO     panic("todo");
+
+#define IS_ERR(ptr)  ((bool)(((usize)(ptr)) >> 63))
+#define GET_ERR(ptr) ((errno_t) - ((isize)(ptr)))

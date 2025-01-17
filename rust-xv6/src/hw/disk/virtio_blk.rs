@@ -1,7 +1,8 @@
 use crate::hw::hal::HalImpl;
 use crate::static_assert;
-use crate::util::u64_to_usize;
-use efs::dev::error::DevError;
+use crate::util::{copy_data, u64_to_usize};
+use alloc::collections::TryReserveError;
+use bytemuck::{Pod, Zeroable};
 use thiserror::Error;
 use virtio_drivers::device::blk;
 use virtio_drivers::transport::mmio::MmioTransport;
@@ -15,19 +16,16 @@ pub struct VirtIOBlk {
 }
 
 #[derive(Debug, Error)]
-#[error("VirtIOBlkError({0})")]
-pub struct VirtIOBlkError(virtio_drivers::Error);
+pub enum VirtIOBlkError {
+    #[error("VirtIOBlkError({0})")]
+    VirtIOBlkError(virtio_drivers::Error),
+    #[error("AllocError({0})")]
+    TryReserveError(#[from] TryReserveError),
+}
 
 impl From<virtio_drivers::Error> for VirtIOBlkError {
     fn from(value: Error) -> Self {
-        Self(value)
-    }
-}
-
-impl<FSE: core::error::Error> From<VirtIOBlkError> for efs::error::Error<FSE> {
-    fn from(value: VirtIOBlkError) -> Self {
-        log::error!("{}", value);
-        Self::Device(DevError::WriteZero)
+        Self::VirtIOBlkError(value)
     }
 }
 
@@ -35,10 +33,13 @@ impl<FSE: core::error::Error> From<VirtIOBlkError> for efs::error::Error<FSE> {
 pub struct SectorID(u64);
 static_assert!(blk::SECTOR_SIZE == 512);
 #[repr(C, align(512))]
-#[derive(IntoBytes, FromBytes, Immutable, Copy, Clone)]
+#[derive(IntoBytes, FromBytes, Immutable, Copy, Clone, Pod, Zeroable)]
 pub struct SectorData(pub [u8; blk::SECTOR_SIZE]);
 
 impl SectorID {
+    /// # Panics
+    /// `bytes` is not `SECTOR_SIZE`-aligned
+    #[must_use]
     pub fn from_bytes(bytes: u64) -> Self {
         assert_eq!(
             bytes % SECTOR_SIZE,
@@ -48,14 +49,27 @@ impl SectorID {
         Self(bytes / SECTOR_SIZE)
     }
 
+    /// # Panics
+    /// never
+    #[must_use]
+    pub fn parts_from_bytes(bytes: u64) -> (Self, usize) {
+        (
+            Self(bytes / SECTOR_SIZE),
+            (bytes % SECTOR_SIZE).try_into().unwrap(),
+        )
+    }
+
+    #[must_use]
     pub const fn in_bytes(self) -> u64 {
         self.0
     }
 
-    pub fn in_sectors(self) -> usize {
-        u64_to_usize(self.0)
+    #[must_use]
+    pub const fn in_sectors(self) -> u64 {
+        self.0
     }
 
+    #[must_use]
     pub const fn next(self) -> Self {
         Self(self.0 + 1)
     }
@@ -67,17 +81,22 @@ impl SectorData {
 
 impl VirtIOBlk {
     #[allow(clippy::large_stack_frames)]
+    /// # Errors
+    /// failed to create `VirtIOBlk`
     pub fn new(transport: MmioTransport) -> Result<Self, VirtIOBlkError> {
         Ok(Self {
             inner: blk::VirtIOBlk::new(transport)?,
         })
     }
 
-    pub fn device_id<'v>(&mut self, id: &'v mut [u8; 20]) -> virtio_drivers::Result<&'v mut [u8]> {
+    /// # Errors
+    /// failed to read name
+    pub fn device_id<'v>(&mut self, id: &'v mut [u8; 20]) -> virtio_drivers::Result<&'v [u8]> {
         let sz = self.inner.device_id(id)?;
-        Ok(&mut id[..sz])
+        Ok(&id[..sz])
     }
 
+    #[must_use]
     pub fn capacity(&self) -> SectorID {
         SectorID(self.inner.capacity())
     }
@@ -86,6 +105,8 @@ impl VirtIOBlk {
         self.inner.ack_interrupt()
     }
 
+    /// # Errors
+    /// failed to read disk
     pub fn read_block(
         &mut self,
         block_id: SectorID,
@@ -96,6 +117,8 @@ impl VirtIOBlk {
             .read_blocks(u64_to_usize(block_id.0), &mut buf.0)?)
     }
 
+    /// # Errors
+    /// failed to read disk
     pub fn read_blocks(
         &mut self,
         start_block_id: SectorID,
@@ -106,6 +129,8 @@ impl VirtIOBlk {
             .read_blocks(u64_to_usize(start_block_id.0), buf.as_mut_bytes())?)
     }
 
+    /// # Errors
+    /// failed to write to disk
     pub fn write_block(
         &mut self,
         block_id: SectorID,
@@ -114,6 +139,8 @@ impl VirtIOBlk {
         Ok(self.inner.write_blocks(u64_to_usize(block_id.0), &buf.0)?)
     }
 
+    /// # Errors
+    /// failed to write to disk
     pub fn write_blocks(
         &mut self,
         start_block_id: SectorID,
@@ -124,6 +151,8 @@ impl VirtIOBlk {
             .write_blocks(u64_to_usize(start_block_id.0), buf.as_bytes())?)
     }
 
+    /// # Errors
+    /// failed to write to disk
     fn write_incomplete(
         &mut self,
         block_id: SectorID,
@@ -158,12 +187,11 @@ impl VirtIOBlk {
         Ok(bytes)
     }
 
-    pub fn write_data(
-        &mut self,
-        sector: SectorID,
-        offset: usize,
-        data: &[u8],
-    ) -> Result<(), VirtIOBlkError> {
+    /// # Errors
+    /// failed to write to disk
+    pub fn write_data(&mut self, position: u64, data: &[u8]) -> Result<(), VirtIOBlkError> {
+        let (sector, offset) = SectorID::parts_from_bytes(position);
+
         let (data, mut sector) = if offset != 0 {
             let rest = self.write_prefix(sector, offset, data)?;
             (rest, sector.next())
@@ -182,5 +210,17 @@ impl VirtIOBlk {
         }
 
         Ok(())
+    }
+
+    /// # Errors
+    /// failed to write to disk
+    pub fn read_data(&mut self, position: u64, data: &mut [u8]) -> Result<usize, VirtIOBlkError> {
+        let (sector, offset) = SectorID::parts_from_bytes(position);
+        let buf = &mut SectorData::DUMMY.clone();
+        self.read_block(sector, buf)?;
+
+        let buf = &buf.0[offset..];
+        let n = copy_data(data, buf);
+        Ok(n)
     }
 }

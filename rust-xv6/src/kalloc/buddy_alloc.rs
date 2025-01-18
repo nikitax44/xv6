@@ -3,7 +3,7 @@ use crate::kalloc::Xv6Alloc;
 use crate::memlayout::PGSIZE;
 use core::fmt::Debug;
 
-const LEVELS: usize = (128 * 1024 * 1024 / PGSIZE).ilog2() as usize;
+const LEVELS: usize = (128 * 1024 * 1024 / 8u64).ilog2() as usize;
 type Heap = buddy_system_allocator::LockedHeap<LEVELS>;
 
 #[global_allocator]

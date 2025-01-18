@@ -1,6 +1,6 @@
+use crate::util::Mutex;
 use core::ffi::{c_int, CStr};
 use core::fmt;
-use spin::Mutex;
 
 pub struct Console {}
 

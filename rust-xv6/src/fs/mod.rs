@@ -2,6 +2,7 @@ pub(crate) mod types;
 
 use crate::fs::types::{AsFile, CStat, FileExt, Whence};
 use crate::hw::disk::{Disk, MAIN_DISK};
+use crate::util::Mutex;
 use alloc::sync::Arc;
 use core::ffi::CStr;
 use core::ptr::NonNull;
@@ -14,7 +15,7 @@ use efs::fs::FileSystem;
 use efs::io::{Read, Seek, SeekFrom, Write};
 use efs::path::{Path, UnixStr};
 use log::{debug, error, warn};
-use spin::{Lazy, Mutex};
+use spin::Lazy;
 
 // type Fs = Ext2Fs<Disk>;
 type Dir = Directory<Disk>;

@@ -228,6 +228,7 @@ dependencies = [
  "critical-section",
  "efs",
  "fdt",
+ "lock_api",
  "log",
  "riscv",
  "spin",

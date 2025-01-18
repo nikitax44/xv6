@@ -45,6 +45,7 @@
     clippy::unnecessary_safety_doc
     // keep-sorted end
 )]
+#![allow(clippy::significant_drop_tightening)]
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]
 #![allow(refining_impl_trait, reason = "more informative")]

@@ -36,7 +36,7 @@ add_custom_command(
 )
 
 set(CARGO_ARGUMENTS --release --frozen --lib)
-set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
+# set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
 set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 add_custom_command(
   OUTPUT librust_xv6.a

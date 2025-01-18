@@ -30,7 +30,7 @@
     # See: https://doc.rust-lang.org/cargo/reference/config.html#target
     CARGO_TARGET_RISCV64GC_UNKNOWN_NONE_ELF_LINKER = "${stdenv.cc.targetPrefix}ld";
 
-    cargoExtraArgs = "--target riscv64gc-unknown-none-elf --features talc";
+    cargoExtraArgs = "--target riscv64gc-unknown-none-elf"; # --features talc
     cargoCheckExtraArgs = "";
 
     HOST_CC = "${stdenv.cc.nativePrefix}cc";

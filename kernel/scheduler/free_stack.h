@@ -1,7 +1,7 @@
 #ifndef KERNEL_BITSET_H
 #define KERNEL_BITSET_H
 
-#include "defs.h"
+#include "kernel/defs.h"
 
 #define START_STACK_SIZE 1024
 

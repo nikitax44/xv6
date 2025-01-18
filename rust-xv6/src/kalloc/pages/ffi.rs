@@ -1,31 +1,26 @@
-use crate::kalloc::pages::page::{Page, PageHandle};
+use crate::kalloc::pages::page::PageHandle;
 use crate::kalloc::pages::KMEM;
-use core::panic::Location;
-use core::ptr;
 
-#[no_mangle]
-extern "C" fn kinit() {
-    crate::kalloc::init();
-}
+crate::export_c_fn! {
+    fn __kinit:kinit() {
+        crate::kalloc::init();
+    }
 
-#[no_mangle]
-extern "C" fn kalloc() -> *mut Page {
-    KMEM.lock()
-        .alloc("ffi alloc")
-        .map_or(ptr::null_mut(), |page| page.into_box().leak().as_ptr())
-}
+    fn __kalloc:kalloc() -> Option<PageHandle> {
+        KMEM.lock()
+            .alloc("ffi alloc")
+            .ok()
+    }
 
-/// # Safety
-/// ptr must point to page-aligned memory. it transfers the ownership over that page.
-#[no_mangle]
-pub unsafe extern "C" fn kfree(ptr: Option<ptr::NonNull<Page>>) {
-    let mut ptr = ptr.expect("kfree(NULL)");
-    assert!(ptr.is_aligned(), "kfree(unaligned)");
+    /// # Safety
+    /// ptr must point to page-aligned memory. it transfers the ownership over that page.
+    fn __kfree:kfree(ptr: Option<PageHandle>) {
+        let mut page = ptr.expect("kfree(NULL)");
 
-    // SAFETY: we now own the page
-    let rf: &'static mut Page = unsafe { ptr.as_mut() };
-    let page = PageHandle::new(rf, Location::caller(), "ffi free");
-    KMEM.lock().free(page);
+        page.set_origin(core::panic::Location::caller(), "ffi kfree");
+        KMEM.lock().free(page);
+    }
+
 }
 
 #[no_mangle]

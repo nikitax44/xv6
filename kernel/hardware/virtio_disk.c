@@ -8,13 +8,9 @@
 
 #include "kernel/buf.h"
 #include "kernel/defs.h"
-#include "kernel/file/fs.h"
-#include "kernel/types.h"
-#include "kernel/util/spinlock.h"
 #include "memlayout.h"
 #include "riscv.h"
 #include "virtio.h"
-#include <string.h>
 
 // the address of virtio mmio register r.
 #define R(r) ((volatile u32*)(VIRTIO0 + (r)))
@@ -86,12 +82,12 @@ u64 begin_init(u64 supported_features) {
   return negotiated_features;
 }
 
-extern void reset_blk(usize blk_mmio);
+// extern void reset_blk(usize blk_mmio);
 
 void virtio_disk_init(void) {
   u32 status;
 
-  reset_blk(VIRTIO0);
+  //  reset_blk(VIRTIO0);
 
   initlock(&disk.vdisk_lock, "virtio_disk");
 

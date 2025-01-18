@@ -42,8 +42,6 @@ char uart_tx_buf[UART_TX_BUF_SIZE];
 u64  uart_tx_w; // write next to uart_tx_buf[uart_tx_w % UART_TX_BUF_SIZE]
 u64  uart_tx_r; // read next from uart_tx_buf[uart_tx_r % UART_TX_BUF_SIZE]
 
-extern volatile int panicked; // from printf.c
-
 void uartstart(void);
 
 void uartinit(void) {
@@ -81,10 +79,6 @@ void uartinit(void) {
 void uartputc(char c) {
   acquire(&uart_tx_lock);
 
-  if (panicked) {
-    for (;;)
-      ;
-  }
   while (uart_tx_w == uart_tx_r + UART_TX_BUF_SIZE) {
     // buffer is full.
     // wait for uartstart() to open up space in the buffer.
@@ -102,11 +96,6 @@ void uartputc(char c) {
 // output register to be empty.
 void uartputc_sync(char c) {
   push_off();
-
-  if (panicked) {
-    for (;;)
-      ;
-  }
 
   // wait for Transmit Holding Empty to be set in LSR.
   while ((ReadReg(LSR) & LSR_TX_IDLE) == 0)

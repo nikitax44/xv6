@@ -1,6 +1,6 @@
-use core::ffi::c_int;
+use crate::util::Mutex;
+use core::ffi::{c_int, CStr};
 use core::fmt;
-use spin::Mutex;
 
 pub struct Console {}
 
@@ -20,6 +20,10 @@ impl Console {
         }
     }
 
+    pub fn newline(&mut self) {
+        self.putc(b'\n');
+    }
+
     pub fn backspace(&mut self) {
         // SAFETY: c is in range
         unsafe {
@@ -30,9 +34,18 @@ impl Console {
     pub fn puts(&mut self, s: &str) {
         s.as_bytes().iter().for_each(|&c| self.putc(c));
     }
-}
 
-impl !Sync for Console {}
+    pub fn putcs(&mut self, s: &CStr) {
+        s.to_bytes().iter().for_each(|&c| self.putc(c));
+    }
+
+    /// # Safety
+    /// actually always safe, but can lead to unreadable mess
+    #[must_use]
+    pub const unsafe fn get_async() -> Self {
+        Self {}
+    }
+}
 
 pub static CONSOLE: Mutex<Console> = Mutex::new(Console {});
 

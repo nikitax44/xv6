@@ -1,9 +1,6 @@
 #include "free_stack.h"
 
-#include "../defs.h"
-#include "../hardware/memlayout.h"
-#include "../util/spinlock.h"
-#include <string.h>
+#include "kernel/util/spinlock.h"
 
 struct {
   u64             max_sz;

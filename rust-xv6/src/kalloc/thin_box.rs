@@ -26,10 +26,23 @@ unsafe impl<T: Send + ?Sized> Send for ThinBox<T> {}
 unsafe impl<T: Send + Sync + ?Sized> Sync for ThinBox<T> {}
 
 impl<T: ?Sized> ThinBox<T> {
+    /// # Panics
+    /// `inner` is not properly aligned
+    /// # Safety
+    /// `inner` is valid, and you have ownership over its contents
+    /// you transfer the ownership over the `inner` contents to `ThinBox`
+    pub const unsafe fn new(inner: NonNull<T>) -> Self
+    where
+        T: Sized,
+    {
+        assert!(inner.is_aligned(), "ThinBox::new(unaligned)");
+        Self { inner }
+    }
+
     /// # Safety
     /// `inner` is valid, properly aligned, and you have ownership over its contents
     /// you transfer the ownership over the `inner` contents to `ThinBox`
-    pub const unsafe fn new(inner: NonNull<T>) -> Self {
+    pub const unsafe fn new_unchecked(inner: NonNull<T>) -> Self {
         Self { inner }
     }
 
@@ -115,7 +128,7 @@ impl<T: 'static> ThinBox<[MaybeUninit<T>]> {
 impl<T: ?Sized> From<&'static mut T> for ThinBox<T> {
     fn from(value: &'static mut T) -> Self {
         // SAFETY: inner is valid and properly aligned. we now have the ownership for &'static mut
-        unsafe { Self::new(value.into()) }
+        unsafe { Self::new_unchecked(value.into()) }
     }
 }
 

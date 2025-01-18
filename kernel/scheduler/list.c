@@ -1,8 +1,6 @@
 #include "list.h"
 
-#include "defs.h"
-#include "param.h"
-#include "proc.h"
+#include "kernel/defs.h"
 
 // double-linked, circular list. double-linked makes remove
 // fast. circular simplifies code, because don't have to check for

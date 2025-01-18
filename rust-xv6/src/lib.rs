@@ -1,4 +1,5 @@
 #![no_std]
+#![no_main]
 #![deny(
     // keep-sorted start
     clippy::as_underscore,
@@ -44,8 +45,15 @@
     clippy::unnecessary_safety_doc
     // keep-sorted end
 )]
+#![allow(clippy::significant_drop_tightening)]
 #![allow(clippy::ptr_as_ptr, clippy::module_name_repetitions, reason = "Useful")]
 #![allow(clippy::cargo_common_metadata, reason = "TODO")]
+#![allow(refining_impl_trait, reason = "more informative")]
+#![allow(internal_features, reason = "greatly simplifies debugging")]
+#![allow(
+    clippy::uninlined_format_args,
+    reason = "inlined ones are harder to see"
+)]
 #![allow(
     clippy::multiple_crate_versions,
     reason = "I need FromZeros 0.8 but virtio_drivers uses 0.7"
@@ -64,20 +72,44 @@
 #![feature(try_with_capacity)]
 #![feature(maybe_uninit_slice)]
 #![feature(vec_push_within_capacity)]
+#![feature(const_nonnull_new)]
+#![feature(const_option)]
+#![feature(integer_sign_cast)]
+#![feature(const_pointer_is_aligned)]
+#![feature(c_variadic)]
+#![feature(ptr_as_uninit)]
+#![feature(custom_test_frameworks)]
+#![feature(slice_as_chunks)]
+#![feature(int_roundings)]
+#![feature(rustc_attrs)]
+#![test_runner(test_runner)]
+
 extern crate alloc;
 
 pub mod dtb;
 pub mod errno;
-mod fs;
+pub mod ffi_interop;
+pub mod fs;
 pub mod hw;
 pub mod kalloc;
 mod log;
 pub mod memlayout;
 pub mod panic;
+mod printf;
 pub mod util;
 pub mod vm;
 
 pub use crate::util::time::Instant;
+
+#[macro_export]
+macro_rules! static_assert {
+    ($e:expr) => (
+        const _: [(); { const ASSERT: bool = $e; ASSERT } as usize - 1] = [];
+    );
+}
+
+#[cfg(test)]
+fn test_runner(_tests: &[&dyn Fn()]) {}
 
 mod ffi {
     use crate::log::XV6Logger;

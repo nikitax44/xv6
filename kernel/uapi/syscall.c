@@ -1,8 +1,6 @@
 #include "syscall.h"
 #include "kernel/defs.h"
-#include "kernel/types.h"
-#include "scheduler/proc.h"
-#include <string.h>
+#include "kernel/scheduler/proc.h"
 
 // Fetch the u64 at addr from the current process.
 int fetchaddr(u64 addr, u64* ip) {

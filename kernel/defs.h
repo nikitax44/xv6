@@ -86,13 +86,6 @@ void pipeclose(struct pipe*, int);
 int  piperead(struct pipe*, u64, int);
 int  pipewrite(struct pipe*, u64, int);
 
-// printf.c
-int  printf(str, ...) __attribute__((format(printf, 1, 2)));
-void tabulate(u32 n);
-void shutdown(void) __attribute__((noreturn));
-void reboot(void) __attribute__((noreturn));
-void printfinit(void);
-
 // proc.c
 u32          cpuid(void);
 void         exit(int);
@@ -137,7 +130,7 @@ int  holdingsleep(struct sleeplock*);
 void initsleeplock(struct sleeplock*, char*);
 
 // string.c
-char* safestrcpy(char*, str, int);
+char* safestrcpy(char*, const char*, usize);
 
 // syscall.c
 void argint(int, int*);
@@ -195,9 +188,12 @@ void virtio_disk_intr(void);
 
 // #### Rust ####
 extern void dumpconf(void);
+extern int  printf(const char*, ...) __attribute__((format(printf, 1, 2)));
+extern void shutdown(void) __attribute__((noreturn));
+extern void reboot(void) __attribute__((noreturn));
 // panic
 extern void panic(char*) __attribute__((noreturn));
-void        testpanic(void);
+extern void testpanic(void) __attribute__((noreturn));
 
 // kalloc
 extern void* kalloc(void);
@@ -206,6 +202,14 @@ extern void* free(u64, u64);
 extern void  kfree(void*);
 extern void  kinit(void);
 extern u64   free_pages(void);
+
+// compiler builtins
+usize strlen(const char*);
+void  memset(void*, u8, usize);
+void* memmove(void*, const void*, usize);
+char* strcpy(char*, const char*);
+int   strncmp(const char*, const char*, usize);
+char* strncpy(char*, const char*, usize);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x) / sizeof((x)[0]))

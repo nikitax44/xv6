@@ -1,5 +1,6 @@
 use crate::kalloc::pages::page::{Page, PageHandle};
 use crate::kalloc::pages::KMEMError;
+use crate::kalloc::{get_kalloc, MemoryInfo, Xv6Alloc};
 use crate::memlayout::PGSIZE;
 use alloc::boxed::Box;
 use core::panic::Location;
@@ -35,13 +36,15 @@ impl KMem {
 
     #[must_use]
     pub fn free_pages(&self) -> usize {
-        let bytes = crate::kalloc::get_info().free_bytes;
+        let info: MemoryInfo = get_kalloc().get_info().into();
+        let bytes = info.free_bytes;
         let pages = bytes / PGSIZE;
         pages * 3 / 4
     }
 
     #[must_use]
     pub fn total_pages(&self) -> usize {
-        crate::kalloc::get_info().total_bytes / PGSIZE - 2
+        let info: MemoryInfo = get_kalloc().get_info().into();
+        (info.total_bytes / PGSIZE).saturating_sub(2)
     }
 }

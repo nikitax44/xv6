@@ -1,15 +1,9 @@
-#include "kernel/types.h"
+#include "kernel/defs.h"
 
-// Like strncpy but guaranteed to NUL-terminate.
-char* safestrcpy(char* s, str t, int n) {
-  char* os;
-
-  os = s;
-  if (n <= 0) {
-    return os;
+char* safestrcpy(char* dest, const char* src, usize size) {
+  if (size == 0) {
+    return dest;
   }
-  while (--n > 0 && (*s++ = *t++) != 0)
-    ;
-  *s = 0;
-  return os;
+  dest[size - 1] = '\0';
+  return strncpy(dest, src, size - 1);
 }

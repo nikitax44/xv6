@@ -1,15 +1,9 @@
 #include "proc.h"
 #include "_initcode.h"
-#include "defs.h"
-#include "errno.h"
 #include "free_stack.h"
-#include "hardware/memlayout.h"
-#include "hardware/riscv.h"
+#include "kernel/errno.h"
+#include "kernel/hardware/memlayout.h"
 #include "list.h"
-#include "param.h"
-#include "types.h"
-#include "util/spinlock.h"
-#include <string.h>
 
 struct cpu cpus[NCPU];
 

@@ -14,11 +14,8 @@
 #include "kernel/buf.h"
 #include "kernel/defs.h"
 #include "kernel/param.h"
-#include "kernel/types.h"
-#include "kernel/util/spinlock.h"
-#include "scheduler/proc.h"
+#include "kernel/scheduler/proc.h"
 #include "stat.h"
-#include <string.h>
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 // there should be one superblock per disk device, but we run with

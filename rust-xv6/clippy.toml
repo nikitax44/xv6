@@ -12,3 +12,4 @@ disallowed-methods = [
     "alloc::vec::Vec::with_capacity",
     #    "alloc::vec::Vec::extend_from_slice",
 ]
+stack-size-threshold = 2048

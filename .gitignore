@@ -18,8 +18,8 @@ qemu-script
 .gdbinit
 result
 target/
-/.direnv
-/.idea
+.direnv
+.idea/
 .rustup
 
 # cmake

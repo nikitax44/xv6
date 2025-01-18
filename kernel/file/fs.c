@@ -14,7 +14,7 @@
 #include "kernel/buf.h"
 #include "kernel/defs.h"
 #include "kernel/param.h"
-#include "kernel/proc.h"
+#include "kernel/scheduler/proc.h"
 #include "stat.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))

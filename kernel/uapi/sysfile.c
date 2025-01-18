@@ -11,7 +11,7 @@
 #include "kernel/file/stat.h"
 #include "kernel/mman.h"
 #include "kernel/param.h"
-#include "kernel/proc.h"
+#include "kernel/scheduler/proc.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.

@@ -1,19 +1,16 @@
 use crate::addrof_symbol;
 use crate::dtb::DTB;
-use crate::kalloc::pages::KMEM;
 use crate::kalloc::region::Region;
 use crate::kalloc::{get_kalloc, Xv6Alloc};
 use crate::memlayout::{
-    addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, KSTACK, PGSIZE, PLIC, SYSCON,
-    TRAMPOLINE, UART0, VIRTIO0,
+    addrof_end_kernel, addrof_end_text, addrof_kernel, FW_CFG, PGSIZE, PLIC, SYSCON, TRAMPOLINE,
+    UART0, VIRTIO0,
 };
 use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::PTError;
 use alloc::vec;
 use alloc::vec::Vec;
-
-const NPROC: usize = 64;
 
 /// # Safety
 /// no one owns memory outside of kernel and bios regions,
@@ -75,7 +72,7 @@ pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     pt.map_page(TRAMPOLINE, addrof_symbol!(trampoline), Mode::___X)?;
 
     // allocate and map a kernel stack for each process.
-    proc_mapstacks(&mut pt)?;
+    //proc_mapstacks(&mut pt)?;
 
     // done mapping
     Ok(pt)
@@ -111,26 +108,4 @@ fn xv6_memory() -> Vec<(Region, Mode)> {
             Mode::_RW_,
         ),
     ]
-}
-
-#[allow(clippy::large_stack_frames, reason = "it is fine")]
-fn proc_mapstacks(pt: &mut Pagetable) -> Result<(), PTError> {
-    for i in 0..NPROC {
-        let page1 = KMEM
-            .lock()
-            .alloc("proc stack")
-            .map_err(PTError::AllocFail)?;
-        let page2 = KMEM
-            .lock()
-            .alloc("proc stack")
-            .map_err(PTError::AllocFail)?;
-        let va = KSTACK(i);
-        pt.map_page(va, page1.into_box().leak().as_ptr() as usize, Mode::_RW_)?;
-        pt.map_page(
-            va + PGSIZE,
-            page2.into_box().leak().as_ptr() as usize,
-            Mode::_RW_,
-        )?;
-    }
-    Ok(())
 }

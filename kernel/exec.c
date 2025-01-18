@@ -3,7 +3,7 @@
 #include "errno.h"
 #include "hardware/riscv.h"
 #include "param.h"
-#include "proc.h"
+#include "scheduler/proc.h"
 #include "types.h"
 
 static int loadseg(pde_t*, u64, struct inode*, u32, u32);

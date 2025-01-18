@@ -1,3 +1,4 @@
+use crate::kalloc::pages::page::Page;
 use crate::kalloc::region::Region;
 use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::{PGSHIFT, PGSIZE};
@@ -5,6 +6,7 @@ use crate::vm::mode::Mode;
 use crate::vm::pt_inner::IPagetable;
 use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
+use alloc::boxed::Box;
 use core::ops::IndexMut;
 
 #[derive(Debug)]
@@ -162,7 +164,23 @@ impl<'inner> Pagetable<'inner> {
     pub fn unmap_page(&mut self, virtual_address: usize) -> Result<(), PTError> {
         // do not create pages to unmapped page
         self.walk(virtual_address)?;
+        self.walk_mut(virtual_address)?.unset();
+        Ok(())
+    }
 
+    ///# Panics
+    /// if va is valid, then cannot panic
+    ///# Errors
+    /// see `MMapError`
+    /// # Safety
+    /// mapped page must be allocated
+    pub unsafe fn unmap_page_and_free(&mut self, virtual_address: usize) -> Result<(), PTError> {
+        // do not create pages to unmapped page
+        let addr = self.walk(virtual_address)?.get().unwrap().0;
+        // SAFETY: page allocated so it's safe
+        unsafe {
+            let _ = Box::from_non_null(core::ptr::NonNull::new(addr as *mut Page).unwrap());
+        }
         self.walk_mut(virtual_address)?.unset();
         Ok(())
     }

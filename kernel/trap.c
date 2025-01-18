@@ -1,7 +1,7 @@
 #include "defs.h"
 #include "hardware/memlayout.h"
 #include "hardware/riscv.h"
-#include "proc.h"
+#include "scheduler/proc.h"
 #include "types.h"
 #include "util/spinlock.h"
 

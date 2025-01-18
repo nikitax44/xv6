@@ -1,6 +1,6 @@
 #include "kernel/defs.h"
 #include "kernel/errno.h"
-#include "kernel/proc.h"
+#include "kernel/scheduler/proc.h"
 #include "kernel/sysinfo.h"
 
 u64 sys_exit(void) {

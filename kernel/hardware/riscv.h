@@ -247,6 +247,11 @@ static void sfence_vma(void) {
   asm volatile("sfence.vma zero, zero");
 }
 
+// flush the TLB for specific address.
+static inline void sfence_vma_address(u64 addr) {
+  asm volatile("sfence.vma zero, %0" ::"r"(addr));
+}
+
 struct sbiret {
   i64 error;
   u64 value;

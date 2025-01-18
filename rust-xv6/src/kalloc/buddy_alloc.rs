@@ -1,6 +1,5 @@
 use crate::kalloc::region::Region;
 use crate::kalloc::Xv6Alloc;
-use crate::memlayout::PGSIZE;
 use core::fmt::Debug;
 
 const LEVELS: usize = (128 * 1024 * 1024 / 8u64).ilog2() as usize;

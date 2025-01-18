@@ -1,8 +1,9 @@
 #pragma once
-#include "hardware/riscv.h"
-#include "param.h"
-#include "types.h"
-#include "util/spinlock.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/param.h"
+#include "kernel/types.h"
+#include "kernel/util/spinlock.h"
+#include "list.h"
 
 // Saved registers for kernel context switches.
 struct context {
@@ -89,7 +90,11 @@ enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
+
   struct spinlock lock;
+
+  struct list sched;
+  struct list sib;
 
   // p->lock must be held when using these:
   enum procstate state;  // Process state
@@ -100,6 +105,7 @@ struct proc {
 
   // wait_lock must be held when using this:
   struct proc* parent; // Parent process
+  struct list  children;
 
   // these are private to the process, so p->lock need not be held.
   u64               kstack;        // Virtual address of kernel stack

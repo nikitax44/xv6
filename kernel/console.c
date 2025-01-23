@@ -18,6 +18,8 @@
 #define BACKSPACE 0x100
 #define C(x)      ((x) - '@') // Control-x
 
+usize size_of_last_char(char* start, char* end);
+
 //
 // send one character to the uart.
 // called by printf(), and to echo input characters,
@@ -155,7 +157,12 @@ void consoleintr(int c) {
   case C('H'): // Backspace
   case '\x7f': // Delete key
     if (cons.e != cons.w) {
-      cons.e--;
+      if (cons.w < cons.e) {
+        cons.e -= size_of_last_char(&cons.buf[cons.w], &cons.buf[cons.e]);
+      } else {
+        cons.e -= size_of_last_char(&cons.buf[0], &cons.buf[cons.e]);
+      }
+      cons.e %= INPUT_BUF_SIZE;
       consputc(BACKSPACE);
     }
     break;

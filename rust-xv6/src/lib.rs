@@ -83,12 +83,15 @@
 #![feature(int_roundings)]
 #![feature(rustc_attrs)]
 #![feature(duration_constants)]
+#![feature(round_char_boundary)]
+#![feature(slice_from_ptr_range)]
 #![test_runner(test_runner)]
 
 extern crate alloc;
 
 pub mod dtb;
 pub mod errno;
+mod exports;
 pub mod ffi_interop;
 pub mod fs;
 pub mod hw;

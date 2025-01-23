@@ -10,7 +10,7 @@ pub const VIRTIO0: usize = 0x1000_1000;
 pub const PLIC: usize = 0x0c00_0000;
 pub const TRAMPOLINE: usize = Pagetable::MAX_VA - PGSIZE;
 #[no_mangle]
-pub static STACK_SIZE: usize = 32;
+pub static STACK_SIZE: usize = 4;
 pub static KSTACK: fn(usize) -> usize = |p| TRAPFRAME - ((p) + 1) * (STACK_SIZE + 1) * PGSIZE;
 pub const TRAPFRAME: usize = TRAMPOLINE - PGSIZE;
 

@@ -1,5 +1,5 @@
 use crate::errno::ErrNo;
-use crate::kalloc::pages::{KMEMError, KMEM};
+use crate::kalloc::pages::KMEM;
 use crate::memlayout::{KSTACK, PGSIZE, STACK_SIZE};
 use crate::vm::kernel_map::make_kernel_map;
 use crate::vm::mode::Mode;
@@ -14,50 +14,56 @@ static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 #[allow(clippy::large_stack_frames, reason = "it is fine")]
 #[no_mangle]
 extern "C" fn map_stack(pos: usize) -> ErrNo {
-    let va = KSTACK(pos);
-    for i in 0..STACK_SIZE {
-        let page = KMEM.lock().alloc("proc stack");
-        if let Err(err) = page {
-            return match err {
-                KMEMError::AllocFail(_err) => ErrNo::ENOMEM,
-            };
-        }
-        let mres = KERNEL_PAGETABLE
-            .write()
-            .as_mut()
-            .expect("map_page on None")
-            .map_page(
-                va + PGSIZE * i,
-                page.expect("something went wrong")
-                    .into_box()
-                    .leak()
-                    .as_ptr() as usize,
-                Mode::_RW_,
-            );
-        if let Err(err) = mres {
-            return match err {
-                PTError::AllocFail(_err) => ErrNo::ENOMEM,
-                _ => panic!("ffi::proc_map_one_stack: {:?}", err),
-            };
-        };
+    match unsafe { KernelStack(pos).map() } {
+        Ok(()) => ErrNo::SUCCESS,
+        Err(PTError::AllocFail(_)) => ErrNo::ENOMEM,
+        Err(PTError::Remap) => panic!("page remap"),
+        Err(err) => panic!("map_stack: {err}"),
     }
-    ErrNo::SUCCESS
 }
 
 #[allow(clippy::large_stack_frames, reason = "it is fine")]
 #[no_mangle]
 extern "C" fn unmap_stack(pos: usize) {
-    let va = KSTACK(pos);
-    for i in 0..STACK_SIZE {
-        // Safety: address is allocated so it's safe
-        unsafe {
+    unsafe { KernelStack(pos).unmap() }.expect("failed to unmap page")
+}
+
+#[derive(Copy, Clone)]
+struct KernelStack(pub usize);
+
+impl KernelStack {
+    fn bottom(self) -> usize {
+        KSTACK(self.0)
+    }
+    fn pages(&self) -> impl Iterator<Item = usize> {
+        let bot = self.bottom();
+        (0..STACK_SIZE).map(move |i| bot + i * PGSIZE)
+    }
+
+    unsafe fn map(self) -> Result<(), PTError> {
+        for ptr in self.pages() {
+            let page = KMEM.lock().alloc("proc stack")?;
             KERNEL_PAGETABLE
                 .write()
                 .as_mut()
-                .expect("unmap_page on None")
-                .unmap_page_and_free(va + i * PGSIZE)
-                .expect("no errors are expected");
+                .expect("map_page on None")
+                .map_page(ptr, page.into_box().leak().as_ptr() as usize, Mode::_RW_)?;
         }
+        Ok(())
+    }
+
+    unsafe fn unmap(self) -> Result<(), PTError> {
+        for ptr in self.pages() {
+            // SAFETY: precondition
+            unsafe {
+                KERNEL_PAGETABLE
+                    .write()
+                    .as_mut()
+                    .expect("unmap_page on None")
+                    .unmap_page_and_free(ptr)?;
+            }
+        }
+        Ok(())
     }
 }
 

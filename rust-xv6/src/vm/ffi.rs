@@ -12,8 +12,10 @@ use spin::rwlock::RwLock;
 static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 
 #[allow(clippy::large_stack_frames, reason = "it is fine")]
+// #[attr_wrapper::time_me(0ms)]
 #[no_mangle]
 extern "C" fn map_stack(pos: usize) -> ErrNo {
+    // SAFETY: precondition
     match unsafe { KernelStack(pos).map() } {
         Ok(()) => ErrNo::SUCCESS,
         Err(PTError::AllocFail(_)) => ErrNo::ENOMEM,
@@ -23,9 +25,11 @@ extern "C" fn map_stack(pos: usize) -> ErrNo {
 }
 
 #[allow(clippy::large_stack_frames, reason = "it is fine")]
+// #[attr_wrapper::time_me(0ms)]
 #[no_mangle]
 extern "C" fn unmap_stack(pos: usize) {
-    unsafe { KernelStack(pos).unmap() }.expect("failed to unmap page")
+    // SAFETY: precondition
+    unsafe { KernelStack(pos).unmap() }.expect("failed to unmap page");
 }
 
 #[derive(Copy, Clone)]
@@ -35,7 +39,7 @@ impl KernelStack {
     fn bottom(self) -> usize {
         KSTACK(self.0)
     }
-    fn pages(&self) -> impl Iterator<Item = usize> {
+    fn pages(self) -> impl Iterator<Item = usize> {
         let bot = self.bottom();
         (0..STACK_SIZE).map(move |i| bot + i * PGSIZE)
     }

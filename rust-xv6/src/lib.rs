@@ -82,6 +82,7 @@
 #![feature(slice_as_chunks)]
 #![feature(int_roundings)]
 #![feature(rustc_attrs)]
+#![feature(duration_constants)]
 #![test_runner(test_runner)]
 
 extern crate alloc;

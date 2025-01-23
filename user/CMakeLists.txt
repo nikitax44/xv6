@@ -25,13 +25,14 @@ list(APPEND UPROGS
 list(APPEND PORTS
         _test
         _dump
+        _donut
 )
 
 # Set the compiler flags
 set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra -Wold-style-definition")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_WARNINGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -ggdb -gdwarf-2")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64g -static")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64gc -static")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${NEWLIB}/include --specs=${NEWLIB}/lib/nano.specs")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${CMAKE_CURRENT_SOURCE_DIR}/../")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -MD")

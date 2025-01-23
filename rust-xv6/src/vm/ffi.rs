@@ -1,6 +1,6 @@
 use crate::errno::ErrNo;
 use crate::kalloc::pages::{KMEMError, KMEM};
-use crate::memlayout::{KSTACK, PGSIZE};
+use crate::memlayout::{KSTACK, PGSIZE, STACK_SIZE};
 use crate::vm::kernel_map::make_kernel_map;
 use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
@@ -15,7 +15,7 @@ static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 #[no_mangle]
 extern "C" fn map_stack(pos: usize) -> ErrNo {
     let va = KSTACK(pos);
-    for i in 0..2 {
+    for i in 0..STACK_SIZE {
         let page = KMEM.lock().alloc("proc stack");
         if let Err(err) = page {
             return match err {
@@ -48,7 +48,7 @@ extern "C" fn map_stack(pos: usize) -> ErrNo {
 #[no_mangle]
 extern "C" fn unmap_stack(pos: usize) {
     let va = KSTACK(pos);
-    for i in 0..2 {
+    for i in 0..STACK_SIZE {
         // Safety: address is allocated so it's safe
         unsafe {
             KERNEL_PAGETABLE

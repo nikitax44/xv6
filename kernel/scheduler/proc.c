@@ -135,7 +135,7 @@ static int allocproc(struct proc** proc_out) {
     freeproc(p);
     return ENOMEM;
   }
-  p->kstack = KSTACK(stack_pos);
+  p->kstack = KSTACK_TOP(stack_pos);
 
   initlock(&p->lock, "proc");
   p->pid   = allocpid();
@@ -144,7 +144,7 @@ static int allocproc(struct proc** proc_out) {
   // Set up new context to start executing at forkret,
   // which returns to user space.
   p->context.ra = (u64)forkret;
-  p->context.sp = p->kstack + PGSIZE;
+  p->context.sp = p->kstack;
 
   acquire(&wait_lock);
   acquire(&p->lock);
@@ -165,8 +165,8 @@ static void freeproc(struct proc* p) {
     proc_freepagetable(p->pagetable, p->sz);
   }
   if (p->kstack) {
-    int pos = ((TRAMPOLINE - p->kstack) / (3 * PGSIZE)) - 1;
-    sfence_vma_address(p->kstack);
+    int pos = FROM_KSTACK_TOP(p->kstack);
+    sfence_vma_address(p->kstack - PGSIZE);
     free_stack_push(pos);
   }
   if (!lst_empty(&p->children)) {
@@ -512,7 +512,7 @@ void scheduler(void) {
     p->state = RUNNING;
     c->proc  = p;
     // flush TLB for kstack
-    sfence_vma_address(p->kstack);
+    sfence_vma_address(p->kstack - PGSIZE);
     swtch(&c->context, &p->context);
 
     // Process is done running for now.

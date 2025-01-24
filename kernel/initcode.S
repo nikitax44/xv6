@@ -1,10 +1,13 @@
+.section .rodata
+.globl initcode_start
+initcode_start:
+# .org 0 # is ignored
+
 # Initial process that execs /init.
 # This code runs in user space.
 
 #include "kernel/uapi/syscall.h"
-
 # exec(init, argv)
-.globl start
 start:
         la a0, init
         la a1, argv
@@ -25,9 +28,12 @@ init:
 .p2align 2
 # char *argv[] = { init, 0 };
 argv:
-  .quad init
+  .quad init-start # stores absolute address in kernelspace, so shift it back to zero
   .quad 0
 
 # char *envp[] = { 0 };
 envp:
   .quad 0
+
+.globl initcode_end
+initcode_end:

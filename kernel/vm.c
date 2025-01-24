@@ -106,7 +106,7 @@ pagetable_t uvmcreate(void) {
 // Load the user initcode into address 0 of pagetable,
 // for the very first process.
 // sz must be less than a page.
-void uvmfirst(pagetable_t pagetable, u8* src, u32 sz) {
+void uvmfirst(pagetable_t pagetable, const u8* src, usize sz) {
   char* mem;
 
   if (sz >= PGSIZE) {

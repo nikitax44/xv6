@@ -69,13 +69,19 @@
           inherit craneLib;
         };
 
+        kernelInclude = prefixDrv "include" ./include;
+        kernelSrc = localPkgs.symlinkJoin {
+          name = "kernelSrc";
+          paths = [(prefixDrv "kernel" ./kernel) kernelInclude];
+        };
+
         kernel = crossPkgs.stdenv.mkDerivation {
           pname = "kernel";
           inherit (rust-xv6) version;
-          src = (prefixDrv "kernel" ./kernel) + "/kernel";
+          src = kernelSrc + "/kernel";
           inherit nativeBuildInputs;
 
-          cmakeFlags = ["-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a" "-DOPENSBI_ENABLED=${toString enableOpenSBI}"];
+          cmakeFlags = ["-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a" "-DOPENSBI_ENABLED=${toString enableOpenSBI}" "-DCMAKE_C_FLAGS=-v"];
           buildFlags = "kernel";
           installPhase = ''
             install -m 0444 kernel $out
@@ -147,7 +153,7 @@
           // common);
 
         packages = {
-          inherit rust-xv6 kernel programs mkfs;
+          inherit rust-xv6 kernel programs mkfs kernelSrc;
           default = crossPkgs.stdenv.mkDerivation ({
               src = ./.;
               pname = "xv6";

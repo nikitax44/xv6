@@ -39,6 +39,7 @@ set(OBJS
     swtch.S
     trampoline.S
     kernelvec.S
+    initcode.S
 )
 
 # Set the compiler flags
@@ -54,18 +55,6 @@ set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_custom_command(
-  OUTPUT _initcode.h
-  COMMAND ${CMAKE_ASM_COMPILER} -nostdinc -I ${CMAKE_CURRENT_SOURCE_DIR}/../include -c ${CMAKE_CURRENT_SOURCE_DIR}/initcode.S -o initcode.o
-  COMMAND ${CMAKE_LINKER} -N -e start -Ttext 0 -o initcode.out initcode.o
-  COMMAND ${CMAKE_OBJCOPY} -S -O binary initcode.out initcode
-  COMMAND xxd -i -n initcode initcode > _initcode.h
-  COMMAND rm initcode.o initcode initcode.out
-  DEPENDS initcode.S
-  COMMENT "Generating _initcode.h from initcode.S"
-)
-
-
 if (OPENSBI_ENABLED)
   set(BOOT boot/sbi_entry.S boot/sbi_start.c)
   set(KERNEL_ENTRY_START "0x80200000")
@@ -74,14 +63,11 @@ else ()
   set(KERNEL_ENTRY_START "0x80000000")
 endif ()
 
-add_custom_target(Initcode ALL DEPENDS _initcode.h)
-
 add_custom_target(KernelDeps ALL DEPENDS _kernel.ld)
 
 # Define the kernel target
 add_library(KernelLib ${OBJS})
-target_link_libraries(KernelLib -lc)
-add_dependencies(KernelLib Initcode)
+target_link_libraries(KernelLib)
 
 if (DEFINED RUST_XV6)
   add_custom_target(GenerateLibRustXv6)
@@ -91,7 +77,7 @@ if (DEFINED RUST_XV6)
 endif ()
 
 add_executable(kernel ${BOOT})
-target_link_libraries(kernel PRIVATE KernelLib RustXv6 KernelLib)
+target_link_libraries(kernel PRIVATE KernelLib RustXv6 KernelLib -lc)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_BINARY_DIR}/_kernel.ld")
 add_dependencies(kernel KernelDeps GenerateLibRustXv6)
 

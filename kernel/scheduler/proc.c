@@ -1,9 +1,8 @@
 #include "kernel/scheduler/proc.h"
-#include "_initcode.h"
 #include "kernel/errno.h"
 #include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
-#include "kernel/hardware/sv39.h"
+#include "kernel/initcode.h"
 #include "kernel/scheduler/free_stack.h"
 
 struct cpu cpus[NCPU];
@@ -226,7 +225,7 @@ void userinit(void) {
 
   // allocate one user page and copy initcode's instructions
   // and data into it.
-  uvmfirst(p->pagetable, initcode, sizeof(initcode));
+  uvmfirst(p->pagetable, initcode_start, initcode_end - initcode_start);
   p->sz = PGSIZE;
 
   // prepare for the very first "return" from kernel to user.

@@ -1,4 +1,6 @@
 #pragma once
+#ifndef __ASSEMBLER__
+
 #include "kernel/types.h"
 #define asm __asm__
 
@@ -262,3 +264,4 @@ static inline void sfence_vma_address(u64 addr) {
 }
 
 #pragma GCC diagnostic pop
+#endif // __ASSEMBLER__

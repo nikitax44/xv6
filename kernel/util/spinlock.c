@@ -7,7 +7,7 @@
 
 void initlock(struct spinlock* lk, char* name) {
   lk->name   = name;
-  lk->locked = 0;
+  lk->locked = (AtomicU32){.value = 0};
   lk->cpu    = 0;
 }
 
@@ -31,26 +31,8 @@ void acquire(struct spinlock* lk) {
   //   a5 = 1
   //   s1 = &lk->locked
   //   amoswap.w.aq a5, a5, (s1)
-
-  //__sync_fetch_and_add(&allcnt, 1);
-  // int cnt = 0;
-  while (true) {
-    while (lk->locked == 1)
-      ;
-    if (__sync_lock_test_and_set(&lk->locked, 1) == 0) {
-      break;
-    }
-    // cnt++;
+  while (atomic_lock_test_and_set(&lk->locked, 1) != 0) {
   }
-
-  //  if (lk == &wait_lock) {
-  //    __sync_fetch_and_add(&wait_lock_cnt, cnt);
-  //    __sync_fetch_and_add(&waitcnt, 1);
-  //    if (waitcnt % 2000 == 0) {
-  //      printf(" L%d WC%d W%d ", wait_lock_cnt / waitcnt, wait_lock_cnt,
-  //      waitcnt); printf(" A%d W%d ", allcnt, waitcnt);
-  //    }
-  //  }
 
   // Tell the C compiler and the processor to not move loads or stores
   // past this point, to ensure that the critical section's memory
@@ -74,7 +56,7 @@ bool try_acquire(struct spinlock* lk) {
   //   a5 = 1
   //   s1 = &lk->locked
   //   amoswap.w.aq a5, a5, (s1)
-  if (__sync_lock_test_and_set(&lk->locked, 1) != 0) {
+  if (atomic_lock_test_and_set(&lk->locked, 1) != 0) {
     pop_off();
     return false;
   }
@@ -113,16 +95,16 @@ void release(struct spinlock* lk) {
   // On RISC-V, sync_lock_release turns into an atomic swap:
   //   s1 = &lk->locked
   //   amoswap.w zero, zero, (s1)
-  __sync_lock_release(&lk->locked);
+  atomic_lock_release(&lk->locked);
 
   pop_off();
 }
 
 // Check whether this cpu is holding the lock.
 // Interrupts must be off.
-int holding(struct spinlock* lk) {
-  int r;
-  r = (lk->locked && lk->cpu == mycpu());
+bool holding(struct spinlock* lk) {
+  bool r;
+  r = (atomic_load(&lk->locked) && lk->cpu == mycpu());
   return r;
 }
 

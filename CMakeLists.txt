@@ -43,9 +43,20 @@ add_custom_command(
   COMMAND cd ./rust-xv6 && cargo clippy --release --frozen --lib || true
   COMMAND cd ./rust-xv6 && cargo build ${CARGO_ARGUMENTS}
   COMMAND cp ./target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
-  DEPENDS ./rust-xv6/src/** ./rust-xv6/Cargo.*
+  DEPENDS ./rust-xv6/src/** ./rust-xv6/Cargo.* Bindgen
   COMMENT "Building librust_xv6.a"
 )
+
+add_custom_command(
+  OUTPUT _bindgen.rs
+  COMMAND fd -e h --base-directory include --strip-cwd-prefix -x echo "#include \"{}\"" > _everything.h
+  VERBATIM
+  COMMAND bindgen _everything.h -o _bindgen.rs --use-core --wrap-static-fns --wrap-unsafe-ops --emit-diagnostics
+          --experimental --no-derive-copy --no-debug trapframe -- -D __ASSEMBLER__ -I include -nostdinc
+  DEPENDS ./include/kernel/* ./include/kernel/*/*
+)
+
+add_custom_target(Bindgen ALL DEPENDS _bindgen.rs)
 
 add_custom_target(GenerateLibRustXv6 ALL DEPENDS librust_xv6.a)
 

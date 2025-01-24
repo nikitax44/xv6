@@ -13,14 +13,11 @@ unsafe extern "C" fn size_of_last_char(
     str.len() - str.floor_char_boundary(str.len() - 1)
 }
 
-extern "C" {
-    fn syscall_impl();
-}
 #[attr_wrapper::time_me(0)]
 #[no_mangle]
 unsafe extern "C" fn syscall() {
     // SAFETY: precondition
     unsafe {
-        syscall_impl();
+        crate::bindings::syscall_impl();
     }
 }

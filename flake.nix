@@ -162,6 +162,7 @@
               config.treefmt.build.wrapper
               localPkgs.gnumake
               localPkgs.clang-tools
+              localPkgs.rust-bindgen
             ];
           }
           // common);

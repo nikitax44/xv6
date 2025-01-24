@@ -1,4 +1,6 @@
 #pragma once
+#ifndef __ASSEMBLER__
+
 #include "kernel/types.h"
 
 struct sbiret {
@@ -52,3 +54,4 @@ static struct sbiret sbi_set_timer(u64 abstime) {
 }
 
 #pragma GCC diagnostic pop
+#endif // __ASSEMBLER__

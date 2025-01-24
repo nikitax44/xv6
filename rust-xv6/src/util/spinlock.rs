@@ -1,16 +1,8 @@
-use core::ffi::{c_char, CStr};
-use core::sync::atomic::AtomicU32;
+use crate::bindings::{acquire, release, spinlock, try_acquire};
+use core::ffi::CStr;
 use lock_api::{GuardNoSend, RawMutex};
 
-#[repr(C)]
-#[must_use]
-pub struct Xv6Spinlock {
-    locked: AtomicU32, // Is the lock held?
-
-    // For debugging:
-    name: *const c_char, // Name of lock.
-    cpu: *const (),      // The cpu holding the lock.
-}
+pub type Xv6Spinlock = spinlock;
 
 // SAFETY: `name` and `cpu` are never dereferenced
 unsafe impl Send for Xv6Spinlock {}
@@ -18,12 +10,17 @@ unsafe impl Send for Xv6Spinlock {}
 unsafe impl Sync for Xv6Spinlock {}
 
 impl Xv6Spinlock {
+    #[must_use]
     pub const fn new(name: &'static CStr) -> Self {
         Self {
-            locked: AtomicU32::new(0),
+            locked: crate::bindings::AtomicU32 { value: 0 },
             name: name.as_ptr(),
-            cpu: core::ptr::null_mut(),
+            cpu: core::ptr::null(),
         }
+    }
+
+    const fn as_mut(&self) -> *mut Self {
+        core::ptr::from_ref(self).cast_mut()
     }
 }
 
@@ -35,22 +32,16 @@ unsafe impl RawMutex for Xv6Spinlock {
 
     fn lock(&self) {
         // SAFETY: ptr is valid
-        unsafe { acquire(core::ptr::from_ref(self)) }
+        unsafe { acquire(self.as_mut()) }
     }
 
     fn try_lock(&self) -> bool {
         // SAFETY: ptr is valid
-        unsafe { try_acquire(core::ptr::from_ref(self)) }
+        unsafe { try_acquire(self.as_mut()) != 0 }
     }
 
     unsafe fn unlock(&self) {
         // SAFETY: ptr is valid
-        unsafe { release(core::ptr::from_ref(self)) }
+        unsafe { release(self.as_mut()) }
     }
-}
-
-extern "C" {
-    fn acquire(spin: *const Xv6Spinlock);
-    fn try_acquire(spin: *const Xv6Spinlock) -> bool;
-    fn release(spin: *const Xv6Spinlock);
 }

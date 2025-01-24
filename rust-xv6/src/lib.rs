@@ -89,6 +89,17 @@
 
 extern crate alloc;
 
+#[allow(
+    non_camel_case_types,
+    non_upper_case_globals,
+    non_snake_case,
+    unreachable_pub,
+    dead_code,
+    clippy::unreadable_literal,
+    clippy::decimal_literal_representation
+)]
+#[path = "../../_bindgen.rs"]
+pub mod bindings;
 pub mod dtb;
 pub mod errno;
 mod exports;

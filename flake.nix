@@ -58,30 +58,35 @@
           });
 
         enableOpenSBI = false;
+        qemuFlags = lib.optionalString (!enableOpenSBI) "-bios none";
 
-        prefixDrv = prefix: drv:
-          crossPkgs.runCommandNoCCLocal "prefix-drv" {} ''
-            mkdir $out
-            cp -r ${drv} $out/${prefix}
-          '';
+        selectPaths = drvs: extra:
+          localPkgs.runCommandNoCCLocal "prefix-drv" {} (''
+              mkdir $out
+            ''
+            + (lib.strings.concatStrings (lib.lists.forEach drvs (drv: ''
+              cp -r ${drv} $out/${builtins.baseNameOf drv}
+            '')))
+            + extra);
+
+        fixCMakeLists = ''
+          mkdir $out/user
+          touch $out/user/CMakeLists.txt
+          mkdir $out/kernel
+          touch $out/kernel/CMakeLists.txt
+        '';
 
         rust-xv6 = crossPkgs.callPackage ./rust-xv6 {
           inherit craneLib;
         };
 
-        kernelInclude = prefixDrv "include" ./include;
-        kernelSrc = localPkgs.symlinkJoin {
-          name = "kernelSrc";
-          paths = [(prefixDrv "kernel" ./kernel) kernelInclude];
-        };
-
         kernel = crossPkgs.stdenv.mkDerivation {
           pname = "kernel";
           inherit (rust-xv6) version;
-          src = kernelSrc + "/kernel";
+          src = selectPaths [./kernel ./include] "";
           inherit nativeBuildInputs;
 
-          cmakeFlags = ["-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a" "-DOPENSBI_ENABLED=${toString enableOpenSBI}" "-DCMAKE_C_FLAGS=-v"];
+          cmakeFlags = ["-S" "../kernel" "-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a" "-DOPENSBI_ENABLED=${toString enableOpenSBI}"];
           buildFlags = "kernel";
           installPhase = ''
             install -m 0444 kernel $out
@@ -90,9 +95,8 @@
         };
 
         programs = crossPkgs.stdenv.mkDerivation ({
-            pname = "programs.tar";
-            version = "none";
-            src = ./.;
+            name = "programs.tar";
+            src = selectPaths [./user ./include] "";
 
             cmakeFlags = ["-DNEWLIB=${NEWLIB}" "-S ../user"];
             buildFlags = "Programs";
@@ -105,13 +109,23 @@
         mkfs = localPkgs.stdenv.mkDerivation ({
             pname = "mkfs";
             version = "none";
-            src = ./.;
+            src = selectPaths [./CMakeLists.txt ./mkfs ./include] fixCMakeLists;
             buildFlags = "mkfs";
             installPhase = ''
               install -Dm 0555 mkfs.elf $out/bin/mkfs
             '';
           }
           // common);
+
+        qemu-script = localPkgs.substitute {
+          name = "qemu-script";
+          src = ./qemu-script.tmpl;
+          substitutions = [
+            "--subst-var-by"
+            "QEMU_FLAGS"
+            qemuFlags
+          ];
+        };
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
         platform = crossPkgs.stdenv.hostPlatform.config;
@@ -153,27 +167,18 @@
           // common);
 
         packages = {
-          inherit rust-xv6 kernel programs mkfs kernelSrc;
-          default = crossPkgs.stdenv.mkDerivation ({
-              src = ./.;
-              pname = "xv6";
-              version = "none";
-              preBuild = ''
-                cp ${kernel} kernel/kernel
-                cp ${programs} user/fs.tar
-                cp ${mkfs}/bin/mkfs mkfs.elf
-                chmod u+w kernel/kernel user/fs.tar mkfs.elf
-              '';
-              buildFlags = "-i";
-              installPhase = ''
-                mkdir -p $out/bin
-                install -Dm 0444 kernel/kernel fs.img $out/
-                install -Dm 0555 qemu-script $out/bin/
-              '';
-              dontStrip = true;
+          inherit rust-xv6 kernel programs mkfs qemu-script;
+          default =
+            localPkgs.runCommandNoCCLocal "xv6" {
               meta.mainProgram = "qemu-script";
-            }
-            // common);
+            } ''
+              tar -xf ${programs}
+              ${mkfs}/bin/mkfs fs.img *
+              mkdir -p $out/bin
+              install -Tm 0444 ${kernel} $out/kernel
+              install -Dm 0444 fs.img $out/
+              install -Dm 0555 ${qemu-script} $out/bin/qemu-script
+            '';
         };
       };
     };

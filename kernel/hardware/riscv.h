@@ -304,8 +304,6 @@ static void set_timer(u64 abstime) {
 #endif
 }
 
-typedef u64  pte_t;
-typedef u64* pagetable_t; // 512 PTEs
 #pragma GCC diagnostic pop
 #endif // __ASSEMBLER__
 

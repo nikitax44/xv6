@@ -344,10 +344,11 @@ void reparent(struct proc* p) {
   release(&wait_lock);
 }
 
-// Exit the current process.  Does not return.
+// Mark the current process as exited. *Does* return.
+// the usertrap must be in the caller chain
 // An exited process remains in the zombie state
 // until its parent calls wait().
-void exit(int status) {
+void mark_exit(int status) {
   struct proc* p = myproc();
 
   if (p == initproc) {
@@ -375,19 +376,14 @@ void exit(int status) {
   acquire(&wait_lock);
   acquire(&p->lock);
   p->xstate = status;
-  p->state  = ZOMBIE;
+  p->state  = WIP_ZOMBIE;
   release(&p->lock);
 
   // Parent might be sleeping in wait().
   wakeup_process(p->parent);
 
-  acquire(&p->lock);
   release(&wait_lock);
   release(&parent_lock);
-
-  // Jump into the scheduler, never to return.
-  sched();
-  panic("zombie exit");
 }
 
 // Wait for a child process to exit and return its pid.

@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "attr-wrapper"
 version = "0.1.0"
-source = "git+https://github.com/nikitax44/attr-wrapper#e5a13d6b10647fc6b302009a25608a3878fa5171"
+source = "git+https://github.com/nikitax44/attr-wrapper#b872cca47a96223dcb7bee8f2986ebd3131339c8"
 dependencies = [
  "quote",
  "syn",

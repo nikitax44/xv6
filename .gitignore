@@ -21,6 +21,7 @@ target/
 .direnv
 .idea/
 .rustup
+perf.*
 
 # cmake
 /build/

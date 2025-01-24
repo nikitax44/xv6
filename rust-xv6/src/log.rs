@@ -14,7 +14,7 @@ impl log::Log for XV6Logger {
         if self.enabled(record.metadata()) {
             writeln!(
                 crate::hw::console::CONSOLE.lock(),
-                "{} -  (HART{} at {}) {}",
+                "{} - (HART{} at {}) {}",
                 record.level(),
                 crate::hw::asm::cpuid(),
                 crate::hw::asm::ticks(),

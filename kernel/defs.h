@@ -138,7 +138,9 @@ int  argstr(int, char*, int);
 void argaddr(int, u64*);
 int  fetchstr(u64, char*, int);
 int  fetchaddr(u64, u64*);
-void syscall(void);
+void syscall_impl(void);
+
+extern void syscall(void); // rust wrapper for syscall_impl
 
 // trap.c
 extern u32             ticks;

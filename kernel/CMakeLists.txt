@@ -91,7 +91,7 @@ if (DEFINED RUST_XV6)
 endif ()
 
 add_executable(kernel ${BOOT})
-target_link_libraries(kernel PRIVATE KernelLib RustXv6)
+target_link_libraries(kernel PRIVATE KernelLib RustXv6 KernelLib)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_BINARY_DIR}/_kernel.ld")
 add_dependencies(kernel KernelDeps GenerateLibRustXv6)
 

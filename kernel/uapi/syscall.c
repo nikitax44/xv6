@@ -109,7 +109,7 @@ static u64 (*syscalls[])(void) = {
     [SYS_sysinfo] = sys_sysinfo,   [SYS_futimesat] = sys_futimesat,
     [SYS_getdents] = sys_getdents, [SYS_shutdown] = (u64(*)(void))shutdown};
 
-void syscall(void) {
+void syscall_impl(void) {
   u64          num;
   struct proc* p = myproc();
 

@@ -16,7 +16,7 @@ use alloc::vec::Vec;
 /// no one owns memory outside of kernel and bios regions,
 /// or it is declared in dtb's reserved regions
 #[allow(clippy::large_stack_frames, reason = "stack is reused")]
-#[attr_wrapper::time_me]
+#[attr_wrapper::time_me(0)]
 pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
     let xv6_mem = xv6_memory();
 

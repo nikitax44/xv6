@@ -1,5 +1,6 @@
 use crate::hw::asm::{cpuid, ticks};
 use alloc::vec::Vec;
+use core::fmt::{Display, Formatter};
 use core::num::NonZeroU64;
 use core::ops::Sub;
 use core::time::Duration;
@@ -19,6 +20,12 @@ impl Instant {
     #[must_use]
     pub fn elapsed(&self) -> Duration {
         Self::now() - *self
+    }
+}
+
+impl Display for Instant {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", (*self - Self { ticks: 0 }).as_nanos())
     }
 }
 

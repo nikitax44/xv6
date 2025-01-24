@@ -12,7 +12,7 @@ use spin::rwlock::RwLock;
 static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 
 #[allow(clippy::large_stack_frames, reason = "it is fine")]
-// #[attr_wrapper::time_me(0ms)]
+#[attr_wrapper::time_me(0)]
 #[no_mangle]
 extern "C" fn map_stack(pos: usize) -> ErrNo {
     // SAFETY: precondition
@@ -25,7 +25,7 @@ extern "C" fn map_stack(pos: usize) -> ErrNo {
 }
 
 #[allow(clippy::large_stack_frames, reason = "it is fine")]
-// #[attr_wrapper::time_me(0ms)]
+#[attr_wrapper::time_me(0)]
 #[no_mangle]
 extern "C" fn unmap_stack(pos: usize) {
     // SAFETY: precondition

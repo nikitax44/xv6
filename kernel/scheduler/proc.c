@@ -722,6 +722,17 @@ int killed(struct proc* p) {
   return k;
 }
 
+void do_exit_if_needed(struct proc* p) {
+  acquire(&p->lock);
+  if (p->state == WIP_ZOMBIE) {
+    p->state = ZOMBIE;
+    // Jump into the scheduler, never to return.
+    sched();
+    panic("zombie exit");
+  }
+  release(&p->lock);
+}
+
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
@@ -753,8 +764,9 @@ int either_copyin(void* dst, int user_src, u64 src, u64 len) {
 // No lock to avoid wedging a stuck machine further.
 void procdump(void) {
   static char* states[] = {
-      [UNUSED] = "unused",   [USED] = "used",      [SLEEPING] = "sleep ",
-      [RUNNABLE] = "runble", [RUNNING] = "run   ", [ZOMBIE] = "zombie"};
+      [UNUSED] = "unused",    [USED] = "used",      [SLEEPING] = "sleep ",
+      [RUNNABLE] = "runble",  [RUNNING] = "run   ", [ZOMBIE] = "zombie",
+      [WIP_ZOMBIE] = "dying "};
   struct proc* p;
   char*        state;
   struct list* it;

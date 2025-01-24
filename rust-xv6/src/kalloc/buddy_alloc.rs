@@ -26,6 +26,7 @@ impl From<BuddyHeapInfo> for super::MemoryInfo {
 }
 
 impl Xv6Alloc for Heap {
+    #[attr_wrapper::time_me(0)]
     unsafe fn add_region(&self, region: Region) {
         // SAFETY: we have the ownership by precondition
         unsafe { self.lock().add_to_heap(region.start(), region.end()) };

@@ -1,9 +1,23 @@
 #pragma once
-#ifndef __ASSEMBLER__
 #include "kernel/types.h"
 #define asm __asm__
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+
+#define WARL_R (1 << 0)
+#define WARL_W (1 << 1)
+#define WARL_X (1 << 2)
+
+#define WARL_LOCK (1 << 7)
+
+#define WARL_OFF   (0x00 << 3)
+#define WARL_TOR   (0x01 << 3)
+#define WARL_NA4   (0x10 << 3)
+#define WARL_NAPOT (0x11 << 3)
+
+#define STCE         (1L << 63)
+#define COUNTEREN_TM (1 << 1)
 
 // which hart (core) is this?
 static u64 r_mhartid(void) {
@@ -160,11 +174,6 @@ static void w_pmpcfg0(u64 x) { asm volatile("csrw pmpcfg0, %0" : : "r"(x)); }
 
 static void w_pmpaddr0(u64 x) { asm volatile("csrw pmpaddr0, %0" : : "r"(x)); }
 
-// use riscv's sv39 page table scheme.
-#define SATP_SV39 (8L << 60)
-
-#define MAKE_SATP(pagetable) (SATP_SV39 | (((u64)pagetable) >> 12))
-
 // supervisor address translation and protection;
 // holds the address of the page table.
 static void w_satp(u64 x) { asm volatile("csrw satp, %0" : : "r"(x)); }
@@ -214,7 +223,7 @@ static void intr_on(void) { w_sstatus(r_sstatus() | SSTATUS_SIE); }
 static void intr_off(void) { w_sstatus(r_sstatus() & ~SSTATUS_SIE); }
 
 // are device interrupts enabled?
-static int intr_get(void) {
+static bool intr_get(void) {
   u64 x = r_sstatus();
   return (x & SSTATUS_SIE) != 0;
 }
@@ -252,87 +261,4 @@ static inline void sfence_vma_address(u64 addr) {
   asm volatile("sfence.vma zero, %0" ::"r"(addr));
 }
 
-struct sbiret {
-  i64 error;
-  u64 value;
-};
-
-#define SBI_EXT_HSM_HART_START   0
-#define SBI_EXT_HSM_HART_STOP    1
-#define SBI_EXT_HSM_HART_STATUS  2
-#define SBI_EXT_HSM_HART_SUSPEND 3
-
-enum sbi_ext {
-  SBI_EXT_HSM  = 0x48534D,
-  SBI_EXT_TIME = 0x54494D45,
-};
-enum perm_mode { MODE_U = 0, MODE_S = 1, MODE_M = 3 };
-
-static struct sbiret sbi_ecall(enum sbi_ext ext, u64 fid, u64 a0, u64 a1,
-                               u64 a2) {
-  register u64 a0v asm("a0") = a0;
-  register u64 a1v asm("a1") = a1;
-  register u64 a2v asm("a2") = a2;
-  register u64 a6v asm("a6") = fid;
-  register u64 a7v asm("a7") = ext;
-  asm("ecall" : "+r"(a0v), "+r"(a1v) : "r"(a2v), "r"(a6v), "r"(a7v) : "memory");
-
-  return (struct sbiret){(i64)a0v, a1v};
-}
-
-static struct sbiret sbi_hsm_hart_start(u32 hartid, void start(u64 hartid),
-                                        u64 arg) {
-  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_START, hartid, (u64)start,
-                   arg);
-}
-static struct sbiret sbi_hsm_hart_stop(void) {
-  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_STOP, 0, 0, 0);
-}
-static struct sbiret sbi_hsm_hart_status(u32 hartid) {
-  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_STATUS, hartid, 0, 0);
-}
-
-static struct sbiret sbi_set_timer(u64 abstime) {
-  return sbi_ecall(SBI_EXT_TIME, 0, abstime, 0, 0);
-}
-
-static void set_timer(u64 abstime) {
-#ifdef SBI_ENABLE
-  sbi_set_timer(abstime);
-#else
-  w_stimecmp(abstime);
-#endif
-}
-
 #pragma GCC diagnostic pop
-#endif // __ASSEMBLER__
-
-#define PGSIZE  4096 // bytes per page
-#define PGSHIFT 12   // bits of offset within a page
-
-#define PGROUNDUP(sz)  (((sz) + PGSIZE - 1) & ~(PGSIZE - 1))
-#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE - 1))
-
-#define PTE_V (1L << 0) // valid
-#define PTE_R (1L << 1)
-#define PTE_W (1L << 2)
-#define PTE_X (1L << 3)
-#define PTE_U (1L << 4) // user can access
-
-// shift a physical address to the right place for a PTE.
-#define PA2PTE(pa) ((((u64)pa) >> 12) << 10)
-
-#define PTE2PA(pte) (((pte) >> 10) << 12)
-
-#define PTE_FLAGS(pte) ((pte) & 0x3FF)
-
-// extract the three 9-bit page table indices from a virtual address.
-#define PXMASK         0x1FF // 9 bits
-#define PXSHIFT(level) (PGSHIFT + (9 * (level)))
-#define PX(level, va)  ((((u64)(va)) >> PXSHIFT(level)) & PXMASK)
-
-// one beyond the highest possible virtual address.
-// MAXVA is actually one bit less than the max allowed by
-// Sv39, to avoid having to sign-extend virtual addresses
-// that have the high bit set.
-#define MAXVA (1L << (9 + 9 + 9 + 12 - 1))

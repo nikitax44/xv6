@@ -3,9 +3,10 @@
 #include "kernel/file/fs.h"
 #include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
+#include "kernel/hardware/sv39.h"
 #include "kernel/param.h"
 #include "kernel/types.h"
-#include "user/user.h"
+#include "user.h"
 #include <stdlib.h>
 
 //

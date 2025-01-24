@@ -2,12 +2,11 @@
 // Support functions for system calls that involve file descriptors.
 //
 
-#include "file.h"
-#include "fs.h"
+#include "kernel/file/file.h"
 #include "kernel/defs.h"
+#include "kernel/file/stat.h"
 #include "kernel/param.h"
 #include "kernel/scheduler/proc.h"
-#include "stat.h"
 
 struct devsw devsw[NDEV];
 struct {

@@ -1,5 +1,4 @@
-#include "list.h"
-
+#include "kernel/scheduler/list.h"
 #include "kernel/defs.h"
 
 // double-linked, circular list. double-linked makes remove

@@ -1,9 +1,14 @@
-#include "defs.h"
-#include "hardware/memlayout.h"
-#include "hardware/riscv.h"
-#include "scheduler/proc.h"
-#include "types.h"
-#include "util/spinlock.h"
+#include "kernel/defs.h"
+#include "kernel/hardware/memlayout.h"
+#include "kernel/scheduler/proc.h"
+
+#ifdef SBI_ENABLE
+#include "kernel/hardware/sbi.h"
+#define set_timer sbi_set_timer
+#else
+#include "kernel/hardware/riscv.h"
+#define set_timer w_stimecmp
+#endif
 
 struct spinlock tickslock;
 u32             ticks;
@@ -194,6 +199,7 @@ void kerneltrap(void) {
 
 void timerinithart(void) {
   // 1000000 is about a tenth of a second.
+
   set_timer(r_time() + 1000000);
 }
 

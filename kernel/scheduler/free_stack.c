@@ -1,5 +1,4 @@
-#include "free_stack.h"
-
+#include "kernel/scheduler/free_stack.h"
 #include "kernel/util/spinlock.h"
 
 struct {

@@ -1,5 +1,4 @@
 #pragma once
-#include "hardware/riscv.h"
 #include "types.h"
 
 struct list;

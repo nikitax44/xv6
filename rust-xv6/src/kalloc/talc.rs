@@ -10,7 +10,6 @@ type Heap = talc::Talck<Xv6Spinlock, ErrOnOom>;
 pub(super) static KALLOC: Heap = Talc::new(ErrOnOom).lock();
 
 impl Xv6Alloc for Heap {
-    #[attr_wrapper::time_me(0)]
     unsafe fn add_region(&self, region: Region) {
         let span = Span::from_base_size(region.start() as *mut u8, region.size());
 

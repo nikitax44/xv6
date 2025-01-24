@@ -1,5 +1,5 @@
-#include "main.h"
-#include "defs.h"
+#include "kernel/main.h"
+#include "kernel/defs.h"
 
 // start() jumps here in supervisor mode on all HARTs after initializing
 // hardware and harts.

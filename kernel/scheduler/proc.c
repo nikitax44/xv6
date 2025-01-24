@@ -1,9 +1,10 @@
-#include "proc.h"
+#include "kernel/scheduler/proc.h"
 #include "_initcode.h"
-#include "free_stack.h"
 #include "kernel/errno.h"
 #include "kernel/hardware/memlayout.h"
-#include "list.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/hardware/sv39.h"
+#include "kernel/scheduler/free_stack.h"
 
 struct cpu cpus[NCPU];
 

@@ -8,9 +8,8 @@
 
 #include "kernel/buf.h"
 #include "kernel/defs.h"
-#include "memlayout.h"
-#include "riscv.h"
-#include "virtio.h"
+#include "kernel/hardware/memlayout.h"
+#include "kernel/hardware/virtio.h"
 
 // the address of virtio mmio register r.
 #define R(r) ((volatile u32*)(VIRTIO0 + (r)))

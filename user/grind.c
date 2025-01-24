@@ -5,7 +5,7 @@
 #include "kernel/fcntl.h"
 #include "kernel/file/stat.h"
 #include "kernel/types.h"
-#include "user/user.h"
+#include "user.h"
 
 // from FreeBSD.
 int do_rand(u64* ctx) {

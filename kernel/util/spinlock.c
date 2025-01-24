@@ -1,7 +1,8 @@
 // Mutual exclusion spin locks.
 
-#include "spinlock.h"
+#include "kernel/util/spinlock.h"
 #include "kernel/defs.h"
+#include "kernel/hardware/riscv.h"
 #include "kernel/scheduler/proc.h"
 
 void initlock(struct spinlock* lk, char* name) {

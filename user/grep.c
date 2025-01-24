@@ -1,7 +1,7 @@
 // Simple grep.  Only supports ^ . * $ operators.
 
 #include "kernel/fcntl.h"
-#include "user/user.h"
+#include "user.h"
 
 char buf[1024];
 int  match(char*, char*);

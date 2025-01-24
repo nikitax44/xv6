@@ -9,6 +9,8 @@
 #include "kernel/fcntl.h"
 #include "kernel/file/file.h"
 #include "kernel/file/stat.h"
+#include "kernel/hardware/memlayout.h"
+#include "kernel/hardware/sv39.h"
 #include "kernel/mman.h"
 #include "kernel/param.h"
 #include "kernel/scheduler/proc.h"

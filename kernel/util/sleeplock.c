@@ -1,6 +1,6 @@
 // Sleeping locks
 
-#include "sleeplock.h"
+#include "kernel/util/sleeplock.h"
 #include "kernel/defs.h"
 #include "kernel/scheduler/proc.h"
 

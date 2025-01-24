@@ -1,10 +1,9 @@
-#include "defs.h"
-#include "elf.h"
-#include "errno.h"
-#include "hardware/riscv.h"
-#include "param.h"
-#include "scheduler/proc.h"
-#include "types.h"
+#include "kernel/defs.h"
+#include "kernel/elf.h"
+#include "kernel/errno.h"
+#include "kernel/hardware/sv39.h"
+#include "kernel/param.h"
+#include "kernel/scheduler/proc.h"
 
 static int loadseg(pde_t*, u64, struct inode*, u32, u32);
 static int loaddata(pde_t*, u64, struct inode*, u32, u32);

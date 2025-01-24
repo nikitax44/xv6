@@ -1,7 +1,7 @@
-#include "defs.h"
-#include "errno.h"
-#include "hardware/riscv.h"
-#include "types.h"
+#include "kernel/defs.h"
+#include "kernel/errno.h"
+#include "kernel/hardware/riscv.h"
+#include "kernel/hardware/sv39.h"
 
 /*
  * the kernel's page table.

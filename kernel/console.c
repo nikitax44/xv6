@@ -9,11 +9,9 @@
 //   control-p -- print process list
 //
 
-#include "defs.h"
-#include "file/file.h"
-#include "scheduler/proc.h"
-#include "types.h"
-#include "util/spinlock.h"
+#include "kernel/defs.h"
+#include "kernel/file/file.h"
+#include "kernel/scheduler/proc.h"
 
 #define BACKSPACE 0x100
 #define C(x)      ((x) - '@') // Control-x

@@ -1,22 +1,8 @@
 #include "kernel/defs.h"
+#include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
 #include "kernel/main.h"
 #include "kernel/param.h"
-#include "kernel/types.h"
-
-#define WARL_R (1 << 0)
-#define WARL_W (1 << 1)
-#define WARL_X (1 << 2)
-
-#define WARL_LOCK (1 << 7)
-
-#define WARL_OFF   (0x00 << 3)
-#define WARL_TOR   (0x01 << 3)
-#define WARL_NA4   (0x10 << 3)
-#define WARL_NAPOT (0x11 << 3)
-
-#define STCE         (1L << 63)
-#define COUNTEREN_TM (1 << 1)
 
 void dispatch(void);
 void timerinit(void);

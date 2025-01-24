@@ -1,4 +1,4 @@
-#include "kernel/hardware/riscv.h"
+#include "kernel/hardware/memlayout.h"
 .section .entry
 .global _entry
 

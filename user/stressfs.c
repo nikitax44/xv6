@@ -8,7 +8,7 @@
 //      asm volatile("");
 
 #include "kernel/fcntl.h"
-#include "user/user.h"
+#include "user.h"
 
 int main(void) {
   int  fd, i;

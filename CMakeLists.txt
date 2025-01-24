@@ -30,8 +30,8 @@ endif()
 # Add the mkfs target
 add_custom_command(
   OUTPUT mkfs.elf
-  COMMAND gcc -o mkfs.elf ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS mkfs/mkfs.c kernel/file/fs.h kernel/file/stat.h kernel/param.h kernel/types.h
+  COMMAND gcc -o mkfs.elf ${CMAKE_CURRENT_SOURCE_DIR}/mkfs/mkfs.c -I ${CMAKE_CURRENT_SOURCE_DIR}/include
+  DEPENDS mkfs/mkfs.c include/kernel/file/fs.h include/kernel/file/stat.h include/kernel/param.h include/kernel/types.h
   COMMENT "Building mkfs with host compiler"
 )
 

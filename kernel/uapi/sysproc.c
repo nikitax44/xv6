@@ -1,5 +1,6 @@
 #include "kernel/defs.h"
 #include "kernel/errno.h"
+#include "kernel/hardware/memlayout.h"
 #include "kernel/scheduler/proc.h"
 #include "kernel/sysinfo.h"
 

@@ -1,7 +1,8 @@
 #include "kernel/defs.h"
+#include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
+#include "kernel/hardware/sbi.h"
 #include "kernel/main.h"
-#include "kernel/types.h"
 
 void parse_dtb(u8* ptr);
 void for_each_hart(void(u64));

@@ -3,9 +3,8 @@
 //
 
 #include "kernel/defs.h"
-#include "kernel/types.h"
+#include "kernel/hardware/memlayout.h"
 #include "kernel/util/spinlock.h"
-#include "memlayout.h"
 
 // the UART control registers are memory-mapped
 // at address UART0. this macro returns the

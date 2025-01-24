@@ -1,4 +1,4 @@
-#include "syscall.h"
+#include "kernel/uapi/syscall.h"
 #include "kernel/defs.h"
 #include "kernel/scheduler/proc.h"
 

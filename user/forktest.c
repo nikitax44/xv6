@@ -2,7 +2,7 @@
 // Tiny executable so that the limit can be filling the proc table.
 
 #include "kernel/types.h"
-#include "user/user.h"
+#include "user.h"
 
 #define N 1000
 

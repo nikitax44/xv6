@@ -1,5 +1,5 @@
-#include "file.h"
 #include "kernel/defs.h"
+#include "kernel/file/file.h"
 #include "kernel/scheduler/proc.h"
 
 #define PIPESIZE 512

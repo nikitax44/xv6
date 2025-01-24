@@ -1,4 +1,4 @@
-#include "user/user.h"
+#include "../user.h"
 int _isatty(void) { return 1; }
 
 int main(int argc, char** argv, char** envp);

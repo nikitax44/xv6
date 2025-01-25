@@ -17,8 +17,8 @@ struct list sentinel_sched;
 // sentinel_sched list and delete yourself from current list
 struct list sentinel_other;
 
-int             nextpid = 1;
-struct spinlock pid_lock;
+int                                          nextpid = 1;
+struct spinlock __attribute__((aligned(64))) pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc* p);
@@ -27,17 +27,17 @@ void        wakeup_process(struct proc*);
 
 extern char trampoline[]; // trampoline.S
 
-// we must acquire this lock if want to iterate sentinel_sched list or
+// We must acquire this lock if we want to iterate sentinel_sched list or
 // sentinel_other list. Must be acquired before any p->lock.
-struct spinlock wait_lock;
+struct spinlock __attribute__((aligned(64))) wait_lock;
 
-// we must held this lock if want to use children list or p->parent of some
+// We must take this lock if we want to use children list or p->parent of some
 // process. Must be acquired before wait_lock and any p->lock.
-struct spinlock parent_lock;
+struct spinlock __attribute__((aligned(64))) parent_lock;
 
 // wait_lock must be aquired
-// iterate all proccesses in sentinel_sched list, and sentinel_other list
-// it returns &sentinel_other if iter wal last element
+// Iterate all proccesses in sentinel_sched list, and sentinel_other list.
+// It returns &sentinel_other if iter wal last element
 struct list* iterate_next(struct list* iter) {
   if (iter->next == &sentinel_sched) {
     return sentinel_other.next;
@@ -46,8 +46,8 @@ struct list* iterate_next(struct list* iter) {
   }
 }
 
-// wait_lock must be aquired
-// used to get first proced in merged list
+// wait_lock must be aquired.
+// Used to get first process in merged list
 struct list* iterate_begin(void) {
   if (lst_empty(&sentinel_sched)) {
     return sentinel_other.next;
@@ -55,11 +55,11 @@ struct list* iterate_begin(void) {
   return sentinel_sched.next;
 }
 
-// initialize the proc table.
+// Initialize the proc table.
 void procinit(void) {
   lst_init(&sentinel_sched);
   lst_init(&sentinel_other);
-  init_free_stack();
+  init_stack_storage();
 
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
@@ -102,10 +102,9 @@ int allocpid(void) {
   return pid;
 }
 
-// try to find UNUSED proc.
-// If found, initialize state required to run in the kernel,
+// Initialize process with state required to run in the kernel,
 // and return with p->lock held.
-// If there are no free procs, or a memory allocation fails, return 0.
+// If memory allocation fails, return 0.
 static int allocproc(struct proc** proc_out) {
   struct proc* p = kalloc();
   if (p == 0) {
@@ -130,7 +129,7 @@ static int allocproc(struct proc** proc_out) {
     return ENOMEM;
   }
 
-  int stack_pos = free_stack_pop();
+  int stack_pos = stack_storage_pop();
   if (stack_pos == -1) {
     freeproc(p);
     return ENOMEM;
@@ -154,8 +153,8 @@ static int allocproc(struct proc** proc_out) {
   return 0;
 }
 
-// free a proc structure and the data hanging from it,
-// including user pages.
+// Free a proc structure and the data hanging from it,
+// including user pages. Unmap stack.
 // p->lock must be held.
 static void freeproc(struct proc* p) {
   if (p->trapframe) {
@@ -167,7 +166,7 @@ static void freeproc(struct proc* p) {
   if (p->kstack) {
     int pos = FROM_KSTACK_TOP(p->kstack);
     sfence_vma_address(p->kstack - PGSIZE);
-    free_stack_push(pos);
+    stack_storage_push(pos);
   }
   if (!lst_empty(&p->children)) {
     panic("free children");

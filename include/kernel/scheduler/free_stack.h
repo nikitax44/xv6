@@ -1,14 +1,11 @@
-#ifndef KERNEL_BITSET_H
-#define KERNEL_BITSET_H
+#pragma once
 
 #include "kernel/defs.h"
 
 #define START_STACK_SIZE 1024
 
-void init_free_stack(void);
+void init_stack_storage(void);
 
-int free_stack_pop(void);
+int stack_storage_pop(void);
 
-void free_stack_push(u32);
-
-#endif
+void stack_storage_push(u32);

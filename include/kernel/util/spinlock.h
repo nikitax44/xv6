@@ -4,7 +4,8 @@
 
 // Mutual exclusion lock.
 struct spinlock {
-  AtomicU32 locked; // Is the lock held?
+  AtomicU32 waiters;  // Is the lock held?
+  AtomicU32 released; // Is the lock held?
 
   // For debugging:
   const char*       name; // Name of lock.

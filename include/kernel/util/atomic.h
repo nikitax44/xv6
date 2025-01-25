@@ -13,6 +13,12 @@ static inline u32 atomic_lock_test_and_set(AtomicU32* atomic, u32 value) {
   return __sync_lock_test_and_set(&atomic->value, value);
 }
 
+static inline u32 atomic_compare_exchange(AtomicU32* atomic, u32 expected,
+                                          u32 desired) {
+  return __atomic_compare_exchange(&atomic->value, &expected, &desired, false,
+                                   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
 static inline void atomic_lock_release(AtomicU32* atomic) {
   __sync_lock_release(&atomic->value);
 }

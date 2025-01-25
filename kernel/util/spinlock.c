@@ -6,18 +6,13 @@
 #include "kernel/scheduler/proc.h"
 
 void initlock(struct spinlock* lk, char* name) {
-  lk->name   = name;
-  lk->locked = (AtomicU32){.value = 0};
-  lk->cpu    = 0;
+  lk->name     = name;
+  lk->waiters  = (AtomicU32){.value = 0};
+  lk->released = (AtomicU32){.value = 0};
+  lk->cpu      = 0;
 }
 
 extern struct spinlock wait_lock;
-
-int wait_lock_cnt  = 0;
-int wait_lock_cnt2 = 1;
-
-int allcnt  = 0;
-int waitcnt = 0;
 
 // Acquire the lock.
 // Loops (spins) until the lock is acquired.
@@ -27,11 +22,9 @@ void acquire(struct spinlock* lk) {
     panic("acquire");
   }
 
-  // On RISC-V, sync_lock_test_and_set turns into an atomic swap:
-  //   a5 = 1
-  //   s1 = &lk->locked
-  //   amoswap.w.aq a5, a5, (s1)
-  while (atomic_lock_test_and_set(&lk->locked, 1) != 0) {
+  u32 tiket = atomic_fetch_and_add(&lk->waiters, 1);
+
+  while (tiket != atomic_load(&lk->released)) {
   }
 
   // Tell the C compiler and the processor to not move loads or stores
@@ -51,12 +44,12 @@ bool try_acquire(struct spinlock* lk) {
   if (holding(lk)) {
     panic("try_acquire");
   }
-
+  u32 waiters = atomic_load(&lk->waiters);
   // On RISC-V, sync_lock_test_and_set turns into an atomic swap:
   //   a5 = 1
   //   s1 = &lk->locked
   //   amoswap.w.aq a5, a5, (s1)
-  if (atomic_lock_test_and_set(&lk->locked, 1) != 0) {
+  if (atomic_compare_exchange(&lk->released, waiters, waiters + 1) == 0) {
     pop_off();
     return false;
   }
@@ -95,7 +88,7 @@ void release(struct spinlock* lk) {
   // On RISC-V, sync_lock_release turns into an atomic swap:
   //   s1 = &lk->locked
   //   amoswap.w zero, zero, (s1)
-  atomic_lock_release(&lk->locked);
+  atomic_fetch_and_add(&lk->released, 1);
 
   pop_off();
 }
@@ -104,7 +97,8 @@ void release(struct spinlock* lk) {
 // Interrupts must be off.
 bool holding(struct spinlock* lk) {
   bool r;
-  r = (atomic_load(&lk->locked) && lk->cpu == mycpu());
+  r = (atomic_load(&lk->waiters) != atomic_load(&lk->released) &&
+       lk->cpu == mycpu());
   return r;
 }
 

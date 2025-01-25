@@ -968,6 +968,81 @@ void bigforktest(char* s) {
   }
 }
 
+void reparent_correctness_allocate(int cnt) {
+  int n, pid;
+
+  int  fd[2];
+  char rbuf[1];
+  if (_pipe(fd) != 0) {
+    printf("pipe() failed\n");
+    _exit(1);
+  }
+
+  for (n = 0; n < cnt; n++) {
+    pid = _fork();
+    if (pid < 0) {
+      break;
+    }
+    if (pid == 0) {
+      _close(fd[1]);
+      _read(fd[0], rbuf, 1);
+      _exit(0);
+    }
+  }
+
+  if (n < cnt) {
+    _exit(1);
+  }
+
+  _exit(0);
+}
+
+void reparent_correctness(char* s) {
+  for (int test = 0; test < 2; test++) {
+    // 2 parallel masters allocate 5 processes
+    // and then quit.
+
+    int i;
+    int failed      = 0;
+    int uncompleted = 0;
+    for (i = 0; i < 10; i++) {
+      int pid = _fork();
+
+      if (pid < 0) {
+        printf("%s: could not fork\n", s);
+        failed = 1;
+        break;
+      }
+
+      if (pid == 0) {
+        reparent_correctness_allocate(5);
+      }
+    }
+
+    for (int j = 0; j < i; j++) {
+      int status;
+      int c = _wait(&status);
+      if (c < 0) {
+        printf("%s: lost children\n", s);
+        failed = 1;
+      }
+      if (status != 0 && status != 1) {
+        printf("%s: unexpected exit status %d\n", s, status);
+        failed = 1;
+      }
+      uncompleted += status;
+    }
+
+    if (failed) {
+      _exit(1);
+    }
+
+    if (uncompleted > 0) {
+      printf("%s: %d masters failed to allocate processes\n", s, uncompleted);
+    }
+  }
+}
+
 // concurrent forks to try to expose locking bugs.
 void forkfork(char* s) {
   enum { N = 2 };
@@ -2638,6 +2713,7 @@ struct test {
     {sbrklast, "sbrklast"},
     {sbrk8000, "sbrk8000"},
     {badarg, "badarg"},
+    {reparent_correctness, "reparent_correctness"},
 
     {0, 0},
 };

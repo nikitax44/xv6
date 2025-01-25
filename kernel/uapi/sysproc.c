@@ -58,7 +58,7 @@ u64 sys_kill(void) {
   int pid;
 
   argint(0, &pid);
-  return kill(pid);
+  return kill((pid_t)pid);
 }
 
 // return how many clock tick interrupts have occurred

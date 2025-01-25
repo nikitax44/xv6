@@ -17,7 +17,7 @@ struct list sentinel_sched;
 // sentinel_sched list and delete yourself from current list
 struct list sentinel_other;
 
-int                                          nextpid = 1;
+pid_t                                        nextpid = 1;
 struct spinlock __attribute__((aligned(64))) pid_lock;
 
 extern void forkret(void);
@@ -91,8 +91,8 @@ struct proc* myproc(void) {
   return p;
 }
 
-int allocpid(void) {
-  int pid;
+pid_t allocpid(void) {
+  pid_t pid;
 
   acquire(&pid_lock);
   pid     = nextpid;
@@ -264,8 +264,9 @@ int growproc(int n) {
 
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
-int fork(void) {
-  int          i, pid;
+pid_t fork(void) {
+  int          i;
+  pid_t        pid;
   struct proc* np;
   struct proc* p   = myproc();
   int          res = 0;
@@ -645,7 +646,7 @@ void wakeup(void* chan) { wakeup_base(chan, 0); }
 // Kill the process with the given pid.
 // The victim won't exit until it tries to return
 // to user space (see usertrap() in trap.c).
-int kill(int pid) {
+int kill(pid_t pid) {
   struct proc* p;
   struct list* it;
 

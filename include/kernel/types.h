@@ -20,6 +20,7 @@ typedef i64  time_t;
 typedef i64  suseconds_t;
 typedef u64  pte_t;
 typedef u64* pagetable_t; // 512 PTEs
+typedef i32  pid_t;
 
 #ifndef __timeval_defined
 #define __timeval_defined 1

@@ -78,7 +78,7 @@ void usertrap(void) {
              r_stval(), r_sepc());
       break;
     default:
-      printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(),
+      printf("usertrap(): unexpected scause 0x%lx pid=%u\n", r_scause(),
              p->pid);
       printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
     }

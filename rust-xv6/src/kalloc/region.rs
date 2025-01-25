@@ -1,6 +1,6 @@
 use crate::kalloc::pages::page::Page;
 use crate::memlayout::PGSIZE;
-use alloc::format;
+use crate::sized_format;
 use alloc::vec::Vec;
 use core::cmp::Reverse;
 use fdt::node::MemoryReservation;
@@ -67,7 +67,8 @@ impl Region {
             let (beg, rest) = self
                 .split(*reg)
                 .ok_or_else(|| {
-                    format!(
+                    sized_format!(
+                        128,
                         "regions are intersecting or out of bounds: {self:0x?} {:0x?}",
                         *reg
                     )

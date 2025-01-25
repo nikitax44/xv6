@@ -1,3 +1,4 @@
+use crate::sized_format;
 use core::fmt::Write;
 use log::{LevelFilter, Metadata, Record};
 
@@ -12,12 +13,18 @@ impl log::Log for XV6Logger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
+            let pid = crate::proc::current_pid().map_or_else(
+                || sized_format!(16, "none"),
+                |pid| sized_format!(16, "{}", pid),
+            );
+
             writeln!(
                 crate::hw::console::CONSOLE.lock(),
-                "{} - (HART{} at {}) {}",
+                "{} - (HART{} at {} pid {}) {}",
                 record.level(),
                 crate::hw::asm::cpuid(),
                 crate::hw::asm::ticks(),
+                pid,
                 record.args()
             )
             .unwrap();

@@ -85,6 +85,7 @@
 #![feature(duration_constants)]
 #![feature(round_char_boundary)]
 #![feature(slice_from_ptr_range)]
+#![feature(const_format_args)]
 #![test_runner(test_runner)]
 
 extern crate alloc;
@@ -111,6 +112,7 @@ mod log;
 pub mod memlayout;
 pub mod panic;
 mod printf;
+pub mod proc;
 pub mod util;
 pub mod vm;
 

@@ -88,12 +88,12 @@ int  pipewrite(struct pipe*, u64, int);
 // proc.c
 u32          cpuid(void);
 void         mark_exit(int);
-int          fork(void);
+pid_t        fork(void);
 int          growproc(int);
 void         proc_mapstacks(pagetable_t);
 pagetable_t  proc_pagetable(struct proc*);
 void         proc_freepagetable(pagetable_t, u64);
-int          kill(int);
+int          kill(pid_t);
 void         kill_all(void);
 int          killed(struct proc*);
 void         setkilled(struct proc*);

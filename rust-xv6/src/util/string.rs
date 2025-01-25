@@ -1,27 +1,49 @@
-use alloc::vec::Vec;
 use core::fmt;
-use core::ops::Deref;
+use core::fmt::{Display, Error, Formatter};
 
-#[derive(Default, Debug, Clone, Eq, PartialEq)]
-pub struct String(Vec<u8>);
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[must_use]
+pub struct StackString<const N: usize>([u8; N], usize);
 
-impl fmt::Write for String {
+impl<const N: usize> Default for StackString<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N: usize> StackString<N> {
+    pub const fn new() -> Self {
+        Self([0; N], 0)
+    }
+}
+
+impl<const N: usize> fmt::Write for StackString<{ N }> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.0.extend_from_slice(s.as_bytes());
+        let buf = &mut self.0[self.1..];
+        let bytes = s.as_bytes();
+        if bytes.len() > buf.len() {
+            return Err(Error);
+        }
+        buf[..bytes.len()].copy_from_slice(bytes);
+        self.1 += bytes.len();
         Ok(())
     }
 }
 
-impl String {
-    #[must_use]
-    pub const fn new() -> Self {
-        Self(Vec::new())
+impl<const N: usize> Display for StackString<{ N }> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let bytes = &self.0[..self.1];
+        let str = core::str::from_utf8(bytes).ok().ok_or(Error)?;
+        f.write_str(str)
     }
 }
 
-impl Deref for String {
-    type Target = str;
-    fn deref(&self) -> &str {
-        core::str::from_utf8(&self.0).expect("String invariant was somehow broken")
-    }
+#[macro_export]
+macro_rules! sized_format {
+    ($sz:literal, $($tts:tt)*) => {{
+        use core::fmt::Write;
+        let mut buf = $crate::util::string::StackString::<$sz>::new();
+        write!(buf, $($tts)*).ok();
+        buf
+    }};
 }

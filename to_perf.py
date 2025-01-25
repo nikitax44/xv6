@@ -38,14 +38,14 @@ def dbg(val):
 
 stacks = {}
 
-info = re.compile(r"DEBUG - \(HART(\d+) at (\d+)\) perf: (.+)$")
+info = re.compile(r"DEBUG - \(HART(\d+) at (\d+) pid (\d+|none)\) perf: (.+)$")
 
 lines = read_lines(sys.stdin)
 lines = map(info.search, lines)
 lines = filter(bool, lines)
 lines = map(re.Match.groups, lines)
-for hart, _timestamp, msg in lines:
-    stack = stacks.setdefault(hart, [None])
+for _hart, _timestamp, pid, msg in lines:
+    stack = stacks.setdefault(pid, [None])
 
     m = msg.split()
 

@@ -923,6 +923,51 @@ void twochildren(char* s) {
   }
 }
 
+void bigforktest(char* s) {
+  int       n, pid;
+  const int N    = 200;
+  const int NMIN = 100;
+
+  int  fd[2];
+  char rbuf[1];
+  if (_pipe(fd) != 0) {
+    printf("%s: pipe() failed\n", s);
+    _exit(1);
+  }
+
+  for (n = 0; n < N; n++) {
+    pid = _fork();
+    if (pid < 0) {
+      break;
+    }
+    if (pid == 0) {
+      _close(fd[1]);
+      _read(fd[0], rbuf, 1);
+      _exit(0);
+    }
+  }
+
+  _close(fd[0]);
+  _close(fd[1]);
+
+  if (n < NMIN) {
+    printf("%s: forked %d processes out of %d\n", s, n, NMIN);
+    _exit(1);
+  }
+
+  for (; n > 0; n--) {
+    if (_wait(0) < 0) {
+      printf("%s: wait stopped early\n", s);
+      _exit(1);
+    }
+  }
+
+  if (_wait(0) != -1) {
+    printf("%s: wait got too many\n", s);
+    _exit(1);
+  }
+}
+
 // concurrent forks to try to expose locking bugs.
 void forkfork(char* s) {
   enum { N = 2 };
@@ -2877,6 +2922,7 @@ void outofinodes(char* s) {
 
 struct test slowtests[] = {
     {bigdir, "bigdir"},
+    {bigforktest, "bigforktest"},
     {manywrites, "manywrites"},
     {badwrite, "badwrite"},
     {execout, "execout"},

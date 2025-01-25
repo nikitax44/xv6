@@ -27,12 +27,12 @@ void        wakeup_process(struct proc*);
 
 extern char trampoline[]; // trampoline.S
 
-// we must acquire this lock if want to iterate sentinel_sched list of
-// sentinel_other list must be acquired before any p->lock.
+// we must acquire this lock if want to iterate sentinel_sched list or
+// sentinel_other list. Must be acquired before any p->lock.
 struct spinlock wait_lock;
 
 // we must held this lock if want to use children list or p->parent of some
-// process must be acquired before wait_lock and any p->lock.
+// process. Must be acquired before wait_lock and any p->lock.
 struct spinlock parent_lock;
 
 // wait_lock must be aquired
@@ -711,25 +711,25 @@ int killed(struct proc* p) {
 }
 
 void do_exit_if_needed(struct proc* p) {
+  acquire((&parent_lock));
+  acquire(&wait_lock);
   acquire(&p->lock);
   if (p->state == WIP_ZOMBIE) {
-    release(&p->lock);
-    acquire(&wait_lock);
-    acquire((&parent_lock));
-    acquire((&p->lock));
     p->state = ZOMBIE;
 
     // Parent might be sleeping in wait().
     wakeup_process(p->parent);
 
-    release(&parent_lock);
     release(&wait_lock);
+    release(&parent_lock);
 
     // Jump into the scheduler, never to return.
     sched();
     panic("zombie exit");
   }
   release(&p->lock);
+  release(&wait_lock);
+  release(&parent_lock);
 }
 
 // Copy to either a user address, or kernel address,

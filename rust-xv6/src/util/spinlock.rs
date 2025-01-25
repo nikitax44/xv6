@@ -13,7 +13,8 @@ impl Xv6Spinlock {
     #[must_use]
     pub const fn new(name: &'static CStr) -> Self {
         Self {
-            locked: crate::bindings::AtomicU32 { value: 0 },
+            waiters: crate::bindings::AtomicU32 { value: 0 },
+            released: crate::bindings::AtomicU32 { value: 0 },
             name: name.as_ptr(),
             cpu: core::ptr::null(),
         }

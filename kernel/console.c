@@ -18,6 +18,8 @@
 
 usize size_of_last_char(char* start, char* end);
 
+void interapt_put_char(int);
+
 //
 // send one character to the uart.
 // called by printf(), and to echo input characters,
@@ -40,6 +42,7 @@ struct {
   // input
 #define INPUT_BUF_SIZE 128
   char buf[INPUT_BUF_SIZE];
+  char last_command_buf[INPUT_BUF_SIZE];
   u32  r; // Read index
   u32  w; // Write index
   u32  e; // Edit index
@@ -167,24 +170,12 @@ void consoleintr(int c) {
   case '\x1b': // Escape key \e
     break;
   case '\t':
+    for (usize i = 0; i < strlen(cons.last_command_buf); ++i) {
+      interapt_put_char(cons.last_command_buf[i]);
+    }
     break;
   default:
-    if (c != 0 && cons.e - cons.r < INPUT_BUF_SIZE) {
-      c = (c == '\r') ? '\n' : c;
-
-      // echo back to the user.
-      consputc(c);
-
-      // store for consumption by consoleread().
-      cons.buf[cons.e++ % INPUT_BUF_SIZE] = c;
-
-      if (c == '\n' || c == C('D') || cons.e - cons.r == INPUT_BUF_SIZE) {
-        // wake up consoleread() if a whole line (or end-of-file)
-        // has arrived.
-        cons.w = cons.e;
-        wakeup(&cons.r);
-      }
-    }
+    interapt_put_char(c);
     break;
   }
 
@@ -200,4 +191,33 @@ void consoleinit(void) {
   // to consoleread and consolewrite.
   devsw[CONSOLE].read  = consoleread;
   devsw[CONSOLE].write = consolewrite;
+}
+
+void interapt_put_char(int c) {
+  if (c != 0 && cons.e - cons.r < INPUT_BUF_SIZE) {
+    c = (c == '\r') ? '\n' : c;
+
+    // echo back to the user.
+    consputc(c);
+
+    // store for consumption by consoleread().
+    cons.buf[cons.e++ % INPUT_BUF_SIZE] = c;
+
+    if (c == '\n' || c == C('D') || cons.e - cons.r == INPUT_BUF_SIZE) {
+      if (c == '\n' || c == C('D')) {
+        // save line for tab command
+        usize line_len = cons.e - cons.w + (c == '\n' ? -1 : 0);
+        if (line_len != 0) {
+          for (usize i = 0; i < line_len; ++i) {
+            cons.last_command_buf[i] = cons.buf[(cons.w + i) % INPUT_BUF_SIZE];
+          }
+          cons.last_command_buf[line_len] = 0;
+        }
+      }
+      // wake up consoleread() if a whole line (or end-of-file)
+      // has arrived.
+      cons.w = cons.e;
+      wakeup(&cons.r);
+    }
+  }
 }

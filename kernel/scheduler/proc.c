@@ -372,18 +372,10 @@ void mark_exit(int status) {
   // Give any children to init.
   reparent(p);
 
-  acquire(&parent_lock);
-  acquire(&wait_lock);
   acquire(&p->lock);
   p->xstate = status;
   p->state  = WIP_ZOMBIE;
   release(&p->lock);
-
-  // Parent might be sleeping in wait().
-  wakeup_process(p->parent);
-
-  release(&wait_lock);
-  release(&parent_lock);
 }
 
 // Wait for a child process to exit and return its pid.
@@ -721,7 +713,18 @@ int killed(struct proc* p) {
 void do_exit_if_needed(struct proc* p) {
   acquire(&p->lock);
   if (p->state == WIP_ZOMBIE) {
+    release(&p->lock);
+    acquire(&wait_lock);
+    acquire((&parent_lock));
+    acquire((&p->lock));
     p->state = ZOMBIE;
+
+    // Parent might be sleeping in wait().
+    wakeup_process(p->parent);
+
+    release(&parent_lock);
+    release(&wait_lock);
+
     // Jump into the scheduler, never to return.
     sched();
     panic("zombie exit");

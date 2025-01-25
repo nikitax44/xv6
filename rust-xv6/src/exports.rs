@@ -13,7 +13,7 @@ unsafe extern "C" fn size_of_last_char(
     str.len() - str.floor_char_boundary(str.len() - 1)
 }
 
-#[attr_wrapper::time_me(0)]
+//#[attr_wrapper::time_me(0)]
 #[no_mangle]
 unsafe extern "C" fn syscall() {
     // SAFETY: precondition

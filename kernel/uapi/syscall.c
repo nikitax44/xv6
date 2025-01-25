@@ -63,51 +63,51 @@ int argstr(int n, char* buf, int max) {
 }
 
 // Prototypes for the functions that handle system calls.
-extern u64 sys_fork(void);
-extern u64 sys_exit(void);
-extern u64 sys_wait(void);
-extern u64 sys_pipe(void);
-extern u64 sys_read(void);
-extern u64 sys_kill(void);
-extern u64 sys_execve(void);
-extern u64 sys_mmap(void);
-extern u64 sys_fstat(void);
-extern u64 sys_chdir(void);
-extern u64 sys_dup(void);
-extern u64 sys_getpid(void);
-extern u64 sys_sbrk(void);
-extern u64 sys_sleep(void);
-extern u64 sys_uptime(void);
-extern u64 sys_open(void);
-extern u64 sys_write(void);
-extern u64 sys_seek(void);
-extern u64 sys_mknod(void);
-extern u64 sys_unlink(void);
-extern u64 sys_link(void);
-extern u64 sys_mkdir(void);
-extern u64 sys_close(void);
-extern u64 sys_gettimeofday(void);
-extern u64 sys_sysinfo(void);
-extern u64 sys_futimesat(void);
-extern u64 sys_getdents(void);
+extern u64 _sys_fork(void);
+extern u64 _sys_exit(void);
+extern u64 _sys_wait(void);
+extern u64 _sys_pipe(void);
+extern u64 _sys_read(void);
+extern u64 _sys_kill(void);
+extern u64 _sys_execve(void);
+extern u64 _sys_mmap(void);
+extern u64 _sys_fstat(void);
+extern u64 _sys_chdir(void);
+extern u64 _sys_dup(void);
+extern u64 _sys_getpid(void);
+extern u64 _sys_sbrk(void);
+extern u64 _sys_sleep(void);
+extern u64 _sys_uptime(void);
+extern u64 _sys_open(void);
+extern u64 _sys_write(void);
+extern u64 _sys_seek(void);
+extern u64 _sys_mknod(void);
+extern u64 _sys_unlink(void);
+extern u64 _sys_link(void);
+extern u64 _sys_mkdir(void);
+extern u64 _sys_close(void);
+extern u64 _sys_gettimeofday(void);
+extern u64 _sys_sysinfo(void);
+extern u64 _sys_futimesat(void);
+extern u64 _sys_getdents(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static u64 (*syscalls[])(void) = {
-    [SYS_fork] = sys_fork,         [SYS_exit] = sys_exit,
-    [SYS_wait] = sys_wait,         [SYS_pipe] = sys_pipe,
-    [SYS_read] = sys_read,         [SYS_kill] = sys_kill,
-    [SYS_execve] = sys_execve,     [SYS_fstat] = sys_fstat,
-    [SYS_chdir] = sys_chdir,       [SYS_dup] = sys_dup,
-    [SYS_getpid] = sys_getpid,     [SYS_sbrk] = sys_sbrk,
-    [SYS_sleep] = sys_sleep,       [SYS_uptime] = sys_uptime,
-    [SYS_open] = sys_open,         [SYS_write] = sys_write,
-    [SYS_lseek] = sys_seek,        [SYS_mknod] = sys_mknod,
-    [SYS_unlink] = sys_unlink,     [SYS_link] = sys_link,
-    [SYS_mkdir] = sys_mkdir,       [SYS_close] = sys_close,
-    [SYS_mmap] = sys_mmap,         [SYS_gettimeofday] = sys_gettimeofday,
-    [SYS_sysinfo] = sys_sysinfo,   [SYS_futimesat] = sys_futimesat,
-    [SYS_getdents] = sys_getdents, [SYS_shutdown] = (u64(*)(void))shutdown};
+    [SYS_fork] = _sys_fork,         [SYS_exit] = _sys_exit,
+    [SYS_wait] = _sys_wait,         [SYS_pipe] = _sys_pipe,
+    [SYS_read] = _sys_read,         [SYS_kill] = _sys_kill,
+    [SYS_execve] = _sys_execve,     [SYS_fstat] = _sys_fstat,
+    [SYS_chdir] = _sys_chdir,       [SYS_dup] = _sys_dup,
+    [SYS_getpid] = _sys_getpid,     [SYS_sbrk] = _sys_sbrk,
+    [SYS_sleep] = _sys_sleep,       [SYS_uptime] = _sys_uptime,
+    [SYS_open] = _sys_open,         [SYS_write] = _sys_write,
+    [SYS_lseek] = _sys_seek,        [SYS_mknod] = _sys_mknod,
+    [SYS_unlink] = _sys_unlink,     [SYS_link] = _sys_link,
+    [SYS_mkdir] = _sys_mkdir,       [SYS_close] = _sys_close,
+    [SYS_mmap] = _sys_mmap,         [SYS_gettimeofday] = _sys_gettimeofday,
+    [SYS_sysinfo] = _sys_sysinfo,   [SYS_futimesat] = _sys_futimesat,
+    [SYS_getdents] = _sys_getdents, [SYS_shutdown] = (u64(*)(void))shutdown};
 
 void syscall_impl(void) {
   u64          num;

@@ -125,7 +125,7 @@ impl<'inner> Pagetable<'inner> {
     /// # Errors
     /// page is not mapped
     /// self's invariants aren't held
-    //#[attr_wrapper::time_me(0)]
+    #[attr_wrapper::time_me(0)]
     pub fn translate(&self, va: usize) -> Result<usize, PTError> {
         let page = va / PGSIZE * PGSIZE;
         self.walk(page)
@@ -189,7 +189,7 @@ impl<'inner> Pagetable<'inner> {
     /// # Errors
     /// `size` is not page-aligned
     /// see `map_page`
-    //#[attr_wrapper::time_me(0)]
+    #[attr_wrapper::time_me(0)]
     pub fn map_pages(
         &mut self,
         virtual_address: usize,
@@ -208,7 +208,7 @@ impl<'inner> Pagetable<'inner> {
     /// # Errors
     /// region is not page-aligned or is empty
     /// see `map_page`
-    //#[attr_wrapper::time_me(0)]
+    #[attr_wrapper::time_me(0)]
     pub fn map_reg(&mut self, reg: Region, mode: Mode) -> Result<(), PTError> {
         self.map_pages(reg.start(), reg.start(), reg.size(), mode)
     }

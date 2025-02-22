@@ -32,24 +32,26 @@ add_custom_command(
 
 set(CARGO_ARGUMENTS --release --frozen --lib)
 set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
-set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
+set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_BINARY_DIR}/target)
 add_custom_command(
   OUTPUT librust_xv6.a
-  COMMAND cd ./rust-xv6 && cargo clippy --release --frozen --lib || true
-  COMMAND cd ./rust-xv6 && cargo build ${CARGO_ARGUMENTS}
-  COMMAND cp ./target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
-  DEPENDS ./rust-xv6/src/** ./rust-xv6/Cargo.* Bindgen
+  COMMAND cd ${CMAKE_SOURCE_DIR}/rust-xv6 && cargo clippy --release --frozen --lib || true
+  COMMAND cd ${CMAKE_SOURCE_DIR}/rust-xv6 && cargo build ${CARGO_ARGUMENTS}
+  COMMAND cp ${CMAKE_BINARY_DIR}/target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
+  DEPENDS ${CMAKE_SOURCE_DIR}/rust-xv6/src/** ${CMAKE_SOURCE_DIR}/rust-xv6/Cargo.* Bindgen
   COMMENT "Building librust_xv6.a"
 )
 
 add_custom_command(
   OUTPUT rust-xv6/xv6_binds.rs
-  COMMAND fd -e h --base-directory include --strip-cwd-prefix -x echo "#include \"{}\"" > _everything.h
+  COMMAND cd "${CMAKE_SOURCE_DIR}" && fd -e h --base-directory include --strip-cwd-prefix -x echo "#include \"{}\"" >
+          ${CMAKE_BINARY_DIR}/_everything.h
   VERBATIM
   COMMAND
-    bindgen _everything.h -o rust-xv6/xv6_binds.rs --use-core --wrap-static-fns --wrap-unsafe-ops --emit-diagnostics
-    --experimental --no-derive-copy --no-debug trapframe -- -D __ASSEMBLER__ -I include -nostdinc
-  DEPENDS ./include/kernel/* ./include/kernel/*/*
+    cd "${CMAKE_SOURCE_DIR}" && bindgen ${CMAKE_BINARY_DIR}/_everything.h -o ${CMAKE_SOURCE_DIR}/rust-xv6/xv6_binds.rs
+    --use-core --wrap-static-fns --wrap-unsafe-ops --emit-diagnostics --experimental --no-derive-copy --no-debug
+    trapframe -- -D __ASSEMBLER__ -I include -nostdinc
+  DEPENDS ${CMAKE_SOURCE_DIR}/include/kernel/* ${CMAKE_SOURCE_DIR}/include/kernel/*/*
 )
 
 add_custom_target(Bindgen ALL DEPENDS rust-xv6/xv6_binds.rs)
@@ -66,10 +68,10 @@ add_subdirectory(user)
 add_custom_command(
   OUTPUT fs.img
   COMMAND rm -rf temp_files && mkdir temp_files
-  COMMAND tar -C temp_files -xf ${CMAKE_CURRENT_BINARY_DIR}/user/fs.tar
-  COMMAND ./mkfs.elf fs.img temp_files/* "${CMAKE_CURRENT_SOURCE_DIR}/README"
+  COMMAND tar -C temp_files -xf ${CMAKE_BINARY_DIR}/user/fs.tar
+  COMMAND ${CMAKE_BINARY_DIR}/mkfs.elf fs.img temp_files/* "${CMAKE_SOURCE_DIR}/README"
   COMMAND rm -rf temp_files
-  DEPENDS mkfs.elf Programs "README"
+  DEPENDS ${CMAKE_BINARY_DIR}/mkfs.elf Programs ${CMAKE_SOURCE_DIR}/README
 )
 
 add_custom_target(mkfs ALL DEPENDS mkfs.elf)

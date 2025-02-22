@@ -20,12 +20,7 @@ if(NOT DEFINED OPENSBI_ENABLED)
   endif()
 endif()
 
-if(NOT DEFINED NEWLIB)
-  set(NEWLIB $ENV{NEWLIB})
-  if(NOT DEFINED NEWLIB)
-    message(FATAL_ERROR "NEWLIB must be set and exported by shell")
-  endif()
-endif()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I ${CMAKE_SOURCE_DIR}/include")
 
 # Add the mkfs target
 add_custom_command(
@@ -36,7 +31,7 @@ add_custom_command(
 )
 
 set(CARGO_ARGUMENTS --release --frozen --lib)
-# set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
+set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
 set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_CURRENT_BINARY_DIR}/target)
 add_custom_command(
   OUTPUT librust_xv6.a
@@ -48,15 +43,16 @@ add_custom_command(
 )
 
 add_custom_command(
-  OUTPUT _bindgen.rs
+  OUTPUT rust-xv6/xv6_binds.rs
   COMMAND fd -e h --base-directory include --strip-cwd-prefix -x echo "#include \"{}\"" > _everything.h
   VERBATIM
-  COMMAND bindgen _everything.h -o _bindgen.rs --use-core --wrap-static-fns --wrap-unsafe-ops --emit-diagnostics
-          --experimental --no-derive-copy --no-debug trapframe -- -D __ASSEMBLER__ -I include -nostdinc
+  COMMAND
+    bindgen _everything.h -o rust-xv6/xv6_binds.rs --use-core --wrap-static-fns --wrap-unsafe-ops --emit-diagnostics
+    --experimental --no-derive-copy --no-debug trapframe -- -D __ASSEMBLER__ -I include -nostdinc
   DEPENDS ./include/kernel/* ./include/kernel/*/*
 )
 
-add_custom_target(Bindgen ALL DEPENDS _bindgen.rs)
+add_custom_target(Bindgen ALL DEPENDS rust-xv6/xv6_binds.rs)
 
 add_custom_target(GenerateLibRustXv6 ALL DEPENDS librust_xv6.a)
 

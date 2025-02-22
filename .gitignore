@@ -12,6 +12,7 @@ _*
 *.a
 *.elf
 *.tar
+rust-xv6/xv6_binds.rs
 
 kernel/kernel
 qemu-script

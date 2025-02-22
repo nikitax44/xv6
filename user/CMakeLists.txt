@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.13)
 project(MyProject C ASM)
 
+if(NOT DEFINED NEWLIB)
+    set(NEWLIB $ENV{NEWLIB})
+    if(NOT DEFINED NEWLIB)
+        message(FATAL_ERROR "NEWLIB must be set and exported by shell")
+    endif()
+endif()
+
+
 # Define the programs
 list(APPEND UPROGS
         _cat

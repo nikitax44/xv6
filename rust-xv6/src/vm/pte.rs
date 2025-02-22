@@ -31,7 +31,7 @@ impl PtEntry {
             })
     }
 
-    pub fn unset(&mut self) {
+    pub const fn unset(&mut self) {
         self.0 = 0;
     }
 
@@ -44,7 +44,7 @@ impl PtEntry {
         self.set_raw(addr, mode)
     }
 
-    fn set_raw(&mut self, addr: usize, mode: Mode) -> Result<(), PTError> {
+    const fn set_raw(&mut self, addr: usize, mode: Mode) -> Result<(), PTError> {
         if addr % PGSIZE != 0 {
             return Err(PTError::UnalignedPhysicalAddress(addr));
         }

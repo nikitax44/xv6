@@ -3,6 +3,7 @@ use alloc::collections::TryReserveError;
 use alloc::vec::Vec;
 use core::any::type_name;
 use core::fmt::{Debug, Formatter};
+use core::mem;
 use core::mem::{ManuallyDrop, MaybeUninit};
 use core::ops::{Deref, DerefMut};
 use core::ptr::NonNull;
@@ -31,7 +32,7 @@ impl<T: ?Sized> ThinBox<T> {
     /// # Safety
     /// `inner` is valid, and you have ownership over its contents
     /// you transfer the ownership over the `inner` contents to `ThinBox`
-    pub const unsafe fn new(inner: NonNull<T>) -> Self
+    pub unsafe fn new(inner: NonNull<T>) -> Self
     where
         T: Sized,
     {
@@ -54,19 +55,30 @@ impl<T: ?Sized> ThinBox<T> {
     }
 
     #[must_use]
-    pub fn leak(self) -> NonNull<T> {
-        core::mem::ManuallyDrop::new(self).inner
+    pub const fn const_deref(&self) -> &T {
+        // SAFETY:
+        // by invariant we own the value for &'self
+        unsafe { self.inner.as_ref() }
     }
 
     #[must_use]
-    pub fn leak_ref(self) -> &'static mut T {
-        // SAFETY: we owned it.
-        unsafe { self.leak().as_mut() }
+    pub const fn const_deref_mut(&mut self) -> &mut T {
+        // SAFETY:
+        // by invariant we own the value for &'self mut
+        unsafe { self.inner.as_mut() }
     }
 
-    /// creates an aliased pointer for use in `ManuallyDrop` context
-    pub fn inner(&mut self) -> NonNull<T> {
-        self.inner
+    #[must_use]
+    pub const fn leak(self) -> NonNull<T> {
+        let value = self.inner;
+        mem::forget(self);
+        value
+    }
+
+    #[must_use]
+    pub const fn leak_ref(self) -> &'static mut T {
+        // SAFETY: we owned it.
+        unsafe { self.leak().as_mut() }
     }
 }
 
@@ -112,7 +124,7 @@ impl<T: 'static> ThinBox<[MaybeUninit<T>]> {
     /// every element must be initialized
     pub unsafe fn slice_assume_init_mut(self) -> ThinBox<[T]> {
         // SAFETY: precondition
-        unsafe { MaybeUninit::slice_assume_init_mut(self.leak_ref()) }.into()
+        unsafe { self.leak_ref().assume_init_mut() }.into()
     }
 
     pub fn zeroed_array(mut self) -> ThinBox<[T]>
@@ -135,17 +147,13 @@ impl<T: ?Sized> From<&'static mut T> for ThinBox<T> {
 impl<T: ?Sized> Deref for ThinBox<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        // SAFETY:
-        // by invariant we own the value for &'self
-        unsafe { self.inner.as_ref() }
+        self.const_deref()
     }
 }
 
 impl<T: ?Sized> DerefMut for ThinBox<T> {
     fn deref_mut(&mut self) -> &mut T {
-        // SAFETY:
-        // by invariant we own the value for &'self mut
-        unsafe { self.inner.as_mut() }
+        self.const_deref_mut()
     }
 }
 
@@ -170,7 +178,7 @@ impl<T: ?Sized> Debug for ThinBox<T> {
 #[no_mangle]
 unsafe extern "C" fn alloc(size: usize) -> Option<NonNull<u8>> {
     let ptr: Result<ThinBox<[MaybeUninit<u64>]>, TryReserveError> =
-        ThinBox::alloc_array((size + 7) / 8);
+        ThinBox::alloc_array(size.div_ceil(8));
     match ptr {
         // SAFETY: cast to primitive type so it is safe
         Ok(x) => unsafe { Some(x.slice_assume_init_mut().leak().cast::<u8>()) },
@@ -186,7 +194,7 @@ unsafe extern "C" fn free(ptr: Option<NonNull<u8>>, size: usize) {
         None => {}
         // SAFETY: cast to primitive type so it is safe
         Some(x) => unsafe {
-            NonNull::slice_from_raw_parts(x.cast::<u64>(), (size + 7) / 8).drop_in_place();
+            NonNull::slice_from_raw_parts(x.cast::<u64>(), size.div_ceil(8)).drop_in_place();
         },
-    };
+    }
 }

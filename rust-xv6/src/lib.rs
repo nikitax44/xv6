@@ -65,17 +65,12 @@
 #![feature(step_trait)]
 #![feature(new_range_api)]
 #![feature(maybe_uninit_uninit_array)]
-#![feature(const_maybe_uninit_uninit_array)]
 #![feature(negative_impls)]
 #![feature(maybe_uninit_as_bytes)]
 #![feature(never_type)]
 #![feature(try_with_capacity)]
 #![feature(maybe_uninit_slice)]
 #![feature(vec_push_within_capacity)]
-#![feature(const_nonnull_new)]
-#![feature(const_option)]
-#![feature(integer_sign_cast)]
-#![feature(const_pointer_is_aligned)]
 #![feature(c_variadic)]
 #![feature(ptr_as_uninit)]
 #![feature(custom_test_frameworks)]
@@ -99,7 +94,7 @@ extern crate alloc;
     clippy::unreadable_literal,
     clippy::decimal_literal_representation
 )]
-#[path = "../../_bindgen.rs"]
+#[path = "../xv6_binds.rs"]
 pub mod bindings;
 pub mod dtb;
 pub mod errno;

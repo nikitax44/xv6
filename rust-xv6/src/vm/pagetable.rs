@@ -45,24 +45,24 @@ impl<'inner> Pagetable<'inner> {
     const fn verify_va(addr: usize) -> Result<(), PTError> {
         if addr >= Self::MAX_VA {
             return Err(PTError::InvalidVirtualAddress(addr));
-        };
+        }
         if addr % PGSIZE != 0 {
             return Err(PTError::UnalignedVirtualAddress(addr));
         }
         Ok(())
     }
 
-    pub(super) fn inner_ref(&self) -> &IPagetable {
+    pub(super) const fn inner_ref(&self) -> &IPagetable {
         match &self.inner {
-            Inner::Owned(inner) => inner,
+            Inner::Owned(inner) => inner.const_deref(),
             Inner::Ref(inner) => inner,
             Inner::Mut(inner) => inner,
         }
     }
 
-    pub(super) fn inner_mut(&mut self) -> Option<&mut IPagetable> {
+    pub(super) const fn inner_mut(&mut self) -> Option<&mut IPagetable> {
         match &mut self.inner {
-            Inner::Owned(inner) => Some(inner),
+            Inner::Owned(inner) => Some(inner.const_deref_mut()),
             Inner::Ref(_inner) => None,
             Inner::Mut(inner) => Some(inner),
         }
@@ -74,7 +74,7 @@ impl<'inner> Pagetable<'inner> {
         }
     }
 
-    pub(super) fn from_mut(inner: &'inner mut IPagetable) -> Self {
+    pub(super) const fn from_mut(inner: &'inner mut IPagetable) -> Self {
         Self {
             inner: Inner::Mut(inner),
         }
@@ -147,7 +147,7 @@ impl<'inner> Pagetable<'inner> {
         let pte = self.walk_mut(virtual_address)?;
         if pte.is_set() {
             return Err(PTError::Remap);
-        };
+        }
         pte.set(physical_address, perm)?;
 
         debug_assert_eq!(

@@ -1,6 +1,7 @@
 use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::PGSIZE;
 use core::cell::UnsafeCell;
+use core::mem;
 use core::mem::{ManuallyDrop, MaybeUninit};
 use core::panic::Location;
 
@@ -50,16 +51,17 @@ impl PageHandle {
         Self::new(unsafe { ptr.assume_init_mut() }, origin, purpose)
     }
 
-    pub fn set_origin(&mut self, origin: Origin, purpose: &'static str) {
+    pub const fn set_origin(&mut self, origin: Origin, purpose: &'static str) {
         self.origin = origin;
         self.purpose = purpose;
     }
 
     /// # Panics
     /// never
-    pub fn into_box(self) -> ThinBox<Page> {
-        let mut this = ManuallyDrop::new(self);
-        this.ptr.take().unwrap()
+    pub const fn into_box(mut self) -> ThinBox<Page> {
+        let value = self.ptr.take().unwrap();
+        mem::forget(self);
+        value
     }
 
     pub const fn from_box(value: ThinBox<Page>, origin: Origin, purpose: &'static str) -> Self {

@@ -69,24 +69,19 @@
             '')))
             + extra);
 
-        fixCMakeLists = ''
-          mkdir $out/user
-          touch $out/user/CMakeLists.txt
-          mkdir $out/kernel
-          touch $out/kernel/CMakeLists.txt
-        '';
+        kernel-headers = ./include;
 
         rust-xv6 = crossPkgs.callPackage ./rust-xv6 {
-          inherit craneLib;
+          inherit craneLib kernel-headers;
         };
 
-        kernel = crossPkgs.stdenv.mkDerivation {
+        kernel = crossPkgs.stdenvNoLibs.mkDerivation {
           pname = "kernel";
           inherit (rust-xv6) version;
-          src = selectPaths [./kernel ./include] "";
+          src = selectPaths [./kernel] "";
           inherit nativeBuildInputs;
 
-          cmakeFlags = ["-S" "../kernel" "-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a" "-DOPENSBI_ENABLED=${toString enableOpenSBI}"];
+          cmakeFlags = ["-S" "../kernel" "-DCMAKE_C_FLAGS=-I${kernel-headers}" "-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a" "-DOPENSBI_ENABLED=${toString enableOpenSBI}"];
           buildFlags = "kernel";
           installPhase = ''
             install -m 0444 kernel $out
@@ -94,7 +89,7 @@
           dontStrip = true;
         };
 
-        programs = crossPkgs.stdenv.mkDerivation ({
+        programs = crossPkgs.stdenvNoLibs.mkDerivation ({
             name = "programs.tar";
             src = selectPaths [./user ./include] "";
 
@@ -106,16 +101,17 @@
           }
           // common);
 
-        mkfs = localPkgs.stdenv.mkDerivation ({
-            pname = "mkfs";
-            version = "none";
-            src = selectPaths [./CMakeLists.txt ./mkfs ./include] fixCMakeLists;
-            buildFlags = "mkfs";
-            installPhase = ''
-              install -Dm 0555 mkfs.elf $out/bin/mkfs
-            '';
-          }
-          // common);
+        mkfs = localPkgs.stdenv.mkDerivation {
+          pname = "mkfs";
+          version = "none";
+          src = selectPaths [./mkfs ./include] "";
+          buildPhase = ''
+            gcc -o mkfs.elf mkfs/mkfs.c -I ./include
+          '';
+          installPhase = ''
+            install -Dm 0555 mkfs.elf $out/bin/mkfs
+          '';
+        };
 
         qemu-script = localPkgs.substitute {
           name = "qemu-script";
@@ -128,10 +124,10 @@
         };
 
         newlib = crossPkgs.newlib.override {nanoizeNewlib = true;};
-        platform = crossPkgs.stdenv.hostPlatform.config;
+        platform = crossPkgs.stdenvNoLibs.hostPlatform.config;
         NEWLIB = "${newlib}/${platform}";
         nativeBuildInputs = [
-          localPkgs.stdenv.cc
+          localPkgs.stdenvNoLibs.cc
           localPkgs.perl
           localPkgs.fd
           localPkgs.cmake

@@ -70,8 +70,8 @@ void fileclose(struct file* f) {
 }
 
 // Get metadata about file f.
-// addr is a user virtual address, pointing to a struct stat.
-int filestat(struct file* f, u64 addr) {
+// dst is a user virtual address, pointing to a struct stat.
+int filestat(struct file* f, u64 dst) {
   struct proc* p = myproc();
   struct stat  st;
 
@@ -79,7 +79,7 @@ int filestat(struct file* f, u64 addr) {
     ilock(f->ip);
     stati(f->ip, &st);
     iunlock(f->ip);
-    if (copyout(p->pagetable, addr, (const u8*)&st, sizeof(st)) < 0) {
+    if (copyout(p->pagetable, dst, (const u8*)&st, sizeof(st)) < 0) {
       return -1;
     }
     return 0;
@@ -88,8 +88,8 @@ int filestat(struct file* f, u64 addr) {
 }
 
 // Read from file f.
-// addr is a user virtual address.
-int fileread(struct file* f, u64 addr, int n) {
+// dst is a user virtual address.
+int fileread(struct file* f, u64 dst, int n) {
   int r;
 
   if (f->readable == 0) {
@@ -97,15 +97,15 @@ int fileread(struct file* f, u64 addr, int n) {
   }
 
   if (f->type == FD_PIPE) {
-    r = piperead(f->pipe, addr, n);
+    r = piperead(f->pipe, dst, n);
   } else if (f->type == FD_DEVICE) {
     if (f->major < 0 || f->major >= NDEV || !devsw[f->major].read) {
       return -1;
     }
-    r = devsw[f->major].read(1, addr, n);
+    r = devsw[f->major].read(1, dst, n);
   } else if (f->type == FD_INODE) {
     ilock(f->ip);
-    if ((r = readi(f->ip, 1, addr, f->off, n)) > 0) {
+    if ((r = readi(f->ip, 1, dst, f->off, n)) > 0) {
       f->off += r;
     }
     iunlock(f->ip);
@@ -148,8 +148,8 @@ int fileseek(struct file* f, u64 offset, WHENCE whence) {
 }
 
 // Write to file f.
-// addr is a user virtual address.
-int filewrite(struct file* f, u64 addr, int n) {
+// src is a user virtual address.
+int filewrite(struct file* f, u64 src, int n) {
   int r, ret;
 
   if (f->writable == 0) {
@@ -157,12 +157,12 @@ int filewrite(struct file* f, u64 addr, int n) {
   }
 
   if (f->type == FD_PIPE) {
-    ret = pipewrite(f->pipe, addr, n);
+    ret = pipewrite(f->pipe, src, n);
   } else if (f->type == FD_DEVICE) {
     if (f->major < 0 || f->major >= NDEV || !devsw[f->major].write) {
       return -1;
     }
-    ret = devsw[f->major].write(1, addr, n);
+    ret = devsw[f->major].write(1, src, n);
   } else if (f->type == FD_INODE) {
     // write a few blocks at a time to avoid exceeding
     // the maximum log transaction size, including
@@ -180,7 +180,7 @@ int filewrite(struct file* f, u64 addr, int n) {
 
       begin_op();
       ilock(f->ip);
-      if ((r = writei(f->ip, 1, addr + i, f->off, n1)) > 0) {
+      if ((r = writei(f->ip, 1, src + i, f->off, n1)) > 0) {
         f->off += r;
       }
       iunlock(f->ip);

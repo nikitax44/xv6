@@ -18,7 +18,7 @@ typedef enum { SEEK_SET, SEEK_CUR, SEEK_END } WHENCE;
 
 // bio.c
 void        binit(void);
-struct buf* bread(u32, u32);
+struct buf* bread(u32 dev, u32 blockno);
 void        brelse(struct buf*);
 void        bwrite(struct buf*);
 void        bpin(struct buf*);
@@ -36,63 +36,58 @@ void  lst_push(struct list*, void*);
 void* lst_pop(struct list*);
 void  lst_print(struct list*);
 int   lst_empty(struct list*);
-void  lst_extend_move(struct list*, struct list*);
+void  lst_extend_move(struct list* dst, struct list* src);
 
 // exec.c
-// gcc does not recognize that they're the same
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
-int execve(str, str*, str*);
-#pragma GCC diagnostic pop
+int execve(str path, str* argv, str* envp);
 
 // file.c
 struct file* filealloc(void);
 void         fileclose(struct file*);
 struct file* filedup(struct file*);
 void         fileinit(void);
-int          fileread(struct file*, u64, int n);
-int          filestat(struct file*, u64 addr);
-int          fileseek(struct file*, u64, WHENCE n);
-int          filewrite(struct file*, u64, int n);
+int          fileread(struct file* f, u64 dst, int n);
+int          filestat(struct file* f, u64 dst);
+int          fileseek(struct file* f, u64 offset, WHENCE whence);
+int          filewrite(struct file* f, u64 src, int n);
 
 // fs.c
-void          fsinit(int);
-int           dirlink(struct inode*, char*, u32);
-struct inode* dirlookup(struct inode*, char*, u32*);
-struct inode* ialloc(u32, short);
-struct inode* idup(struct inode*);
+void          fsinit(int dev);
+int           dirlink(struct inode* dp, char* name, u32 inum);
+struct inode* dirlookup(struct inode* dp, char* name, u32* poff);
+struct inode* ialloc(u32 dev, short type);
+struct inode* idup(struct inode* ip);
 void          iinit(void);
-void          ilock(struct inode*);
-void          iput(struct inode*);
-void          iunlock(struct inode*);
-void          iunlockput(struct inode*);
-void          iupdate(struct inode*);
+void          ilock(struct inode* ip);
+void          iput(struct inode* ip);
+void          iunlock(struct inode* ip);
+void          iunlockput(struct inode* ip);
+void          iupdate(struct inode* ip);
 int           namecmp(str, str);
-struct inode* namei(str);
-struct inode* nameiparent(char*, char*);
-u32           readi(struct inode*, int, u64, u32, u32);
-void          stati(struct inode*, struct stat*);
-u32           writei(struct inode*, int, u64, u32, u32);
-void          itrunc(struct inode*);
+struct inode* namei(str path);
+struct inode* nameiparent(str path, char* name);
+u32           readi(struct inode* ip, int user_dst, u64 dst, u32 off, u32 n);
+void          stati(struct inode* ip, struct stat* st);
+u32           writei(struct inode* ip, int user_src, u64 src, u32 off, u32 n);
+void          itrunc(struct inode* ip);
 
 // log.c
-void initlog(int, struct superblock*);
-void log_write(struct buf*);
+void initlog(int dev, struct superblock* sb);
+void log_write(struct buf* b);
 void begin_op(void);
 void end_op(void);
 
 // pipe.c
-int  pipealloc(struct file**, struct file**);
-void pipeclose(struct pipe*, int);
-int  piperead(struct pipe*, u64, int);
-int  pipewrite(struct pipe*, u64, int);
+int  pipealloc(struct file** readout, struct file** writeout);
+void pipeclose(struct pipe* pi, int writable);
+int  piperead(struct pipe* pi, u64 addr, int n);
+int  pipewrite(struct pipe* pi, u64 addr, int n);
 
 // proc.c
 u32          cpuid(void);
 void         mark_exit(int);
 pid_t        fork(void);
 int          growproc(int);
-void         proc_mapstacks(pagetable_t);
 pagetable_t  proc_pagetable(struct proc*);
 void         proc_freepagetable(pagetable_t, u64);
 int          kill(pid_t);
@@ -115,7 +110,7 @@ int          either_copyin(void* dst, int user_src, u64 src, u64 len);
 void         procdump(void);
 
 // swtch.S
-void swtch(struct context*, struct context*);
+void swtch(struct context* old, struct context* new);
 
 // spinlock.c
 void acquire(struct spinlock*);
@@ -151,7 +146,7 @@ void                   trapinit(void);
 void                   trapinithart(void);
 void                   timerinithart(void);
 extern struct spinlock tickslock;
-void                   usertrapret(void);
+void                   usertrapret(void) __attribute__((noreturn));
 
 // uart.c
 void uartinit(void);
@@ -177,8 +172,6 @@ u64         walkaddr(pagetable_t, u64);
 int         copyout(pagetable_t, u64, const u8*, u64);
 int         copyin(pagetable_t, char*, u64, u64);
 int         copyinstr(pagetable_t, char*, u64, u64);
-page*       request_stack(void);
-void        release_stack(page*);
 
 // plic.c
 void plicinit(void);
@@ -205,6 +198,9 @@ extern void* kalloc(void);
 extern void  kfree(void*);
 extern void  kinit(void);
 extern u64   free_pages(void);
+
+page* request_stack(void);
+void  release_stack(page*);
 
 // compiler builtins
 usize strlen(const char*);

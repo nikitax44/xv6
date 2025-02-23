@@ -91,7 +91,7 @@
 
         programs = crossPkgs.stdenvNoLibs.mkDerivation ({
             name = "programs.tar";
-            src = selectPaths [./user ./include] "";
+            src = selectPaths [./user kernel-headers] "";
 
             cmakeFlags = ["-DNEWLIB=${NEWLIB}" "-S ../user"];
             buildFlags = "Programs";
@@ -104,7 +104,7 @@
         mkfs = localPkgs.stdenv.mkDerivation {
           pname = "mkfs";
           version = "none";
-          src = selectPaths [./mkfs ./include] "";
+          src = selectPaths [./mkfs kernel-headers] "";
           buildPhase = ''
             gcc -o mkfs.elf mkfs/mkfs.c -I ./include
           '';

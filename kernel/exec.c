@@ -22,7 +22,7 @@ int flags2perm(int flags) {
 }
 
 int execve(str path, str* argv, str* envp) {
-  const char *   s, *last;
+  str            s, last;
   u64            i, off;
   u64            argc, envc, sz = 0, sp, ustack[MAXARG], stackbase, base;
   struct elfhdr  elf;

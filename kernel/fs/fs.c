@@ -665,6 +665,4 @@ struct inode* namei(str path) {
   return namex(path, 0, name);
 }
 
-struct inode* nameiparent(char* path, char* name) {
-  return namex(path, 1, name);
-}
+struct inode* nameiparent(str path, char* name) { return namex(path, 1, name); }

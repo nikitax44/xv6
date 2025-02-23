@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD 11)
 set(OBJS
     main.c
 
-    file/fs.c
+    fs/fs.c
     file/pipe.c
     file/file.c
 
@@ -17,7 +17,7 @@ set(OBJS
     uapi/sysfile.c
 
     hardware/uart.c
-    hardware/virtio_disk.c
+    hardware/disk/virtio_disk.c
     hardware/plic.c
 
     scheduler/list.c
@@ -28,21 +28,21 @@ set(OBJS
     util/string.c
     util/util.c
 
-    console.c
+    hardware/console.c
     vm.c
-    trap.c
-    bio.c
-    log.c
+    context_switch/trap.c
+    hardware/disk/bio.c
+    fs/log.c
     exec.c
 
-    swtch.S
-    trampoline.S
-    kernelvec.S
-    initcode.S
+    context_switch/swtch.S
+    context_switch/trampoline.S
+    context_switch/kernelvec.S
+    user_initcode.S
 )
 
 # Set the compiler flags
-set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra -Wold-style-definition")
+set(C_WARNINGS "-Wall -Werror -Wpedantic -Wextra -Wold-style-definition -Wno-builtin-declaration-mismatch")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_WARNINGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -ggdb -gdwarf-2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcmodel=medany -march=rv64g -static")

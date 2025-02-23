@@ -1,6 +1,6 @@
-use crate::kalloc::pages::page::Page;
 use crate::kalloc::region::Region;
 use crate::kalloc::thin_box::ThinBox;
+use crate::kalloc::Page;
 use crate::memlayout::{PGSHIFT, PGSIZE};
 use crate::vm::mode::Mode;
 use crate::vm::pt_inner::IPagetable;

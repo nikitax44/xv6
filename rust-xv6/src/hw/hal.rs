@@ -1,4 +1,4 @@
-use crate::kalloc::pages::page::Page;
+use crate::kalloc::Page;
 use crate::memlayout::{PGSIZE, VIRTIO0};
 use crate::vm::get_physical_address;
 use alloc::vec::Vec;

@@ -1,5 +1,5 @@
 use crate::errno::ErrNo;
-use crate::kalloc::pages::KMEM;
+use crate::kalloc::thin_box::ThinBox;
 use crate::memlayout::{KSTACK, PGSIZE, STACK_SIZE};
 use crate::vm::kernel_map::make_kernel_map;
 use crate::vm::mode::Mode;
@@ -46,12 +46,12 @@ impl KernelStack {
 
     unsafe fn map(self) -> Result<(), PTError> {
         for ptr in self.pages() {
-            let page = KMEM.lock().alloc("proc stack")?;
+            let page = ThinBox::alloc_page()?;
             KERNEL_PAGETABLE
                 .write()
                 .as_mut()
                 .expect("map_page on None")
-                .map_page(ptr, page.into_box().leak().as_ptr() as usize, Mode::_RW_)?;
+                .map_page(ptr, page.leak().as_ptr() as usize, Mode::_RW_)?;
         }
         Ok(())
     }

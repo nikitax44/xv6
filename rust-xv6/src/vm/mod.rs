@@ -1,4 +1,4 @@
-use crate::kalloc::pages::KMEMError;
+use core::alloc::AllocError;
 use core::fmt::{Debug, Formatter};
 use thiserror::Error;
 
@@ -15,7 +15,7 @@ pub enum PTError {
     #[error("this va is already mapped")]
     Remap,
     #[error("failed to allocate memory")]
-    AllocFail(#[from] KMEMError),
+    AllocFail(#[from] AllocError),
     #[error("this va is not mapped")]
     NotMapped,
     #[error("invalid va: {0:#x}")]

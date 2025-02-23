@@ -1,3 +1,4 @@
+use crate::kalloc::Page;
 use alloc::boxed::Box;
 use alloc::collections::TryReserveError;
 use alloc::vec::Vec;
@@ -80,6 +81,14 @@ impl<T: ?Sized> ThinBox<T> {
         // SAFETY: we owned it.
         unsafe { self.leak().as_mut() }
     }
+
+    pub fn free(self) {
+        let ptr = self.leak();
+        // SAFETY: we owned it.
+        unsafe {
+            let _box = Box::from_non_null(ptr);
+        }
+    }
 }
 
 impl<T: 'static> ThinBox<T> {
@@ -93,6 +102,15 @@ impl<T: 'static> ThinBox<T> {
     /// failed to allocate memory
     pub fn alloc_array(len: usize) -> Result<ThinBox<[MaybeUninit<T>]>, TryReserveError> {
         Vec::try_with_capacity(len).map(Vec::leak).map(From::from)
+    }
+}
+
+impl ThinBox<Page> {
+    /// # Errors
+    /// failed to allocate Page
+    pub fn alloc_page() -> Result<Self, core::alloc::AllocError> {
+        // SAFETY: page contents are already wrapped in MaybeUninit
+        unsafe { Ok(Self::alloc()?.assume_init()) }
     }
 }
 
@@ -170,31 +188,5 @@ impl<T: ?Sized> Drop for ThinBox<T> {
 impl<T: ?Sized> Debug for ThinBox<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         self.inner.fmt(f)
-    }
-}
-
-///# Safity
-/// alloc for C
-#[no_mangle]
-unsafe extern "C" fn alloc(size: usize) -> Option<NonNull<u8>> {
-    let ptr: Result<ThinBox<[MaybeUninit<u64>]>, TryReserveError> =
-        ThinBox::alloc_array(size.div_ceil(8));
-    match ptr {
-        // SAFETY: cast to primitive type so it is safe
-        Ok(x) => unsafe { Some(x.slice_assume_init_mut().leak().cast::<u8>()) },
-        Err(_e) => None,
-    }
-}
-
-///# Safity
-/// user must free pointer that he get from malloc, user must pass ther same size as in malloc
-#[no_mangle]
-unsafe extern "C" fn free(ptr: Option<NonNull<u8>>, size: usize) {
-    match ptr {
-        None => {}
-        // SAFETY: cast to primitive type so it is safe
-        Some(x) => unsafe {
-            NonNull::slice_from_raw_parts(x.cast::<u64>(), size.div_ceil(8)).drop_in_place();
-        },
     }
 }

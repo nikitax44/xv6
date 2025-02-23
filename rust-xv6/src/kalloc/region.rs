@@ -1,4 +1,4 @@
-use crate::kalloc::pages::page::Page;
+use crate::kalloc::Page;
 use crate::memlayout::PGSIZE;
 use crate::sized_format;
 use alloc::vec::Vec;
@@ -85,7 +85,7 @@ impl Region {
 
     /// # Panics
     /// self is misaligned
-    pub fn pages(self) -> impl Iterator<Item = *const Page> {
+    pub fn pages(self) -> impl Iterator<Item = *mut Page> {
         assert_eq!(
             self.align_shrink(),
             self,
@@ -93,7 +93,7 @@ impl Region {
         );
         (self.start..self.end)
             .step_by(PGSIZE)
-            .map(|addr| addr as *const Page)
+            .map(|addr| addr as *mut Page)
     }
 
     #[must_use]

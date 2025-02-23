@@ -1,7 +1,7 @@
-use crate::kalloc::pages::KMEMError;
 use crate::kalloc::thin_box::ThinBox;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::pte::PtEntry;
+use core::alloc::AllocError;
 use core::fmt::{Debug, Formatter};
 use core::ops::{Index, IndexMut};
 
@@ -12,12 +12,11 @@ pub(super) struct IPagetable {
 
 impl IPagetable {
     #[track_caller]
-    pub fn alloc() -> Result<ThinBox<Self>, KMEMError> {
+    pub fn alloc() -> Result<ThinBox<Self>, AllocError> {
         ThinBox::alloc()
             .map(ThinBox::zero)
             // SAFETY: 0 is valid state for IPagetable
             .map(|ipt| unsafe { ipt.assume_init() })
-            .map_err(KMEMError::AllocFail)
     }
 }
 

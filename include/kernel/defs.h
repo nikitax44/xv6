@@ -200,8 +200,6 @@ extern void testpanic(void) __attribute__((noreturn));
 
 // kalloc
 extern void* kalloc(void);
-extern void* alloc(u64);
-extern void* free(u64, u64);
 extern void  kfree(void*);
 extern void  kinit(void);
 extern u64   free_pages(void);

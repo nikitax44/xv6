@@ -2,18 +2,22 @@
 #[cfg_attr(not(feature = "talc"), path = "buddy_alloc.rs")]
 mod alloc_impl;
 
-pub mod pages;
 pub mod region;
 pub mod thin_box;
 
+use crate::kalloc::thin_box::ThinBox;
+use crate::memlayout::PGSIZE;
 use core::alloc::Layout;
 use core::fmt::Debug;
 use core::mem::MaybeUninit;
 use core::panic::Location;
 use core::ptr;
-use pages::page::Page;
 use region::Region;
 use spin::Once;
+
+#[repr(C, align(4096))]
+#[must_use]
+pub struct Page(MaybeUninit<[u8; PGSIZE]>);
 
 #[derive(Debug)]
 pub struct MemoryInfo {
@@ -59,4 +63,24 @@ unsafe fn __rg_oom(size: usize, align: usize) -> ! {
         Location::caller(),
         free_mem
     );
+}
+
+crate::export_c_fn! {
+    fn __kinit:kinit() {
+        init();
+    }
+
+    fn __kalloc:kalloc() -> Option<ThinBox<Page>> {
+        ThinBox::alloc_page().ok()
+    }
+
+    fn __kfree:kfree(ptr: Option<ThinBox<Page>>) {
+        let page = ptr.expect("kfree(NULL)");
+        page.free();
+    }
+
+    fn __free_pages:free_pages() -> usize {
+        let info = get_kalloc().get_info().into();
+        info.free_bytes/PGSIZE
+    }
 }

@@ -1,11 +1,10 @@
 use crate::errno::ErrNo;
 use crate::errno::ErrNo::EINVAL;
 use crate::fs::types::Whence;
-use crate::kalloc::pages::page::{Page, PageHandle};
 use crate::kalloc::thin_box::ThinBox;
+use crate::kalloc::Page;
 use alloc::sync::Arc;
 use core::ffi::{c_char, CStr};
-use core::panic::Location;
 use core::ptr::NonNull;
 use efs::file::Type;
 use efs::fs::error::FsError;
@@ -65,21 +64,19 @@ impl FromFFI for &CStr {
     }
 }
 
-impl ToFFI for Option<PageHandle> {
+impl ToFFI for Option<ThinBox<Page>> {
     type Target = Option<NonNull<Page>>;
 
     fn into_ffi(self) -> Self::Target {
-        self.map(|page| page.into_box().leak())
+        self.map(ThinBox::leak)
     }
 }
-impl FromFFI for Option<PageHandle> {
+impl FromFFI for Option<ThinBox<Page>> {
     type Source = Option<NonNull<Page>>;
 
     unsafe fn from_ffi(value: Self::Source) -> Self {
-        value
-            // SAFETY: precondition
-            .map(|ptr| unsafe { ThinBox::new(ptr) })
-            .map(|ptr| PageHandle::from_box(ptr, Location::caller(), "unknown C source"))
+        // SAFETY: precondition
+        value.map(|ptr| unsafe { ThinBox::new(ptr) })
     }
 }
 

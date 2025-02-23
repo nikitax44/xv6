@@ -1,57 +1,50 @@
 use crate::errno::ErrNo;
 use crate::kalloc::thin_box::ThinBox;
-use crate::memlayout::{KSTACK, PGSIZE, STACK_SIZE};
+use crate::kalloc::Xv6Alloc;
+use crate::kalloc::{get_kalloc, Page};
+use crate::memlayout::{FROM_KSTACK_BOTTOM, PGSIZE, STACK_SIZE, TO_KSTACK_BOTTOM};
+use crate::util::Mutex;
 use crate::vm::kernel_map::make_kernel_map;
 use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
 use crate::vm::pt_inner::IPagetable;
 use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
+use alloc::vec::Vec;
+use core::ptr::NonNull;
+use log::error;
 use spin::rwlock::RwLock;
 
 static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
-
-#[allow(clippy::large_stack_frames, reason = "it is fine")]
-//#[attr_wrapper::time_me(0)]
-#[no_mangle]
-extern "C" fn map_stack(pos: usize) -> ErrNo {
-    // SAFETY: precondition
-    match unsafe { KernelStack(pos).map() } {
-        Ok(()) => ErrNo::SUCCESS,
-        Err(PTError::AllocFail(_)) => ErrNo::ENOMEM,
-        Err(PTError::Remap) => panic!("page remap"),
-        Err(err) => panic!("map_stack: {err}"),
-    }
-}
-
-#[allow(clippy::large_stack_frames, reason = "it is fine")]
-//#[attr_wrapper::time_me(0)]
-#[no_mangle]
-extern "C" fn unmap_stack(pos: usize) {
-    // SAFETY: precondition
-    unsafe { KernelStack(pos).unmap() }.expect("failed to unmap page");
-}
 
 #[derive(Copy, Clone)]
 struct KernelStack(pub usize);
 
 impl KernelStack {
-    fn bottom(self) -> usize {
-        KSTACK(self.0)
+    fn bottom(self) -> *mut Page {
+        TO_KSTACK_BOTTOM(self.0)
     }
-    fn pages(self) -> impl Iterator<Item = usize> {
-        let bot = self.bottom();
-        (0..STACK_SIZE).map(move |i| bot + i * PGSIZE)
+    fn top(self) -> *mut Page {
+        (self.bottom() as usize + STACK_SIZE * PGSIZE) as *mut _
     }
 
-    unsafe fn map(self) -> Result<(), PTError> {
+    fn from_bottom(ptr: *mut Page) -> Self {
+        Self(FROM_KSTACK_BOTTOM(ptr))
+    }
+
+    fn pages(self) -> impl Iterator<Item = *mut Page> {
+        let bot = self.bottom();
+        (0..STACK_SIZE).map(move |i| (bot as usize + i * PGSIZE) as *mut _)
+    }
+
+    fn map(self) -> Result<(), PTError> {
         for ptr in self.pages() {
             let page = ThinBox::alloc_page()?;
             KERNEL_PAGETABLE
                 .write()
                 .as_mut()
                 .expect("map_page on None")
-                .map_page(ptr, page.leak().as_ptr() as usize, Mode::_RW_)?;
+                .map_page(ptr as usize, page.leak().as_ptr() as usize, Mode::_RW_)?;
         }
         Ok(())
     }
@@ -64,11 +57,53 @@ impl KernelStack {
                     .write()
                     .as_mut()
                     .expect("unmap_page on None")
-                    .unmap_page_and_free(ptr)?;
+                    .unmap_page_and_free(ptr as usize)?;
             }
         }
         Ok(())
     }
+}
+
+struct FreeKernelStacks {
+    free_stack_slots: Vec<KernelStack>,
+    next_stack_slot: usize,
+}
+
+static UNUSED_KERNEL_STACKS: Mutex<FreeKernelStacks> = Mutex::new(FreeKernelStacks {
+    free_stack_slots: Vec::new(),
+    next_stack_slot: 0,
+});
+
+#[no_mangle]
+extern "C" fn request_stack() -> Option<NonNull<Page>> {
+    let mut guard = UNUSED_KERNEL_STACKS.lock();
+    let slot = guard.free_stack_slots.pop().unwrap_or_else(|| {
+        let slot = KernelStack(guard.next_stack_slot);
+        guard.next_stack_slot += 1;
+        slot
+    });
+    slot.map()
+        .inspect_err(|err| {
+            let info = get_kalloc().try_get_info();
+            error!("failed to map kernel stack: {err}; {info:?}");
+        })
+        .ok()?;
+    NonNull::new(slot.top())
+}
+
+#[no_mangle]
+unsafe extern "C" fn release_stack(top: Option<NonNull<Page>>) {
+    let top = top.expect("release_stack(NULL)");
+    let bottom = top.as_ptr() as usize - PGSIZE * STACK_SIZE;
+    let kstack = KernelStack::from_bottom(bottom as *mut Page);
+    // SAFETY: precondition
+    unsafe { kstack.unmap().expect("failed to unmap kernel stack") };
+
+    let mut guard = UNUSED_KERNEL_STACKS.lock();
+
+    // worst-case scenario is address space overflow
+    guard.free_stack_slots.try_reserve(1).ok();
+    guard.free_stack_slots.push_within_capacity(kstack).ok();
 }
 
 /// # Safety

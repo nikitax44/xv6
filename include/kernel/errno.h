@@ -1,5 +1,6 @@
 #pragma once
 typedef enum errno {
+  ESUCCESS        = 0,    // Success
   EPERM           = 1,    // Operation not permitted
   ENOENT          = 2,    // No such file or directory
   ESRCH           = 3,    // No such process

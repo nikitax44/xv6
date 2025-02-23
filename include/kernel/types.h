@@ -37,6 +37,8 @@ struct timeval {
 #define true  ((bool)1)
 #define false ((bool)0)
 
-#define MIN(a, b)           ((a) <= (b) ? (a) : (b))
-#define MAX(a, b)           ((a) >= (b) ? (a) : (b))
-#define offsetof(st, field) ((usize)((char*)&((st*)(0))->field - (char*)0))
+#define MIN(a, b)    ((a) <= (b) ? (a) : (b))
+#define MAX(a, b)    ((a) >= (b) ? (a) : (b))
+#define SENTINEL_PTR (0)
+#define offsetof(st, field)                                                    \
+  ((usize)((char*)&((st*)SENTINEL_PTR)->field - (char*)SENTINEL_PTR))

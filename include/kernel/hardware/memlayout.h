@@ -64,14 +64,3 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
-
-#ifndef __ASSEMBLER__
-#include "kernel/types.h"
-// map kernel stacks beneath the trapframe,
-// each surrounded by invalid guard pages.
-extern usize STACK_SIZE;
-#define KSTACK_TOP(p)                                                          \
-  (TRAPFRAME - ((p) + 1) * (STACK_SIZE + 1) * PGSIZE + STACK_SIZE * PGSIZE)
-#define FROM_KSTACK_TOP(ptr)                                                   \
-  ((TRAPFRAME - (ptr) + STACK_SIZE * PGSIZE) / (STACK_SIZE + 1) / PGSIZE - 1)
-#endif

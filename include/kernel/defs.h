@@ -1,4 +1,5 @@
 #pragma once
+#include "errno.h"
 #include "types.h"
 
 struct list;
@@ -12,6 +13,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+typedef struct page page;
 typedef enum { SEEK_SET, SEEK_CUR, SEEK_END } WHENCE;
 
 // bio.c
@@ -175,8 +177,8 @@ u64         walkaddr(pagetable_t, u64);
 int         copyout(pagetable_t, u64, const u8*, u64);
 int         copyin(pagetable_t, char*, u64, u64);
 int         copyinstr(pagetable_t, char*, u64, u64);
-int         map_stack(usize);
-void        unmap_stack(usize);
+page*       request_stack(void);
+void        release_stack(page*);
 
 // plic.c
 void plicinit(void);

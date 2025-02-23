@@ -1,9 +1,9 @@
 #include "kernel/scheduler/proc.h"
+#include "kernel/defs.h"
 #include "kernel/errno.h"
 #include "kernel/hardware/memlayout.h"
 #include "kernel/hardware/riscv.h"
 #include "kernel/initcode.h"
-#include "kernel/scheduler/free_stack.h"
 
 struct cpu cpus[NCPU];
 
@@ -59,7 +59,6 @@ struct list* iterate_begin(void) {
 void procinit(void) {
   lst_init(&sentinel_sched);
   lst_init(&sentinel_other);
-  init_stack_storage();
 
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
@@ -129,12 +128,11 @@ static int allocproc(struct proc** proc_out) {
     return ENOMEM;
   }
 
-  int stack_pos = stack_storage_pop();
-  if (stack_pos == -1) {
+  p->kstack = request_stack();
+  if (p->kstack == NULL) {
     freeproc(p);
     return ENOMEM;
   }
-  p->kstack = KSTACK_TOP(stack_pos);
 
   initlock(&p->lock, "proc");
   p->pid   = allocpid();
@@ -143,7 +141,7 @@ static int allocproc(struct proc** proc_out) {
   // Set up new context to start executing at forkret,
   // which returns to user space.
   p->context.ra = (u64)forkret;
-  p->context.sp = p->kstack;
+  p->context.sp = (u64)p->kstack;
 
   acquire(&wait_lock);
   acquire(&p->lock);
@@ -164,9 +162,8 @@ static void freeproc(struct proc* p) {
     proc_freepagetable(p->pagetable, p->sz);
   }
   if (p->kstack) {
-    int pos = FROM_KSTACK_TOP(p->kstack);
-    sfence_vma_address(p->kstack - PGSIZE);
-    stack_storage_push(pos);
+    sfence_vma_address((u64)p->kstack - PGSIZE);
+    release_stack(p->kstack);
   }
   if (!lst_empty(&p->children)) {
     panic("free children");
@@ -500,7 +497,7 @@ void scheduler(void) {
     p->state = RUNNING;
     c->proc  = p;
     // flush TLB for kstack
-    sfence_vma_address(p->kstack - PGSIZE);
+    sfence_vma_address((u64)p->kstack - PGSIZE);
     swtch(&c->context, &p->context);
 
     // Process is done running for now.

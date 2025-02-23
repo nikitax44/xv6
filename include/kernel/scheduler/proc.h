@@ -4,6 +4,8 @@
 #include "kernel/util/spinlock.h"
 #include "list.h"
 
+typedef struct page page;
+
 // Saved registers for kernel context switches.
 struct context {
   u64 ra;
@@ -115,7 +117,7 @@ struct proc {
   struct list  children;
 
   // these are private to the process, so p->lock need not be held.
-  u64               kstack;        // Virtual address of kernel stack
+  page*             kstack;        // Virtual address of kernel stack
   u64               sz;            // Size of process memory (bytes)
   pagetable_t       pagetable;     // User page table
   struct trapframe* trapframe;     // data page for trampoline.S

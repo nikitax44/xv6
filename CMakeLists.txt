@@ -100,21 +100,22 @@ add_custom_target(script ALL DEPENDS qemu-script)
 add_custom_target(
   qemu
   DEPENDS kernel fs.img qemu-script
-  COMMAND CPUS=${NPROC} KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
+  COMMAND CPUS=${NPROC} KERNEL="${CMAKE_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
           ./qemu-script
 )
 
 # Generate GDB initialization file
 add_custom_command(
-  OUTPUT .gdbinit
-  COMMAND sed "s/:1234/:${GDBPORT}/" < ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit.tmpl-riscv > .gdbinit
+  OUTPUT ${CMAKE_SOURCE_DIR}/.gdbinit
+  COMMAND sed -e "s/:1234/:${GDBPORT}/" -e "s#kernel/kernel#${CMAKE_BINARY_DIR}/kernel/kernel#" <
+          ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit.tmpl-riscv > ${CMAKE_SOURCE_DIR}/.gdbinit
   DEPENDS .gdbinit.tmpl-riscv
 )
 
 # Add the GDB target
 add_custom_target(
   qemu-gdb
-  DEPENDS kernel .gdbinit fs.img qemu-script
+  DEPENDS kernel ${CMAKE_SOURCE_DIR}/.gdbinit fs.img qemu-script
   COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window."
   COMMAND CPUS=1 KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
           ./qemu-script -S -gdb "tcp::${GDBPORT}"

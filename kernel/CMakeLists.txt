@@ -20,7 +20,6 @@ set(OBJS
     hardware/virtio_disk.c
     hardware/plic.c
 
-    scheduler/free_stack.c
     scheduler/list.c
     scheduler/proc.c
 

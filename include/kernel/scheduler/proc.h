@@ -1,4 +1,5 @@
 #pragma once
+#include "kernel/hardware/riscv.h"
 #include "kernel/param.h"
 #include "kernel/types.h"
 #include "kernel/util/spinlock.h"
@@ -87,15 +88,7 @@ struct trapframe {
   /* 280 */ u64 t6;
 };
 
-enum procstate {
-  UNUSED,
-  USED,
-  SLEEPING,
-  RUNNABLE,
-  RUNNING,
-  WIP_ZOMBIE,
-  ZOMBIE
-};
+enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {

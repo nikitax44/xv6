@@ -118,7 +118,6 @@ void syscall_impl(void) {
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
     p->trapframe->a0 = syscalls[num]();
-    // all syscalls must return. even SYS_exit
   } else {
     printf("%d %s: unknown sys call %lu\n", p->pid, p->name, num);
     p->trapframe->a0 = -1;

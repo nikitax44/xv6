@@ -7,8 +7,8 @@
 u64 sys_exit(void) {
   int n;
   argint(0, &n);
-  mark_exit(n);
-  return 0; // reached but not used
+  exit(n);
+  return 0; // not reached
 }
 
 u64 sys_getpid(void) { return myproc()->pid; }

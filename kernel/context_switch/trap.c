@@ -45,8 +45,12 @@ void usertrap(void) {
   // save user program counter.
   p->trapframe->epc = r_sepc();
 
-  if (r_scause() == 8 && !killed(p)) {
+  if (r_scause() == 8) {
     // system call
+
+    if (killed(p)) {
+      exit(-1);
+    }
 
     // sepc points to the ecall instruction,
     // but we want to return to the next instruction.
@@ -86,10 +90,9 @@ void usertrap(void) {
   }
 
   if (killed(p)) {
-    mark_exit(-1);
+    exit(-1);
   }
 
-  do_exit_if_needed(p);
   // give up the CPU if this is a timer interrupt.
   if (which_dev == 2) {
     yield();

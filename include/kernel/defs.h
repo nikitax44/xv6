@@ -85,7 +85,7 @@ int  pipewrite(struct pipe* pi, u64 addr, int n);
 
 // proc.c
 u32          cpuid(void);
-void         mark_exit(int);
+void         exit(int);
 pid_t        fork(void);
 int          growproc(int);
 pagetable_t  proc_pagetable(struct proc*);
@@ -94,7 +94,6 @@ int          kill(pid_t);
 void         kill_all(void);
 int          killed(struct proc*);
 void         setkilled(struct proc*);
-void         do_exit_if_needed(struct proc*);
 struct cpu*  mycpu(void);
 struct proc* myproc(void);
 void         procinit(void);

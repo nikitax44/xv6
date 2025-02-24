@@ -344,11 +344,10 @@ void reparent(struct proc* p) {
   release(&wait_lock);
 }
 
-// Mark the current process as exited. *Does* return.
-// the usertrap must be in the caller chain
+// Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait().
-void mark_exit(int status) {
+void exit(int status) {
   struct proc* p = myproc();
 
   if (p == initproc) {
@@ -372,10 +371,23 @@ void mark_exit(int status) {
   // Give any children to init.
   reparent(p);
 
+  acquire(&parent_lock);
+  acquire(&wait_lock);
   acquire(&p->lock);
   p->xstate = status;
-  p->state  = WIP_ZOMBIE;
+  p->state  = ZOMBIE;
   release(&p->lock);
+
+  // Parent might be sleeping in wait().
+  wakeup_process(p->parent);
+
+  acquire(&p->lock);
+  release(&wait_lock);
+  release(&parent_lock);
+
+  // Jump into the scheduler, never to return.
+  sched();
+  panic("zombie exit");
 }
 
 // Wait for a child process to exit and return its pid.
@@ -723,28 +735,6 @@ int killed(struct proc* p) {
   return k;
 }
 
-void do_exit_if_needed(struct proc* p) {
-  acquire((&parent_lock));
-  acquire(&wait_lock);
-  acquire(&p->lock);
-  if (p->state == WIP_ZOMBIE) {
-    p->state = ZOMBIE;
-
-    // Parent might be sleeping in wait().
-    wakeup_process(p->parent);
-
-    release(&wait_lock);
-    release(&parent_lock);
-
-    // Jump into the scheduler, never to return.
-    sched();
-    panic("zombie exit");
-  }
-  release(&p->lock);
-  release(&wait_lock);
-  release(&parent_lock);
-}
-
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
@@ -776,9 +766,9 @@ int either_copyin(void* dst, int user_src, u64 src, u64 len) {
 // No lock to avoid wedging a stuck machine further.
 void procdump(void) {
   static char* states[] = {
-      [UNUSED] = "unused",    [USED] = "used",      [SLEEPING] = "sleep ",
-      [RUNNABLE] = "runble",  [RUNNING] = "run   ", [ZOMBIE] = "zombie",
-      [WIP_ZOMBIE] = "dying "};
+      [UNUSED] = "unused",   [USED] = "used",      [SLEEPING] = "sleep ",
+      [RUNNABLE] = "runble", [RUNNING] = "run   ", [ZOMBIE] = "zombie",
+  };
   struct proc* p;
   char*        state;
   struct list* it;

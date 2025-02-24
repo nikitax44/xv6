@@ -5,6 +5,10 @@ typedef struct {
   u32 value;
 } AtomicU32;
 
+static inline u32 atomic_exchange(AtomicU32* atomic, u32 value) {
+  return __atomic_exchange_n(&atomic->value, value, __ATOMIC_SEQ_CST);
+}
+
 static inline u32 atomic_fetch_and_add(AtomicU32* atomic, u32 value) {
   return __sync_fetch_and_add(&atomic->value, value);
 }

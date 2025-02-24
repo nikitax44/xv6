@@ -15,28 +15,22 @@ void lst_init(struct list* lst) {
   lst->prev = lst;
 }
 
-int lst_empty(struct list* lst) { return lst->next == lst; }
+bool lst_empty(struct list* lst) { return lst->next == lst; }
 
-void lst_remove(struct list* e) {
-  e->prev->next = e->next;
-  e->next->prev = e->prev;
-}
+void lst_remove(struct list* e) { lst_link(e->prev, e->next); }
 
-void* lst_pop(struct list* lst) {
-  if (lst->next == lst) {
+struct list* lst_pop(struct list* lst) {
+  if (lst_empty(lst)) {
     panic("lst_pop");
   }
   struct list* p = lst->next;
   lst_remove(p);
-  return (void*)p;
+  return p;
 }
 
-void lst_push(struct list* lst, void* p) {
-  struct list* e  = (struct list*)p;
-  e->next         = lst->next;
-  e->prev         = lst;
-  lst->next->prev = p;
-  lst->next       = e;
+void lst_push(struct list* lst, struct list* p) {
+  lst_link(p, lst->next);
+  lst_link(lst, p);
 }
 
 void lst_print(struct list* lst) {

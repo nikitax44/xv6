@@ -30,13 +30,13 @@ void consoleintr(int);
 void consputc(int);
 
 // list.c
-void  lst_init(struct list*);
-void  lst_remove(struct list*);
-void  lst_push(struct list*, void*);
-void* lst_pop(struct list*);
-void  lst_print(struct list*);
-int   lst_empty(struct list*);
-void  lst_extend_move(struct list* dst, struct list* src);
+void         lst_init(struct list*);
+void         lst_remove(struct list*);
+void         lst_push(struct list* list, struct list* elem);
+struct list* lst_pop(struct list*);
+void         lst_print(struct list*);
+bool         lst_empty(struct list*);
+void         lst_extend_move(struct list* dst, struct list* src);
 
 // exec.c
 int execve(str path, str* argv, str* envp);

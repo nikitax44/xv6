@@ -9,10 +9,11 @@ struct cpu cpus[NCPU];
 
 struct proc* initproc;
 
-// list for procces that may has arbitrary state, mostly it has runnable state
+// list for processes that may have arbitrary state, mostly it has runnable
+// state
 struct list sentinel_sched;
 
-// list for procces that has state different from runnable
+// list for processes that has state different from runnable
 // if process switch your status to runnable it must add yourself to
 // sentinel_sched list and delete yourself from current list
 struct list sentinel_other;
@@ -20,7 +21,7 @@ struct list sentinel_other;
 pid_t                                        nextpid = 1;
 struct spinlock __attribute__((aligned(64))) pid_lock;
 
-extern void forkret(void);
+extern void forkret(void) __attribute__((noreturn));
 static void freeproc(struct proc* p);
 void        wakeup_base(void*, int);
 void        wakeup_process(struct proc*);
@@ -35,9 +36,9 @@ struct spinlock __attribute__((aligned(64))) wait_lock;
 // process. Must be acquired before wait_lock and any p->lock.
 struct spinlock __attribute__((aligned(64))) parent_lock;
 
-// wait_lock must be aquired
-// Iterate all proccesses in sentinel_sched list, and sentinel_other list.
-// It returns &sentinel_other if iter wal last element
+// wait_lock must be acquired
+// Iterate all processes in sentinel_sched list, and sentinel_other list.
+// It returns sentinel_other.next if iter was the last element of sentinel_sched
 struct list* iterate_next(struct list* iter) {
   if (iter->next == &sentinel_sched) {
     return sentinel_other.next;
@@ -443,7 +444,7 @@ int wait(u64 addr) {
   }
 }
 
-u64 max_shead_cycles = 100;
+u64 max_scheduler_waiting_cycles = 100;
 
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -453,36 +454,36 @@ u64 max_shead_cycles = 100;
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
 void scheduler(void) {
-  struct proc* p;
-  struct cpu*  c = mycpu();
-  struct list* lst_ptr;
+  struct cpu* c = mycpu();
+  intr_on();
 
-  c->proc     = 0;
-  u64 count   = 0;
-  int has_job = 0;
+  c->intena                     = true;
+  c->proc                       = 0;
+  u64  scheduler_waiting_cycles = 0;
+  bool has_job                  = 0;
   for (;;) {
-    count++;
-    if (count == max_shead_cycles) {
+    // safeguard against a deadlock in case of a bug.
+    ASSERT(c->noff == 0, "scheduler: noff is not 0");
+    ASSERT(intr_get(), "scheduler: interrupts are disabled");
+
+    scheduler_waiting_cycles++;
+    if (scheduler_waiting_cycles == max_scheduler_waiting_cycles) {
       if (!has_job) {
-        intr_on();
-        asm volatile("wfi");
+        asm volatile("wfi"); // wait in energy-saving mode
       }
-      count   = 0;
-      has_job = 0;
+      scheduler_waiting_cycles = 0;
+      has_job                  = false;
     }
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting.
-    intr_on();
     acquire(&wait_lock);
-    if (sentinel_sched.next == &sentinel_sched) {
+    if (lst_empty(&sentinel_sched)) {
       release(&wait_lock);
       continue;
     }
-    lst_ptr = sentinel_sched.next;
-    lst_remove(lst_ptr);
-    lst_push(sentinel_other.prev, lst_ptr);
-    p = (struct proc*)((char*)lst_ptr - offsetof(struct proc, sched));
+
+    struct list* curr_proc = lst_pop(&sentinel_sched);
+    lst_push(sentinel_other.prev, curr_proc);
+    struct proc* p = GET_PROC_FROM_SCHED(curr_proc);
+
     acquire(&p->lock);
     if (p->state != RUNNABLE) {
       release(&p->lock);
@@ -490,19 +491,23 @@ void scheduler(void) {
       continue;
     }
     release(&wait_lock);
-    has_job = 1;
+    has_job = true;
+
     //  Switch to chosen process.  It is the process's job
     //  to release its lock and then reacquire it
     //  before jumping back to us.
     p->state = RUNNING;
     c->proc  = p;
+
     // flush TLB for kstack
     sfence_vma_address((u64)p->kstack - PGSIZE);
+    // resumes state in the `sched`
     swtch(&c->context, &p->context);
 
     // Process is done running for now.
     // It should have changed its p->state before coming back.
-    c->proc = 0;
+    c->proc   = 0;
+    c->intena = true;
     release(&p->lock);
   }
 }
@@ -519,21 +524,34 @@ void sched(void) {
   struct proc* p = myproc();
 
   if (!holding(&p->lock)) {
-    panic("sched p->lock");
+    panic("sched1 p->lock");
   }
   if (mycpu()->noff != 1) {
-    panic("sched locks");
+    panic("sched1 locks");
   }
   if (p->state == RUNNING) {
-    panic("sched running");
+    panic("sched1 running");
   }
   if (intr_get()) {
-    panic("sched interruptible");
+    panic("sched1 interruptible");
   }
 
   intena = mycpu()->intena;
   swtch(&p->context, &mycpu()->context);
   mycpu()->intena = intena;
+
+  if (!holding(&p->lock)) {
+    panic("sched2 p->lock ");
+  }
+  if (mycpu()->noff != 1) {
+    panic("sched2 locks");
+  }
+  if (p->state != RUNNING) {
+    panic("sched2 is not running");
+  }
+  if (intr_get()) {
+    panic("sched2 interruptible");
+  }
 }
 
 // Give up the CPU for one scheduling round.
@@ -604,7 +622,7 @@ void wakeup_base(void* chan, int has_wait_lock) {
     acquire(&wait_lock);
   }
   for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
+    p = GET_PROC_FROM_SCHED(it);
     if (p != myproc()) {
       acquire(&p->lock);
       if (p->state == SLEEPING && p->chan == chan) {
@@ -645,7 +663,7 @@ int kill(pid_t pid) {
 
   acquire(&wait_lock);
   for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
+    p = GET_PROC_FROM_SCHED(it);
     acquire(&p->lock);
     if (p->pid == pid) {
       p->killed = 1;
@@ -672,7 +690,7 @@ void kill_all(void) {
 
   acquire(&wait_lock);
   for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
+    p = GET_PROC_FROM_SCHED(it);
     acquire(&p->lock);
     if (p->pid > 1) {
       p->killed = 1;
@@ -766,7 +784,7 @@ void procdump(void) {
   printf("\n");
   acquire(&wait_lock);
   for (it = iterate_begin(); it != &sentinel_other; it = iterate_next(it)) {
-    p = (struct proc*)((char*)it - offsetof(struct proc, sched));
+    p = GET_PROC_FROM_SCHED(it);
     if (p->state == UNUSED) {
       continue;
     }

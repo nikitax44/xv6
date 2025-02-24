@@ -126,3 +126,6 @@ struct proc {
   struct inode*     cwd;           // Current directory
   char              name[16];      // Process name (debugging)
 };
+
+#define GET_PROC_FROM_SCHED(it)                                                \
+  ((struct proc*)((char*)it - offsetof(struct proc, sched)))

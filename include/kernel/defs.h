@@ -211,5 +211,10 @@ int   strncmp(const char*, const char*, usize);
 char* strncpy(char*, const char*, usize);
 
 // number of elements in fixed-size array
-#define NELEM(x) (sizeof(x) / sizeof((x)[0]))
-#define TODO     panic("todo");
+#define NELEM(x)     (sizeof(x) / sizeof((x)[0]))
+#define TODO         panic("todo");
+#define STRINGIFY(x) #x
+#define TOSTRING(x)  STRINGIFY(x)
+#define AT           __FILE__ ":" TOSTRING(__LINE__)
+#define ASSERT(x, msg)                                                         \
+  ((x) ? (void)0 : panic("assertion failed at " AT "\n" msg))

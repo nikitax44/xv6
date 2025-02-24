@@ -231,6 +231,7 @@ void userinit(void) {
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
+  ASSERT(p->cwd != NULL, "cannot find /");
   release(&p->lock);
   acquire(&wait_lock);
   acquire(&p->lock);
@@ -298,6 +299,7 @@ pid_t fork(void) {
     }
   }
   np->cwd = idup(p->cwd);
+  ASSERT(np->cwd != NULL, "fork: failed to idup cwd");
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 

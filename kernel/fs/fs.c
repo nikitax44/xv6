@@ -262,6 +262,7 @@ static struct inode* iget(u32 dev, u32 inum) {
 // Increment reference count for ip.
 // Returns ip to enable ip = idup(ip1) idiom.
 struct inode* idup(struct inode* ip) {
+  ASSERT(ip != NULL, "idup(NULL)");
   acquire(&itable.lock);
   ip->ref++;
   release(&itable.lock);
@@ -314,6 +315,7 @@ void iunlock(struct inode* ip) {
 // All calls to iput() must be inside a transaction in
 // case it has to free the inode.
 void iput(struct inode* ip) {
+  ASSERT(ip != NULL, "iput(NULL)");
   acquire(&itable.lock);
 
   if (ip->ref == 1 && ip->valid && ip->nlink == 0) {

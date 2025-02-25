@@ -3,15 +3,6 @@
 version = 4
 
 [[package]]
-name = "attr-wrapper"
-version = "0.1.0"
-source = "git+https://github.com/nikitax44/attr-wrapper#b872cca47a96223dcb7bee8f2986ebd3131339c8"
-dependencies = [
- "quote",
- "syn",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -238,7 +229,6 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 name = "rust-xv6"
 version = "0.1.0"
 dependencies = [
- "attr-wrapper",
  "buddy_system_allocator",
  "critical-section",
  "efs",

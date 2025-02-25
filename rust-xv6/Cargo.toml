@@ -18,9 +18,7 @@ fdt = "0.1.5"
 zerocopy = { version = "0.8.5", default-features = false, features = ["derive"] }
 virtio-drivers = "0.9.0"
 lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
-attr-wrapper = { git = "https://github.com/nikitax44/attr-wrapper" }
 macro_rules_attribute = "0.2.0"
-# attr-wrapper = { path = "../../attr-wrapper" }
 thiserror = { version = "2.0.0", default-features = false }
 efs = "0.4.2"
 log = "0.4.22"

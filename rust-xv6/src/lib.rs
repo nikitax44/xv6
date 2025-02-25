@@ -120,6 +120,33 @@ macro_rules! static_assert {
     );
 }
 
+#[macro_export]
+macro_rules! time_me {
+    (
+        $(#[$($attrss:tt)*])*
+        $vs:vis $(unsafe $(@ $uf:tt)?)?
+        fn $name:ident($($arg:ident: $tp:ty),* $(,)?) $(-> $ret:ty)? $body:block
+    ) => {
+        $(#[$($attrss)*])*
+        $vs $(unsafe $($uf)?)?
+        fn $name($($arg: $tp),*) $(-> $ret)? {
+            struct PerfGuard($crate::Instant);
+            impl ::core::ops::Drop for PerfGuard {
+                fn drop(&mut self) {
+                    let now = $crate::Instant::now();
+                    let elapsed = now - self.0;
+                    if (elapsed >= ::core::time::Duration::from_millis(50)) {
+                        ::log::debug!("perf: {} took {:?} to finish", stringify!(#function_identifier), elapsed);
+                    }
+                }
+            }
+            let _guard = PerfGuard($crate::Instant::now());
+
+            $body
+        }
+    };
+}
+
 #[cfg(test)]
 fn test_runner(_tests: &[&dyn Fn()]) {}
 

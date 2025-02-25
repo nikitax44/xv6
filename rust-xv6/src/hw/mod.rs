@@ -3,7 +3,6 @@ use log::info;
 
 pub mod asm;
 pub mod console;
-pub(crate) mod hal;
 
 mod __critical {
     #[no_mangle]

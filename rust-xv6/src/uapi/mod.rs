@@ -1,8 +1,4 @@
-use crate::bindings::pid_t;
-use crate::errno::ErrNo;
-use crate::kalloc::Xv6Alloc;
-use crate::with_lock;
-use macro_rules_attribute::apply;
+mod sysproc;
 
 #[macro_export]
 macro_rules! syscall {
@@ -33,7 +29,7 @@ macro_rules! syscall {
     }};
 
     (@tp $argidx:ident Proc) => {
-        // SAFETY: it is save
+        // SAFETY: it is safe
         unsafe { $crate::bindings::myproc() }
     };
 
@@ -57,82 +53,18 @@ macro_rules! syscall {
     }};
 }
 
-#[apply(syscall)]
-fn sys_uptime() -> i64 {
-    // SAFETY: we acquired the lock required to access it
-    with_lock!(crate::bindings::tickslock, || i64::from(unsafe {
-        crate::bindings::ticks
-    }))
-}
-
-#[apply(syscall)]
-fn sys_sysinfo(proc: Proc, outaddr: u64) -> i64 {
-    let meminfo = crate::kalloc::get_kalloc().get_info().into();
-    let sysinfo = crate::bindings::sysinfo {
-        uptime: sys_uptime(),
-        loads: [0, 0, 0],
-        totalram: meminfo.total_bytes as u64,
-        freeram: meminfo.free_bytes as u64,
-        sharedram: 0,
-        bufferram: 0,
-        totalswap: 0,
-        freeswap: 0,
-        procs: 1,
-        totalhigh: 0,
-        freehigh: 0,
-        mem_unit: 1,
-    };
-    // SAFETY: it is read-only
+pub fn copyout<T>(outaddr: u64, value: &T) -> core::ffi::c_int {
+    // SAFETY: safe
+    let proc = unsafe { crate::bindings::myproc() };
+    // SAFETY: `pagetable` is readonly
     let pagetable = unsafe { (*proc).pagetable };
-    // SAFETY: sizeof of sysinfo was passed correctly
-    let status = unsafe {
+    // SAFETY: `value` is valid for reads for `sizeof(value)` bytes and pagetable is valid
+    unsafe {
         crate::bindings::copyout(
             pagetable,
             outaddr,
-            &raw const sysinfo as *const u8,
-            size_of_val(&sysinfo) as u64,
+            &raw const value as *const _,
+            size_of_val(value) as u64,
         )
-    };
-
-    if status != 0 {
-        -ErrNo::EFAULT
-    } else {
-        0
     }
-}
-
-#[apply(syscall)]
-fn sys_futimesat() -> i64 {
-    -ErrNo::ENOSYS
-}
-
-#[apply(syscall)]
-fn sys_kill(pid: u64) -> i64 {
-    let Ok(pid) = pid_t::try_from(pid) else {
-        return -ErrNo::EINVAL;
-    };
-
-    // SAFETY: it is safe
-    i64::from(unsafe { crate::bindings::kill(pid) })
-}
-
-#[apply(syscall)]
-fn sys_exit(code: u64) -> i64 {
-    let Ok(code) = i32::try_from(code.cast_signed()) else {
-        return -ErrNo::EINVAL;
-    };
-    // SAFETY: it is safe
-    unsafe { crate::bindings::exit(code) }
-}
-
-#[apply(syscall)]
-fn sys_getpid(proc: Proc) -> i64 {
-    // SAFETY: it is read-only
-    i64::from(unsafe { (*proc).pid })
-}
-
-#[apply(syscall)]
-fn sys_fork() -> i64 {
-    // SAFETY: it is safe
-    i64::from(unsafe { crate::bindings::fork() })
 }

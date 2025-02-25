@@ -245,7 +245,7 @@ void userinit(void) {
 
 // Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
-int growproc(int n) {
+int growproc(i64 n) {
   u64          sz;
   struct proc* p = myproc();
 
@@ -680,7 +680,7 @@ int kill(pid_t pid) {
     p = GET_PROC_FROM_SCHED(it);
     acquire(&p->lock);
     if (p->pid == pid) {
-      p->killed = 1;
+      p->killed = true;
       if (p->state == SLEEPING) {
         // Wake process from sleep().
         p->state = RUNNABLE;
@@ -707,7 +707,7 @@ void kill_all(void) {
     p = GET_PROC_FROM_SCHED(it);
     acquire(&p->lock);
     if (p->pid > 1) {
-      p->killed = 1;
+      p->killed = true;
       if (p->state == SLEEPING) {
         // Wake process from sleep().
         p->state = RUNNABLE;
@@ -722,12 +722,12 @@ void kill_all(void) {
 
 void setkilled(struct proc* p) {
   acquire(&p->lock);
-  p->killed = 1;
+  p->killed = true;
   release(&p->lock);
 }
 
-int killed(struct proc* p) {
-  int k;
+bool killed(struct proc* p) {
+  bool k;
 
   acquire(&p->lock);
   k = p->killed;

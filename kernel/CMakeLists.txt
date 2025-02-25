@@ -13,7 +13,6 @@ set(OBJS
     file/file.c
 
     uapi/syscall.c
-    uapi/sysproc.c
     uapi/sysfile.c
 
     hardware/uart.c

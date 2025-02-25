@@ -4,8 +4,8 @@
 #include "user.h"
 
 int main(void) {
-  if (_fork() > 0) {
-    _sleep(5); // Let child exit before parent.
+  if (fork() > 0) {
+    sleep(5); // Let child exit before parent.
   }
-  _exit(0);
+  exit(0);
 }

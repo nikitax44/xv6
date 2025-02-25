@@ -51,7 +51,7 @@ struct backcmd {
   struct cmd* cmd;
 };
 
-int         fork(void); // Fork but panics on failure.
+int         checked_fork(void); // Fork but panics on failure.
 void        panic(char*);
 struct cmd* parsecmd(char*);
 void        runcmd(struct cmd*) __attribute__((noreturn));
@@ -79,7 +79,7 @@ void runcmd(struct cmd* cmd) {
   struct redircmd* rcmd;
 
   if (cmd == 0) {
-    _exit(1);
+    exit(1);
   }
 
   switch (cmd->type) {
@@ -89,68 +89,68 @@ void runcmd(struct cmd* cmd) {
   case EXEC:
     ecmd = (struct execcmd*)cmd;
     if (ecmd->argv[0] == 0) {
-      _exit(1);
+      exit(1);
     }
-    int errno = _execve(ecmd->argv[0], ecmd->argv, (char*[]){"SHELL=/sh", 0});
+    int errno = execve(ecmd->argv[0], ecmd->argv, (char*[]){"SHELL=/sh", 0});
     print_error(ecmd->argv[0], errno);
     break;
 
   case REDIR:
     rcmd = (struct redircmd*)cmd;
-    _close(rcmd->fd);
-    if (_open(rcmd->file, rcmd->mode) < 0) {
+    close(rcmd->fd);
+    if (open(rcmd->file, rcmd->mode) < 0) {
       fdprintf(stderr, "open %s failed\n", rcmd->file);
-      _exit(1);
+      exit(1);
     }
     runcmd(rcmd->cmd);
     break;
 
   case LIST:
     lcmd = (struct listcmd*)cmd;
-    if (fork() == 0) {
+    if (checked_fork() == 0) {
       runcmd(lcmd->left);
     }
-    _wait(0);
+    wait(0);
     runcmd(lcmd->right);
     break;
 
   case PIPE:
     pcmd = (struct pipecmd*)cmd;
-    if (_pipe(p) < 0) {
+    if (pipe(p) < 0) {
       panic("pipe");
     }
-    if (fork() == 0) {
-      _close(1);
-      _dup(p[1]);
-      _close(p[0]);
-      _close(p[1]);
+    if (checked_fork() == 0) {
+      close(1);
+      dup(p[1]);
+      close(p[0]);
+      close(p[1]);
       runcmd(pcmd->left);
     }
-    if (fork() == 0) {
-      _close(0);
-      _dup(p[0]);
-      _close(p[0]);
-      _close(p[1]);
+    if (checked_fork() == 0) {
+      close(0);
+      dup(p[0]);
+      close(p[0]);
+      close(p[1]);
       runcmd(pcmd->right);
     }
-    _close(p[0]);
-    _close(p[1]);
-    _wait(0);
-    _wait(0);
+    close(p[0]);
+    close(p[1]);
+    wait(0);
+    wait(0);
     break;
 
   case BACK:
     bcmd = (struct backcmd*)cmd;
-    if (fork() == 0) {
+    if (checked_fork() == 0) {
       runcmd(bcmd->cmd);
     }
     break;
   }
-  _exit(0);
+  exit(0);
 }
 
 int getcmd(char* buf, int nbuf) {
-  _write(2, "$ ", 2);
+  write(2, "$ ", 2);
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if (buf[0] == 0) { // EOF
@@ -164,9 +164,9 @@ int main(void) {
   int         fd;
 
   // Ensure that three file descriptors are open.
-  while ((fd = _open("console", O_RDWR)) >= 0) {
+  while ((fd = open("console", O_RDWR)) >= 0) {
     if (fd >= 3) {
-      _close(fd);
+      close(fd);
       break;
     }
   }
@@ -176,28 +176,28 @@ int main(void) {
     if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf) - 1] = 0; // chop \n
-      if (_chdir(buf + 3) < 0) {
+      if (chdir(buf + 3) < 0) {
         fdprintf(stderr, "cannot cd %s\n", buf + 3);
       }
       continue;
     }
-    if (fork() == 0) {
+    if (checked_fork() == 0) {
       runcmd(parsecmd(buf));
     }
-    _wait(0);
+    wait(0);
   }
-  _exit(0);
+  exit(0);
 }
 
 void __attribute__((noreturn)) panic(char* s) {
   fdprintf(stderr, "%s\n", s);
-  _exit(1);
+  exit(1);
 }
 
-int fork(void) {
+int checked_fork(void) {
   int pid;
 
-  pid = _fork();
+  pid = fork();
   if (pid == -1) {
     panic("fork");
   }

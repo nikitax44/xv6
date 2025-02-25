@@ -6,7 +6,7 @@
 
 #define N 1000
 
-void print(str s) { _write(1, s, (int)strlen(s)); }
+void print(str s) { write(1, s, (int)strlen(s)); }
 
 void forktest(void) {
   int n, pid;
@@ -14,30 +14,30 @@ void forktest(void) {
   print("fork test\n");
 
   for (n = 0; n < N; n++) {
-    pid = _fork();
+    pid = fork();
     if (pid < 0) {
       break;
     }
     if (pid == 0) {
-      _exit(0);
+      exit(0);
     }
   }
 
   if (n == N) {
     print("fork claimed to work N times!\n");
-    _exit(1);
+    exit(1);
   }
 
   for (; n > 0; n--) {
-    if (_wait(0) < 0) {
+    if (wait(0) < 0) {
       print("wait stopped early\n");
-      _exit(1);
+      exit(1);
     }
   }
 
-  if (_wait(0) != -1) {
+  if (wait(0) != -1) {
     print("wait got too many\n");
-    _exit(1);
+    exit(1);
   }
 
   print("fork test OK\n");
@@ -45,5 +45,5 @@ void forktest(void) {
 
 int main(void) {
   forktest();
-  _exit(0);
+  exit(0);
 }

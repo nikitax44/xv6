@@ -40,301 +40,301 @@ int rand(void) { return (do_rand(&rand_next)); }
 void go(int which_child) {
   int         fd = -1;
   static char buf[999];
-  char*       break0 = _sbrk(0);
+  char*       break0 = sbrk(0);
   u64         iters  = 0;
 
-  _mkdir("grindir");
-  if (_chdir("grindir") != 0) {
+  mkdir("grindir");
+  if (chdir("grindir") != 0) {
     printf("grind: chdir grindir failed\n");
-    _exit(1);
+    exit(1);
   }
-  _chdir("/");
+  chdir("/");
 
   while (1) {
     iters++;
     if ((iters % 500) == 0) {
-      _write(1, which_child ? "B" : "A", 1);
+      write(1, which_child ? "B" : "A", 1);
     }
     int what = rand() % 23;
     if (what == 1) {
-      _close(_open("grindir/../a", O_CREATE | O_RDWR));
+      close(open("grindir/../a", O_CREATE | O_RDWR));
     } else if (what == 2) {
-      _close(_open("grindir/../grindir/../b", O_CREATE | O_RDWR));
+      close(open("grindir/../grindir/../b", O_CREATE | O_RDWR));
     } else if (what == 3) {
-      _unlink("grindir/../a");
+      unlink("grindir/../a");
     } else if (what == 4) {
-      if (_chdir("grindir") != 0) {
+      if (chdir("grindir") != 0) {
         printf("grind: chdir grindir failed\n");
-        _exit(1);
+        exit(1);
       }
-      _unlink("../b");
-      _chdir("/");
+      unlink("../b");
+      chdir("/");
     } else if (what == 5) {
-      _close(fd);
-      fd = _open("/grindir/../a", O_CREATE | O_RDWR);
+      close(fd);
+      fd = open("/grindir/../a", O_CREATE | O_RDWR);
     } else if (what == 6) {
-      _close(fd);
-      fd = _open("/./grindir/./../b", O_CREATE | O_RDWR);
+      close(fd);
+      fd = open("/./grindir/./../b", O_CREATE | O_RDWR);
     } else if (what == 7) {
-      _write(fd, buf, sizeof(buf));
+      write(fd, buf, sizeof(buf));
     } else if (what == 8) {
-      _read(fd, buf, sizeof(buf));
+      read(fd, buf, sizeof(buf));
     } else if (what == 9) {
-      _mkdir("grindir/../a");
-      _close(_open("a/../a/./a", O_CREATE | O_RDWR));
-      _unlink("a/a");
+      mkdir("grindir/../a");
+      close(open("a/../a/./a", O_CREATE | O_RDWR));
+      unlink("a/a");
     } else if (what == 10) {
-      _mkdir("/../b");
-      _close(_open("grindir/../b/b", O_CREATE | O_RDWR));
-      _unlink("b/b");
+      mkdir("/../b");
+      close(open("grindir/../b/b", O_CREATE | O_RDWR));
+      unlink("b/b");
     } else if (what == 11) {
-      _unlink("b");
-      _link("../grindir/./../a", "../b");
+      unlink("b");
+      link("../grindir/./../a", "../b");
     } else if (what == 12) {
-      _unlink("../grindir/../a");
-      _link(".././b", "/grindir/../a");
+      unlink("../grindir/../a");
+      link(".././b", "/grindir/../a");
     } else if (what == 13) {
-      int pid = _fork();
+      int pid = fork();
       if (pid == 0) {
-        _exit(0);
+        exit(0);
       } else if (pid < 0) {
         printf("grind: fork failed\n");
-        _exit(1);
+        exit(1);
       }
-      _wait(0);
+      wait(0);
     } else if (what == 14) {
-      int pid = _fork();
+      int pid = fork();
       if (pid == 0) {
-        _fork();
-        _fork();
-        _exit(0);
+        fork();
+        fork();
+        exit(0);
       } else if (pid < 0) {
         printf("grind: fork failed\n");
-        _exit(1);
+        exit(1);
       }
-      _wait(0);
+      wait(0);
     } else if (what == 15) {
-      _sbrk(6011);
+      sbrk(6011);
     } else if (what == 16) {
-      if (_sbrk(0) > break0) {
-        _sbrk(-(int)(_sbrk(0) - break0));
+      if (sbrk(0) > break0) {
+        sbrk(-(int)(sbrk(0) - break0));
       }
     } else if (what == 17) {
-      int pid = _fork();
+      int pid = fork();
       if (pid == 0) {
-        _close(_open("a", O_CREATE | O_RDWR));
-        _exit(0);
+        close(open("a", O_CREATE | O_RDWR));
+        exit(0);
       } else if (pid < 0) {
         printf("grind: fork failed\n");
-        _exit(1);
+        exit(1);
       }
-      if (_chdir("../grindir/..") != 0) {
+      if (chdir("../grindir/..") != 0) {
         printf("grind: chdir failed\n");
-        _exit(1);
+        exit(1);
       }
-      _kill(pid);
-      _wait(0);
+      kill(pid);
+      wait(0);
     } else if (what == 18) {
-      int pid = _fork();
+      int pid = fork();
       if (pid == 0) {
-        _kill(_getpid());
-        _exit(0);
+        kill(getpid());
+        exit(0);
       } else if (pid < 0) {
         printf("grind: fork failed\n");
-        _exit(1);
+        exit(1);
       }
-      _wait(0);
+      wait(0);
     } else if (what == 19) {
       int fds[2];
-      if (_pipe(fds) < 0) {
+      if (pipe(fds) < 0) {
         printf("grind: pipe failed\n");
-        _exit(1);
+        exit(1);
       }
-      int pid = _fork();
+      int pid = fork();
       if (pid == 0) {
-        _fork();
-        _fork();
-        if (_write(fds[1], "x", 1) != 1) {
+        fork();
+        fork();
+        if (write(fds[1], "x", 1) != 1) {
           printf("grind: pipe write failed\n");
         }
         char c;
-        if (_read(fds[0], &c, 1) != 1) {
+        if (read(fds[0], &c, 1) != 1) {
           printf("grind: pipe read failed\n");
         }
-        _exit(0);
+        exit(0);
       } else if (pid < 0) {
         printf("grind: fork failed\n");
-        _exit(1);
+        exit(1);
       }
-      _close(fds[0]);
-      _close(fds[1]);
-      _wait(0);
+      close(fds[0]);
+      close(fds[1]);
+      wait(0);
     } else if (what == 20) {
-      int pid = _fork();
+      int pid = fork();
       if (pid == 0) {
-        _unlink("a");
-        _mkdir("a");
-        _chdir("a");
-        _unlink("../a");
-        _open("x", O_CREATE | O_RDWR);
-        _unlink("x");
-        _exit(0);
+        unlink("a");
+        mkdir("a");
+        chdir("a");
+        unlink("../a");
+        open("x", O_CREATE | O_RDWR);
+        unlink("x");
+        exit(0);
       } else if (pid < 0) {
         printf("grind: fork failed\n");
-        _exit(1);
+        exit(1);
       }
-      _wait(0);
+      wait(0);
     } else if (what == 21) {
-      _unlink("c");
+      unlink("c");
       // should always succeed. check that there are free i-nodes,
       // file descriptors, blocks.
-      int fd1 = _open("c", O_CREATE | O_RDWR);
+      int fd1 = open("c", O_CREATE | O_RDWR);
       if (fd1 < 0) {
         printf("grind: create c failed\n");
-        _exit(1);
+        exit(1);
       }
-      if (_write(fd1, "x", 1) != 1) {
+      if (write(fd1, "x", 1) != 1) {
         printf("grind: write c failed\n");
-        _exit(1);
+        exit(1);
       }
       struct stat st;
-      if (_fstat(fd1, &st) != 0) {
+      if (fstat(fd1, &st) != 0) {
         printf("grind: fstat failed\n");
-        _exit(1);
+        exit(1);
       }
       if (st.size != 1) {
         printf("grind: fstat reports wrong size %d\n", (int)st.size);
-        _exit(1);
+        exit(1);
       }
       if (st.ino > 200) {
         printf("grind: fstat reports crazy i-number %ld\n", st.ino);
-        _exit(1);
+        exit(1);
       }
-      _close(fd1);
-      _unlink("c");
+      close(fd1);
+      unlink("c");
     } else if (what == 22) {
       // echo hi | cat
       int aa[2], bb[2];
-      if (_pipe(aa) < 0) {
+      if (pipe(aa) < 0) {
         fdprintf(stderr, "grind: pipe failed\n");
-        _exit(1);
+        exit(1);
       }
-      if (_pipe(bb) < 0) {
+      if (pipe(bb) < 0) {
         fdprintf(stderr, "grind: pipe failed\n");
-        _exit(1);
+        exit(1);
       }
-      int pid1 = _fork();
+      int pid1 = fork();
       if (pid1 == 0) {
-        _close(bb[0]);
-        _close(bb[1]);
-        _close(aa[0]);
-        _close(1);
-        if (_dup(aa[1]) != 1) {
+        close(bb[0]);
+        close(bb[1]);
+        close(aa[0]);
+        close(1);
+        if (dup(aa[1]) != 1) {
           fdprintf(stderr, "grind: dup failed\n");
-          _exit(1);
+          exit(1);
         }
-        _close(aa[1]);
+        close(aa[1]);
         char* args[3] = {"echo", "hi", 0};
-        _exec("grindir/../echo", args);
+        exec("grindir/../echo", args);
         fdprintf(stderr, "grind: echo: not found\n");
-        _exit(2);
+        exit(2);
       } else if (pid1 < 0) {
         fdprintf(stderr, "grind: fork failed\n");
-        _exit(3);
+        exit(3);
       }
-      int pid2 = _fork();
+      int pid2 = fork();
       if (pid2 == 0) {
-        _close(aa[1]);
-        _close(bb[0]);
-        _close(0);
-        if (_dup(aa[0]) != 0) {
+        close(aa[1]);
+        close(bb[0]);
+        close(0);
+        if (dup(aa[0]) != 0) {
           fdprintf(stderr, "grind: dup failed\n");
-          _exit(4);
+          exit(4);
         }
-        _close(aa[0]);
-        _close(1);
-        if (_dup(bb[1]) != 1) {
+        close(aa[0]);
+        close(1);
+        if (dup(bb[1]) != 1) {
           fdprintf(stderr, "grind: dup failed\n");
-          _exit(5);
+          exit(5);
         }
-        _close(bb[1]);
+        close(bb[1]);
         char* args[2] = {"cat", 0};
-        _exec("/cat", args);
+        exec("/cat", args);
         fdprintf(stderr, "grind: cat: not found\n");
-        _exit(6);
+        exit(6);
       } else if (pid2 < 0) {
         fdprintf(stderr, "grind: fork failed\n");
-        _exit(7);
+        exit(7);
       }
-      _close(aa[0]);
-      _close(aa[1]);
-      _close(bb[1]);
+      close(aa[0]);
+      close(aa[1]);
+      close(bb[1]);
       char current_buf[4] = {0, 0, 0, 0};
-      _read(bb[0], current_buf + 0, 1);
-      _read(bb[0], current_buf + 1, 1);
-      _read(bb[0], current_buf + 2, 1);
-      _close(bb[0]);
+      read(bb[0], current_buf + 0, 1);
+      read(bb[0], current_buf + 1, 1);
+      read(bb[0], current_buf + 2, 1);
+      close(bb[0]);
       int st1, st2;
-      _wait(&st1);
-      _wait(&st2);
+      wait(&st1);
+      wait(&st2);
       if (st1 != 0 || st2 != 0 || strcmp(current_buf, "hi\n") != 0) {
         printf("grind: exec pipeline failed %d %d \"%s\"\n", st1, st2,
                current_buf);
-        _exit(1);
+        exit(1);
       }
     }
   }
 }
 
 void iter(void) {
-  _unlink("a");
-  _unlink("b");
+  unlink("a");
+  unlink("b");
 
-  int pid1 = _fork();
+  int pid1 = fork();
   if (pid1 < 0) {
     printf("grind: fork failed\n");
-    _exit(1);
+    exit(1);
   }
   if (pid1 == 0) {
     rand_next ^= 31;
     go(0);
-    _exit(0);
+    exit(0);
   }
 
-  int pid2 = _fork();
+  int pid2 = fork();
   if (pid2 < 0) {
     printf("grind: fork failed\n");
-    _exit(1);
+    exit(1);
   }
   if (pid2 == 0) {
     rand_next ^= 7177;
     go(1);
-    _exit(0);
+    exit(0);
   }
 
   int st1 = -1;
-  _wait(&st1);
+  wait(&st1);
   if (st1 != 0) {
-    _kill(pid1);
-    _kill(pid2);
+    kill(pid1);
+    kill(pid2);
   }
   int st2 = -1;
-  _wait(&st2);
+  wait(&st2);
 
-  _exit(0);
+  exit(0);
 }
 
 int main(void) {
   while (1) {
-    int pid = _fork();
+    int pid = fork();
     if (pid == 0) {
       iter();
-      _exit(0);
+      exit(0);
     }
     if (pid > 0) {
-      _wait(0);
+      wait(0);
     }
-    _sleep(20);
+    sleep(20);
     rand_next += 1;
   }
 }

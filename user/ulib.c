@@ -8,7 +8,7 @@ char* gets(char* buf, int max) {
   char c;
 
   for (i = 0; i + 1 < max;) {
-    cc = _read(0, &c, 1);
+    cc = read(0, &c, 1);
     if (cc < 1) {
       break;
     }
@@ -25,12 +25,12 @@ int stat(str n, struct stat* st) {
   int fd;
   int r;
 
-  fd = _open(n, O_RDONLY);
+  fd = open(n, O_RDONLY);
   if (fd < 0) {
     return -1;
   }
-  r = _fstat(fd, st);
-  _close(fd);
+  r = fstat(fd, st);
+  close(fd);
   return r;
 }
 
@@ -44,4 +44,4 @@ int atoi(str s) {
   return n;
 }
 
-int _exec(str path, char** argv) { return _execve(path, argv, (char**)0); }
+int exec(str path, char** argv) { return execve(path, argv, (char**)0); }

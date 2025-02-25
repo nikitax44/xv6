@@ -5,15 +5,15 @@ int main(int argc, char* argv[]) {
 
   if (argc < 2) {
     fdprintf(stderr, "Usage: rm files...\n");
-    _exit(1);
+    exit(1);
   }
 
   for (i = 1; i < argc; i++) {
-    if (_unlink(argv[i]) < 0) {
+    if (unlink(argv[i]) < 0) {
       fdprintf(stderr, "rm: %s failed to delete\n", argv[i]);
       break;
     }
   }
 
-  _exit(0);
+  exit(0);
 }

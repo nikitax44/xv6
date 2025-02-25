@@ -5,30 +5,30 @@
 struct stat;
 
 // system calls
-int   _fork(void);
-void  _exit(int) __attribute__((noreturn));
-int   _wait(int*);
-int   _pipe(int*);
-int   _write(int, const void*, int);
-int   _read(int, void*, int);
-isize _seek(int, isize, int);
-int   _close(int);
-int   _kill(int);
-int   _exec(str, char**);
-int   _execve(str, char**, char**);
-int   _open(str, int);
-int   _mknod(str, short, short);
-int   _unlink(str);
-int   _fstat(int fd, struct stat*);
-int   _link(str, str);
-int   _mkdir(str);
-int   _chdir(str);
-int   _dup(int);
-int   _getpid(void);
-char* _sbrk(int);
-int   _sleep(int);
-int   _uptime(void);
-int   _shutdown(void);
+int   fork(void);
+void  exit(int) __attribute__((noreturn));
+int   wait(int*);
+int   pipe(int*);
+int   write(int, const void*, int);
+int   read(int, void*, int);
+isize seek(int, isize, int);
+int   close(int);
+int   kill(int);
+int   exec(str, char**);
+int   execve(str, char* const*, char* const*);
+int   open(str, int);
+int   mknod(str, short, short);
+int   unlink(str);
+int   fstat(int fd, struct stat*);
+int   link(str, str);
+int   mkdir(str);
+int   chdir(str);
+int   dup(int);
+int   getpid(void);
+char* sbrk(int);
+int   sleep(int);
+int   uptime(void);
+int   shutdown(void);
 
 // ulib.c
 int   stat(str, struct stat*);

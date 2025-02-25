@@ -19,7 +19,7 @@ int main(void) {
   memset(data, 'a', sizeof(data));
 
   for (i = 0; i < 4; i++) {
-    if (_fork() > 0) {
+    if (fork() > 0) {
       break;
     }
   }
@@ -27,22 +27,22 @@ int main(void) {
   printf("write %d\n", i);
 
   path[8] += i;
-  fd = _open(path, O_CREATE | O_RDWR);
+  fd = open(path, O_CREATE | O_RDWR);
   for (i = 0; i < 20; i++) {
     //    printf(fd, "%d\n", i);
-    _write(fd, data, sizeof(data));
+    write(fd, data, sizeof(data));
   }
-  _close(fd);
+  close(fd);
 
   printf("read\n");
 
-  fd = _open(path, O_RDONLY);
+  fd = open(path, O_RDONLY);
   for (i = 0; i < 20; i++) {
-    _read(fd, data, sizeof(data));
+    read(fd, data, sizeof(data));
   }
-  _close(fd);
+  close(fd);
 
-  _wait(0);
+  wait(0);
 
-  _exit(0);
+  exit(0);
 }

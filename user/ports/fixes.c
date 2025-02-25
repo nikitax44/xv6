@@ -7,5 +7,5 @@ extern char** environ;
 
 void _start(int argc, char** argv, char** envp) {
   environ = envp;
-  _exit(main(argc, argv, envp));
+  exit(main(argc, argv, envp));
 }

@@ -1,10 +1,10 @@
 #include "user.h"
 
 //
-// wrapper so that it's OK if main() does not call _exit().
+// wrapper so that it's OK if main() does not call exit().
 //
 void _start(void) {
   extern int main(void);
   main();
-  _exit(0);
+  exit(0);
 }

@@ -23,6 +23,16 @@ impl Xv6Spinlock {
     const fn as_mut(&self) -> *mut Self {
         core::ptr::from_ref(self).cast_mut()
     }
+
+    pub fn with<T, F: FnOnce() -> T>(&self, f: F) -> T {
+        self.lock();
+        let res = f();
+        // SAFETY: we acquired the lock
+        unsafe {
+            self.unlock();
+        }
+        res
+    }
 }
 
 // SAFETY: contract is upheld
@@ -45,4 +55,14 @@ unsafe impl RawMutex for Xv6Spinlock {
         // SAFETY: ptr is valid
         unsafe { release(self.as_mut()) }
     }
+}
+
+#[macro_export]
+macro_rules! with_lock {
+    ($lock:path, $f:expr) => {{
+        #[allow(static_mut_refs)]
+        // SAFETY: we do not observe the state
+        let lock = unsafe { &$lock };
+        lock.with($f)
+    }};
 }

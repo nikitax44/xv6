@@ -107,6 +107,7 @@ pub mod memlayout;
 pub mod panic;
 mod printf;
 pub mod proc;
+mod uapi;
 pub mod util;
 pub mod vm;
 

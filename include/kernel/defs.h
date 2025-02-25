@@ -130,11 +130,12 @@ void initsleeplock(struct sleeplock*, char*);
 char* safestrcpy(char*, const char*, usize);
 
 // syscall.c
-void argint(int, int*);
-int  argstr(int, char*, int);
-void argaddr(int, u64*);
-int  fetchstr(u64, char*, int);
-int  fetchaddr(u64, u64*);
+u64  argraw(int n);
+void argint(int n, int* ip);
+int  argstr(int n, char* buf, usize max);
+void argaddr(int n, u64* ip);
+int  fetchstr(u64 addr, char* buf, usize max);
+int  fetchaddr(u64 addr, u64* ip);
 void syscall_impl(void);
 
 extern void syscall(void); // rust wrapper for syscall_impl
@@ -168,7 +169,7 @@ void        uvmunmap(pagetable_t, u64, u64, int);
 void        uvmclear(pagetable_t, u64);
 pte_t*      walk(pagetable_t, u64, int);
 u64         walkaddr(pagetable_t, u64);
-int         copyout(pagetable_t, u64, const u8*, u64);
+int         copyout(pagetable_t pagetable, u64 dstva, const u8* src, u64 len);
 int         copyin(pagetable_t, char*, u64, u64);
 int         copyinstr(pagetable_t, char*, u64, u64);
 

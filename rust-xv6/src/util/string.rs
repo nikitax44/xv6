@@ -1,5 +1,7 @@
+use core::ffi::CStr;
 use core::fmt;
 use core::fmt::{Display, Error, Formatter};
+use core::ops::Deref;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[must_use]
@@ -46,4 +48,18 @@ macro_rules! sized_format {
         write!(buf, $($tts)*).ok();
         buf
     }};
+}
+
+pub struct InlineCString<const N: usize> {
+    buffer: [core::ffi::c_char; N],
+    size_with_null: usize,
+}
+
+impl<const N: usize> Deref for InlineCString<N> {
+    type Target = CStr;
+
+    fn deref(&self) -> &Self::Target {
+        CStr::from_bytes_with_nul(&self.buffer[..self.size_with_null])
+            .expect("InlineCString invariant was broken")
+    }
 }

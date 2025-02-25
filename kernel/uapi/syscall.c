@@ -17,7 +17,7 @@ int fetchaddr(u64 addr, u64* ip) {
 
 // Fetch the nul-terminated string at addr from the current process.
 // Returns length of string, not including nul, or -1 for error.
-int fetchstr(u64 addr, char* buf, int max) {
+int fetchstr(u64 addr, char* buf, usize max) {
   struct proc* p = myproc();
   if (copyinstr(p->pagetable, buf, addr, max) < 0) {
     return -1;
@@ -25,7 +25,7 @@ int fetchstr(u64 addr, char* buf, int max) {
   return strlen(buf);
 }
 
-static u64 argraw(int n) {
+u64 argraw(int n) {
   struct proc* p = myproc();
   switch (n) {
   case 0:
@@ -56,7 +56,7 @@ void argaddr(int n, u64* ip) { *ip = argraw(n); }
 // Fetch the nth word-sized system call argument as a null-terminated string.
 // Copies into buf, at most max.
 // Returns string length if OK (including nul), -1 if error.
-int argstr(int n, char* buf, int max) {
+int argstr(int n, char* buf, usize max) {
   u64 addr;
   argaddr(n, &addr);
   return fetchstr(addr, buf, max);

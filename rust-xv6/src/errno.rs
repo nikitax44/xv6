@@ -1,3 +1,5 @@
+use core::ops::Neg;
+
 #[repr(u32)]
 pub enum ErrNo {
     SUCCESS = 0,
@@ -263,4 +265,12 @@ pub enum ErrNo {
     ERFKILL = 132,
     /// Memory page has hardware error
     EHWPOISON = 133,
+}
+
+impl Neg for ErrNo {
+    type Output = i64;
+
+    fn neg(self) -> Self::Output {
+        -(self as i64)
+    }
 }

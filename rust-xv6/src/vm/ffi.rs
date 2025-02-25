@@ -12,6 +12,7 @@ use crate::vm::pte::PtEntry;
 use crate::vm::PTError;
 use alloc::vec::Vec;
 use core::ptr::NonNull;
+use lazy_static::lazy_static;
 use log::error;
 use spin::rwlock::RwLock;
 
@@ -69,10 +70,12 @@ struct FreeKernelStacks {
     next_stack_slot: usize,
 }
 
-static UNUSED_KERNEL_STACKS: Mutex<FreeKernelStacks> = Mutex::new(FreeKernelStacks {
-    free_stack_slots: Vec::new(),
-    next_stack_slot: 0,
-});
+lazy_static! {
+    static ref UNUSED_KERNEL_STACKS: Mutex<FreeKernelStacks> = Mutex::new(FreeKernelStacks {
+        free_stack_slots: Vec::try_with_capacity(4096).ok().unwrap_or_else(Vec::new),
+        next_stack_slot: 0,
+    });
+}
 
 #[no_mangle]
 extern "C" fn request_stack() -> Option<NonNull<Page>> {

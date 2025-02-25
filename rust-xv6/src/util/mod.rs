@@ -1,4 +1,3 @@
-pub mod lazy;
 pub mod spinlock;
 pub mod string;
 pub mod time;

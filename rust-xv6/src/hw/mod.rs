@@ -3,7 +3,6 @@ use log::info;
 
 pub mod asm;
 pub mod console;
-pub mod disk;
 pub(crate) mod hal;
 
 mod __critical {

@@ -100,7 +100,6 @@ pub mod dtb;
 pub mod errno;
 mod exports;
 pub mod ffi_interop;
-pub mod fs;
 pub mod hw;
 pub mod kalloc;
 mod log;
@@ -127,8 +126,8 @@ mod ffi {
     use crate::log::XV6Logger;
     use crate::memlayout::addrof_kernel;
     use core::fmt::{Debug, Display, Formatter};
+    use lazy_static::lazy_static;
     use log::{error, info};
-    use spin::Lazy;
 
     static LOGGER: XV6Logger = XV6Logger {
         max_level: log::LevelFilter::Trace,
@@ -139,9 +138,11 @@ mod ffi {
         start: usize,
     }
 
-    static FEATURES: Lazy<Features> = Lazy::new(|| Features {
-        start: addrof_kernel(),
-    });
+    lazy_static! {
+        static ref FEATURES: Features = Features {
+            start: addrof_kernel(),
+        };
+    }
 
     impl Display for Features {
         fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
@@ -160,7 +161,7 @@ mod ffi {
 
     #[no_mangle]
     extern "C" fn dumpconf() {
-        info!("rust features: {}", Lazy::force(&FEATURES));
+        info!("rust features: {}", &*FEATURES);
     }
 
     #[no_mangle]

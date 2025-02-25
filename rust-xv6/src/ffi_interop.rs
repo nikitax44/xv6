@@ -1,14 +1,8 @@
-use crate::errno::ErrNo;
-use crate::errno::ErrNo::EINVAL;
-use crate::fs::types::Whence;
 use crate::kalloc::thin_box::ThinBox;
 use crate::kalloc::Page;
 use alloc::sync::Arc;
 use core::ffi::{c_char, CStr};
 use core::ptr::NonNull;
-use efs::file::Type;
-use efs::fs::error::FsError;
-use log::{error, warn};
 
 pub trait ToFFI {
     type Target: FFISafe;
@@ -81,60 +75,13 @@ impl FromFFI for Option<ThinBox<Page>> {
 }
 
 impl FFISafe for () {}
-impl FFISafe for crate::fs::types::CStat {}
+// impl FFISafe for crate::fs::types::CStat {}
 impl FFISafe for usize {}
 impl FFISafe for i64 {}
-impl FFISafe for Whence {}
+// impl FFISafe for Whence {}
 
 impl<T> FFISafe for Option<NonNull<T>> {}
 impl<T> FFISafe for *const T {}
-
-impl ToFFI for Result<u64, crate::fs::Error> {
-    type Target = i64;
-
-    fn into_ffi(self) -> Self::Target {
-        let err = match self {
-            Ok(val) => {
-                return i64::try_from(val).expect("failed to convert u64 to i64");
-            }
-            Err(err) => err,
-        };
-        let err: ErrNo = match err {
-            err @ crate::fs::Error::Device(_) => {
-                panic!("disk error: {err:?}");
-            }
-            crate::fs::Error::Path(_) => EINVAL,
-
-            crate::fs::Error::IO(io) => {
-                error!("io error: {io:?}");
-                ErrNo::EIO
-            }
-            crate::fs::Error::Fs(FsError::EntryAlreadyExist(_)) => ErrNo::EEXIST,
-            crate::fs::Error::Fs(FsError::Loop(path)) => {
-                warn!("symlink loop found: {path:?}");
-                ErrNo::ELOOP
-            }
-            crate::fs::Error::Fs(FsError::NameTooLong(_)) => ErrNo::ENAMETOOLONG,
-            crate::fs::Error::Fs(FsError::NotDir(_)) => ErrNo::ENOTDIR,
-            crate::fs::Error::Fs(FsError::NoEnt(_)) => ErrNo::ENOLINK,
-            crate::fs::Error::Fs(FsError::NotFound(_)) => ErrNo::ENOENT,
-            crate::fs::Error::Fs(FsError::RemoveRefused) => ErrNo::EACCES,
-            crate::fs::Error::Fs(FsError::WrongFileType { expected, given }) => {
-                if expected == Type::Directory {
-                    ErrNo::ENOTDIR
-                } else if given == Type::Directory {
-                    ErrNo::EISDIR
-                } else {
-                    ErrNo::EOPNOTSUPP
-                }
-            }
-            err @ crate::fs::Error::Fs(FsError::Implementation(_)) => {
-                panic!("filesystem error: {err:?}");
-            }
-        };
-        -i64::from(err as u32)
-    }
-}
 
 #[macro_export]
 macro_rules! export_c_fn {

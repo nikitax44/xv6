@@ -170,6 +170,7 @@
               meta.mainProgram = "qemu-script";
             } ''
               tar -xf ${programs}
+              cp ${./README} ./README
               ${mkfs}/bin/mkfs fs.img *
               mkdir -p $out/bin
               install -Tm 0444 ${kernel} $out/kernel

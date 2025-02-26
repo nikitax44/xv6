@@ -56,13 +56,12 @@ add_custom_command(
 
 add_custom_target(Bindgen ALL DEPENDS rust-xv6/xv6_binds.rs)
 
-add_custom_target(GenerateLibRustXv6 ALL DEPENDS librust_xv6.a)
-
 add_library(RustXv6 STATIC IMPORTED)
 set_target_properties(RustXv6 PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
 
 add_subdirectory(kernel)
 add_subdirectory(user)
+add_subdirectory(boot)
 
 # Add the filesystem image target
 add_custom_command(

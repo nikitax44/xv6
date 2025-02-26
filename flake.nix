@@ -60,28 +60,36 @@
         enableOpenSBI = false;
         qemuFlags = lib.optionalString (!enableOpenSBI) "-bios none";
 
-        selectPaths = drvs: extra:
-          localPkgs.runCommandNoCCLocal "prefix-drv" {} (''
-              mkdir $out
-            ''
-            + (lib.strings.concatStrings (lib.lists.forEach drvs (drv: ''
-              cp -r ${drv} $out/${builtins.baseNameOf drv}
-            '')))
-            + extra);
-
         kernel-headers = ./include;
 
         rust-xv6 = crossPkgs.callPackage ./rust-xv6 {
           inherit craneLib kernel-headers;
         };
 
+        libkernel = crossPkgs.stdenvNoLibs.mkDerivation {
+          name = "libkernel";
+          src = ./kernel;
+          inherit nativeBuildInputs;
+
+          cmakeFlags = ["-DCMAKE_C_FLAGS=-I${kernel-headers}"];
+          buildFlags = "KernelLib";
+          installPhase = ''
+            install -m 0444 libKernelLib.a $out
+          '';
+        };
+
         kernel = crossPkgs.stdenvNoLibs.mkDerivation {
           pname = "kernel";
           inherit (rust-xv6) version;
-          src = selectPaths [./kernel] "";
+          src = ./boot;
           inherit nativeBuildInputs;
 
-          cmakeFlags = ["-S" "../kernel" "-DCMAKE_C_FLAGS=-I${kernel-headers}" "-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a" "-DOPENSBI_ENABLED=${toString enableOpenSBI}"];
+          cmakeFlags = [
+            "-DCMAKE_C_FLAGS=-I${kernel-headers}"
+            "-DKERNEL=${libkernel}"
+            "-DRUST_XV6=${rust-xv6}/lib/librust_xv6.a"
+            "-DOPENSBI_ENABLED=${toString enableOpenSBI}"
+          ];
           buildFlags = "kernel";
           installPhase = ''
             install -m 0444 kernel $out
@@ -91,9 +99,9 @@
 
         programs = crossPkgs.stdenvNoLibs.mkDerivation ({
             name = "programs.tar";
-            src = selectPaths [./user kernel-headers] "";
+            src = ./user;
 
-            cmakeFlags = ["-DNEWLIB=${NEWLIB}" "-S ../user"];
+            cmakeFlags = ["-DCMAKE_C_FLAGS=-I${kernel-headers}" "-DNEWLIB=${NEWLIB}"];
             buildFlags = "Programs";
             installPhase = ''
               install -m 0444 fs.tar $out
@@ -104,9 +112,9 @@
         mkfs = localPkgs.stdenv.mkDerivation {
           pname = "mkfs";
           version = "none";
-          src = selectPaths [./mkfs kernel-headers] "";
+          src = ./mkfs;
           buildPhase = ''
-            gcc -o mkfs.elf mkfs/mkfs.c -I ./include
+            gcc -o mkfs.elf mkfs.c -I${kernel-headers}
           '';
           installPhase = ''
             install -Dm 0555 mkfs.elf $out/bin/mkfs
@@ -164,7 +172,7 @@
           // common);
 
         packages = {
-          inherit rust-xv6 kernel programs mkfs qemu-script;
+          inherit rust-xv6 libkernel kernel programs mkfs qemu-script;
           default =
             localPkgs.runCommandNoCCLocal "xv6" {
               meta.mainProgram = "qemu-script";

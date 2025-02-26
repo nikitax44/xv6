@@ -50,8 +50,5 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -MD")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffreestanding")
 set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # Define the kernel target
-add_library(KernelLib ${OBJS})
-target_link_libraries(KernelLib)
+add_library(KernelLib STATIC ${OBJS})

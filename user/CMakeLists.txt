@@ -49,8 +49,6 @@ set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS}")
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z max-page-size=4096 -L ${NEWLIB}/lib -nostdlib")
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # Custom command to generate usys.o from usys.pl
 add_custom_command(
         OUTPUT _usys.S
@@ -59,7 +57,7 @@ add_custom_command(
         COMMENT "Generating _usys.S from usys.pl"
 )
 
-add_library(u STATIC
+add_library(u OBJECT
         ulib.c
         _usys.S
         printf.c
@@ -88,6 +86,6 @@ add_custom_command(
         DEPENDS ${UPROGS} ${PORTS}
 )
 
-add_custom_target(Programs ALL
+add_custom_target(Programs
         DEPENDS fs.tar
 )

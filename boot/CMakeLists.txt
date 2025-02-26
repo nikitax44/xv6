@@ -27,11 +27,13 @@ add_custom_command(
   COMMAND sed "s/@KERNEL_ENTRY_START@/${KERNEL_ENTRY_START}/g" < ${CMAKE_CURRENT_SOURCE_DIR}/kernel.ld.tmpl > _kernel.ld
   DEPENDS kernel.ld.tmpl
 )
-add_custom_target(KernelDeps ALL DEPENDS _kernel.ld)
 
 if (DEFINED RUST_XV6)
   add_library(RustXv6 STATIC IMPORTED)
   set_target_properties(RustXv6 PROPERTIES IMPORTED_LOCATION ${RUST_XV6})
+  add_custom_target(KernelDeps DEPENDS _kernel.ld)
+else ()
+  add_custom_target(KernelDeps DEPENDS _kernel.ld GenerateLibRustXv6)
 endif ()
 if (DEFINED KERNEL)
   add_library(KernelLib STATIC IMPORTED)
@@ -43,6 +45,3 @@ add_executable(kernel ${BOOT})
 target_link_libraries(kernel PRIVATE KernelLib RustXv6 KernelLib)
 target_link_options(kernel PRIVATE "-T${CMAKE_CURRENT_BINARY_DIR}/_kernel.ld")
 add_dependencies(kernel KernelDeps)
-
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-

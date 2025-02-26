@@ -30,32 +30,43 @@ add_custom_command(
   COMMENT "Building mkfs with host compiler"
 )
 
-set(CARGO_ARGUMENTS --release --frozen --lib)
+set(CARGO_BASE_OPTS -C ${CMAKE_SOURCE_DIR}/rust-xv6 -Z unstable-options)
+set(CARGO_EXTRA_OPTS --target-dir ${CMAKE_BINARY_DIR}/target --release --frozen --lib)
+set(CARGO_ARGUMENTS ${CARGO_EXTRA_OPTS} --artifact-dir ${CMAKE_BINARY_DIR})
 # set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --features talc)
-set(CARGO_ARGUMENTS ${CARGO_ARGUMENTS} --target-dir ${CMAKE_BINARY_DIR}/target)
 add_custom_command(
-  OUTPUT librust_xv6.a
-  COMMAND cd ${CMAKE_SOURCE_DIR}/rust-xv6 && cargo clippy --release --frozen --lib || true
-  COMMAND cd ${CMAKE_SOURCE_DIR}/rust-xv6 && cargo build ${CARGO_ARGUMENTS}
-  COMMAND cp ${CMAKE_BINARY_DIR}/target/riscv64gc-unknown-none-elf/release/librust_xv6.a ./
+  OUTPUT ${CMAKE_BINARY_DIR}/librust_xv6.a
+  COMMAND cargo ${CARGO_BASE_OPTS} clippy ${CARGO_EXTRA_OPTS} || true
+  COMMAND cargo ${CARGO_BASE_OPTS} build ${CARGO_ARGUMENTS}
   DEPENDS ${CMAKE_SOURCE_DIR}/rust-xv6/src/** ${CMAKE_SOURCE_DIR}/rust-xv6/Cargo.* Bindgen
+  BYPRODUCTS ${CMAKE_BINARY_DIR}/target
   COMMENT "Building librust_xv6.a"
 )
 
+set(BINDGEN_OPTS
+    --use-core
+    --wrap-static-fns
+    --wrap-unsafe-ops
+    --emit-diagnostics
+    --experimental
+    --no-derive-copy
+    --no-debug
+    trapframe
+)
 add_custom_command(
-  OUTPUT rust-xv6/xv6_binds.rs
-  COMMAND cd "${CMAKE_SOURCE_DIR}" && fd -e h --base-directory include --strip-cwd-prefix -x echo "#include \"{}\"" >
+  OUTPUT ${CMAKE_SOURCE_DIR}/rust-xv6/xv6_binds.rs
+  COMMAND fd -e h --base-directory "${CMAKE_SOURCE_DIR}/include" --strip-cwd-prefix -x echo "#include \"{}\"" >
           ${CMAKE_BINARY_DIR}/_everything.h
   VERBATIM
-  COMMAND
-    cd "${CMAKE_SOURCE_DIR}" && bindgen ${CMAKE_BINARY_DIR}/_everything.h -o ${CMAKE_SOURCE_DIR}/rust-xv6/xv6_binds.rs
-    --use-core --wrap-static-fns --wrap-unsafe-ops --emit-diagnostics --experimental --no-derive-copy --no-debug
-    trapframe -- -D __ASSEMBLER__ -I include -nostdinc
+  COMMAND bindgen ${CMAKE_BINARY_DIR}/_everything.h -o ${CMAKE_SOURCE_DIR}/rust-xv6/xv6_binds.rs ${BINDGEN_OPTS} -- -D
+          __ASSEMBLER__ -I "${CMAKE_SOURCE_DIR}/include" -nostdinc
+  BYPRODUCTS ${CMAKE_BINARY_DIR}/_everything.h
   DEPENDS ${CMAKE_SOURCE_DIR}/include/kernel/* ${CMAKE_SOURCE_DIR}/include/kernel/*/*
 )
 
-add_custom_target(Bindgen ALL DEPENDS rust-xv6/xv6_binds.rs)
+add_custom_target(Bindgen DEPENDS rust-xv6/xv6_binds.rs)
 
+add_custom_target(GenerateLibRustXv6 DEPENDS librust_xv6.a)
 add_library(RustXv6 STATIC IMPORTED)
 set_target_properties(RustXv6 PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/librust_xv6.a)
 
@@ -69,13 +80,13 @@ add_custom_command(
   COMMAND rm -rf temp_files && mkdir temp_files
   COMMAND tar -C temp_files -xf ${CMAKE_BINARY_DIR}/user/fs.tar
   COMMAND ${CMAKE_BINARY_DIR}/mkfs.elf fs.img temp_files/* "${CMAKE_SOURCE_DIR}/README"
-  COMMAND rm -rf temp_files
+  BYPRODUCTS temp_files
   DEPENDS ${CMAKE_BINARY_DIR}/mkfs.elf Programs ${CMAKE_SOURCE_DIR}/README
 )
 
-add_custom_target(mkfs ALL DEPENDS mkfs.elf)
+add_custom_target(mkfs DEPENDS mkfs.elf)
 
-add_custom_target(image ALL DEPENDS fs.img)
+add_custom_target(image DEPENDS fs.img)
 
 # Enable bios for qemu
 if(OPENSBI_ENABLED)
@@ -93,20 +104,19 @@ add_custom_command(
   DEPENDS qemu-script.tmpl
 )
 
-add_custom_target(script ALL DEPENDS qemu-script)
+add_custom_target(script DEPENDS qemu-script)
 
 # Add the QEMU target
 add_custom_target(
   qemu
   DEPENDS kernel fs.img qemu-script
-  COMMAND CPUS=${NPROC} KERNEL="${CMAKE_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
-          ./qemu-script
+  COMMAND CPUS=${NPROC} KERNEL="${CMAKE_BINARY_DIR}/boot/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img" ./qemu-script
 )
 
 # Generate GDB initialization file
 add_custom_command(
   OUTPUT ${CMAKE_SOURCE_DIR}/.gdbinit
-  COMMAND sed -e "s/:1234/:${GDBPORT}/" -e "s#kernel/kernel#${CMAKE_BINARY_DIR}/kernel/kernel#" <
+  COMMAND sed -e "s/:1234/:${GDBPORT}/" -e "s#build/kernel#${CMAKE_BINARY_DIR}/boot/kernel#" <
           ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit.tmpl-riscv > ${CMAKE_SOURCE_DIR}/.gdbinit
   DEPENDS .gdbinit.tmpl-riscv
 )
@@ -116,6 +126,6 @@ add_custom_target(
   qemu-gdb
   DEPENDS kernel ${CMAKE_SOURCE_DIR}/.gdbinit fs.img qemu-script
   COMMAND ${CMAKE_COMMAND} -E echo "*** Now run 'gdb' in another window."
-  COMMAND CPUS=1 KERNEL="${CMAKE_CURRENT_BINARY_DIR}/kernel/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img"
-          ./qemu-script -S -gdb "tcp::${GDBPORT}"
+  COMMAND CPUS=1 KERNEL="${CMAKE_CURRENT_BINARY_DIR}/boot/kernel" FS="${CMAKE_CURRENT_BINARY_DIR}/fs.img" ./qemu-script
+          -S -gdb "tcp::${GDBPORT}"
 )

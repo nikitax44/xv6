@@ -69,7 +69,7 @@ pub(super) unsafe fn make_kernel_map() -> Result<Pagetable<'static>, PTError> {
 
     // map the trampoline for trap entry/exit to
     // the highest virtual address in the kernel.
-    pt.map_page(TRAMPOLINE, addrof_symbol!(trampoline), Mode::___X)?;
+    pt.map_kilo(TRAMPOLINE, addrof_symbol!(trampoline), Mode::___X)?;
 
     // allocate and map a kernel stack for each process.
     //proc_mapstacks(&mut pt)?;

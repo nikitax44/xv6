@@ -2,13 +2,13 @@ use crate::errno::ErrNo;
 use crate::kalloc::thin_box::ThinBox;
 use crate::kalloc::Xv6Alloc;
 use crate::kalloc::{get_kalloc, Page};
-use crate::memlayout::{FROM_KSTACK_BOTTOM, PGSIZE, STACK_SIZE, TO_KSTACK_BOTTOM};
+use crate::memlayout::{PGSIZE, TRAPFRAME};
 use crate::util::Mutex;
 use crate::vm::kernel_map::make_kernel_map;
 use crate::vm::mode::Mode;
 use crate::vm::pagetable::Pagetable;
-use crate::vm::pt_inner::IPagetable;
-use crate::vm::pte::PtEntry;
+use crate::vm::pt_inner::GigaPT;
+use crate::vm::pte::KiloPtEntry;
 use crate::vm::PTError;
 use alloc::vec::Vec;
 use core::ptr::NonNull;
@@ -20,6 +20,12 @@ static KERNEL_PAGETABLE: RwLock<Option<Pagetable>> = RwLock::new(None);
 
 #[derive(Copy, Clone)]
 struct KernelStack(pub usize);
+
+pub const STACK_SIZE: usize = 4;
+const TO_KSTACK_BOTTOM: fn(usize) -> *mut Page =
+    |id| (TRAPFRAME - ((id) + 1) * (STACK_SIZE + 1) * PGSIZE) as *mut _;
+const FROM_KSTACK_BOTTOM: fn(*mut Page) -> usize =
+    |ptr| (TRAPFRAME - (ptr as usize)) / PGSIZE / (STACK_SIZE + 1) - 1;
 
 impl KernelStack {
     fn bottom(self) -> *mut Page {
@@ -45,7 +51,7 @@ impl KernelStack {
                 .write()
                 .as_mut()
                 .expect("map_page on None")
-                .map_page(ptr as usize, page.leak().as_ptr() as usize, Mode::_RW_)?;
+                .map_kilo(ptr as usize, page.leak().as_ptr() as usize, Mode::_RW_)?;
         }
         Ok(())
     }
@@ -124,7 +130,7 @@ unsafe extern "C" fn kvminit() {
 }
 
 #[no_mangle]
-extern "C" fn with_kernel_pagetable(op: extern "C" fn(&mut IPagetable)) {
+extern "C" fn with_kernel_pagetable(op: extern "C" fn(&mut GigaPT)) {
     let mut kpt = KERNEL_PAGETABLE.write();
     let kpt = kpt
         .as_mut()
@@ -137,7 +143,7 @@ extern "C" fn with_kernel_pagetable(op: extern "C" fn(&mut IPagetable)) {
 //int mappages(pagetable_t pagetable, u64 va, u64 size, u64 pa, int perm)
 #[no_mangle]
 extern "C" fn mappages(
-    pt: &mut IPagetable,
+    pt: &mut GigaPT,
     virtual_address: usize,
     size: usize,
     physical_address: usize,
@@ -164,12 +170,19 @@ extern "C" fn mappages(
 // Can only be used to look up user pages.
 // u64 walkaddr(pagetable_t pagetable, u64 va)
 #[no_mangle]
-extern "C" fn walkaddr(pagetable: &IPagetable, virtual_address: usize) -> usize {
+extern "C" fn walkaddr(pagetable: &GigaPT, virtual_address: usize) -> usize {
     Pagetable::from_ref(pagetable)
-        .walk(virtual_address)
-        .ok()
+        .walk_kilo(virtual_address)
+        .and_then(KiloPtEntry::get)
+        .map(|(addr, mode)| if mode.get_u() { addr } else { 0 })
+        .unwrap_or(0)
+}
+
+#[no_mangle]
+extern "C" fn kmapdump() {
+    let guard = KERNEL_PAGETABLE.read();
+    let pt = guard
         .as_ref()
-        .and_then(PtEntry::get)
-        .filter(|(_addr, mode)| mode.get_u())
-        .map_or(0, |(addr, _mode)| addr)
+        .expect("kernel pagetable was expected to be present");
+    log::info!("kernel pagetable: {:#?}", pt.inner_ref());
 }

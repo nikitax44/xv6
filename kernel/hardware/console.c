@@ -17,6 +17,7 @@
 #define C(x)      ((x) - '@') // Control-x
 
 usize size_of_last_char(char* start, char* end);
+void  kmapdump(void);
 
 void interapt_put_char(int);
 
@@ -133,6 +134,7 @@ void consoleintr(int c) {
   case C('P'): // Print process list.
     printf("\nfree RAM: %lu blocks\n", free_pages());
     procdump();
+    kmapdump();
     break;
   case C('Q'):
     printf("\nctrl+Q: shutdown\n");

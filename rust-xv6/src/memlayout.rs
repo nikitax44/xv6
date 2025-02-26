@@ -9,14 +9,8 @@ pub const UART0: usize = 0x1000_0000;
 pub const VIRTIO0: usize = 0x1000_1000;
 pub const PLIC: usize = 0x0c00_0000;
 pub const TRAMPOLINE: usize = Pagetable::MAX_VA - PGSIZE;
-pub const STACK_SIZE: usize = 4;
-pub const TO_KSTACK_BOTTOM: fn(usize) -> *mut Page =
-    |id| (TRAPFRAME - ((id) + 1) * (STACK_SIZE + 1) * PGSIZE) as *mut _;
-pub const FROM_KSTACK_BOTTOM: fn(*mut Page) -> usize =
-    |ptr| (TRAPFRAME - (ptr as usize)) / PGSIZE / (STACK_SIZE + 1) - 1;
 pub const TRAPFRAME: usize = TRAMPOLINE - PGSIZE;
 
-use crate::kalloc::Page;
 use core::ffi::c_void;
 
 #[repr(transparent)]

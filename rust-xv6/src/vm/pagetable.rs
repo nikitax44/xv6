@@ -3,11 +3,10 @@ use crate::kalloc::thin_box::ThinBox;
 use crate::kalloc::Page;
 use crate::memlayout::{PGSHIFT, PGSIZE};
 use crate::vm::mode::Mode;
-use crate::vm::pt_inner::IPagetable;
-use crate::vm::pte::PtEntry;
+use crate::vm::pt_inner::GigaPT;
+use crate::vm::pte::{GigaPtEntry, KiloPtEntry, MegaPtEntry};
 use crate::vm::PTError;
 use alloc::boxed::Box;
-use core::ops::IndexMut;
 
 #[derive(Debug)]
 pub struct Pagetable<'inner> {
@@ -16,19 +15,22 @@ pub struct Pagetable<'inner> {
 
 #[derive(Debug)]
 enum Inner<'inner> {
-    Owned(ThinBox<IPagetable>),
-    Ref(&'inner IPagetable),
-    Mut(&'inner mut IPagetable),
+    Owned(ThinBox<GigaPT>),
+    Ref(&'inner GigaPT),
+    Mut(&'inner mut GigaPT),
 }
 
-// TODO: add support for megapages and gigapages
 impl<'inner> Pagetable<'inner> {
+    pub const KPGSIZE: usize = PGSIZE;
+    pub const MPGSIZE: usize = Self::KPGSIZE * Self::PT_ENTRIES;
+    pub const GPGSIZE: usize = Self::MPGSIZE * Self::PT_ENTRIES;
+
     #[track_caller]
     /// # Errors
     /// out of memory
     pub fn new() -> Result<Self, PTError> {
         Ok(Self {
-            inner: Inner::Owned(IPagetable::alloc().map_err(PTError::AllocFail)?),
+            inner: Inner::Owned(ThinBox::alloc()?.zeroed()),
         })
     }
 
@@ -52,7 +54,7 @@ impl<'inner> Pagetable<'inner> {
         Ok(())
     }
 
-    pub(super) const fn inner_ref(&self) -> &IPagetable {
+    pub(super) const fn inner_ref(&self) -> &GigaPT {
         match &self.inner {
             Inner::Owned(inner) => inner.const_deref(),
             Inner::Ref(inner) => inner,
@@ -60,21 +62,21 @@ impl<'inner> Pagetable<'inner> {
         }
     }
 
-    pub(super) const fn inner_mut(&mut self) -> Option<&mut IPagetable> {
+    pub(super) const fn inner_mut(&mut self) -> Result<&mut GigaPT, PTError> {
         match &mut self.inner {
-            Inner::Owned(inner) => Some(inner.const_deref_mut()),
-            Inner::Ref(_inner) => None,
-            Inner::Mut(inner) => Some(inner),
+            Inner::Owned(inner) => Ok(inner.const_deref_mut()),
+            Inner::Ref(_inner) => Err(PTError::ROPagetable),
+            Inner::Mut(inner) => Ok(inner),
         }
     }
 
-    pub(super) const fn from_ref(inner: &'inner IPagetable) -> Self {
+    pub(super) const fn from_ref(inner: &'inner GigaPT) -> Self {
         Self {
             inner: Inner::Ref(inner),
         }
     }
 
-    pub(super) const fn from_mut(inner: &'inner mut IPagetable) -> Self {
+    pub(super) const fn from_mut(inner: &'inner mut GigaPT) -> Self {
         Self {
             inner: Inner::Mut(inner),
         }
@@ -82,44 +84,20 @@ impl<'inner> Pagetable<'inner> {
 
     /// # Errors
     /// see `MMapError`
-    pub fn walk(&self, virtual_address: usize) -> Result<PtEntry, PTError> {
+    pub fn walk_giga(&self, virtual_address: usize) -> Result<&GigaPtEntry, PTError> {
         Self::verify_va(virtual_address)?;
 
-        let pt2 = self.inner_ref();
-        let pt1: &IPagetable = pt2[Self::get_idx(2, virtual_address)]
-            .as_pt()
-            .ok_or(PTError::NotMapped)?;
-
-        let pt0: &IPagetable = pt1[Self::get_idx(1, virtual_address)]
-            .as_pt()
-            .ok_or(PTError::NotMapped)?;
-
-        Ok(pt0[Self::get_idx(0, virtual_address)])
+        let pt = self.inner_ref();
+        Ok(&pt[Self::get_idx(2, virtual_address)])
     }
 
     /// # Errors
-    /// see `MMapError`
-    /// # Panics
-    /// never
-    pub fn walk_mut(&mut self, virtual_address: usize) -> Result<&mut PtEntry, PTError> {
+    /// pagetable is readonly
+    pub fn walk_giga_mut(&mut self, virtual_address: usize) -> Result<&mut GigaPtEntry, PTError> {
         Self::verify_va(virtual_address)?;
 
-        let inner = self.inner_mut().ok_or(PTError::ROPagetable)?;
-        let pt_entry2: &mut PtEntry = &mut inner[Self::get_idx(2, virtual_address)];
-        if !pt_entry2.is_set() {
-            pt_entry2.set_pt(IPagetable::alloc().map_err(PTError::AllocFail)?);
-        }
-
-        let pt1: &mut IPagetable = pt_entry2.as_pt_mut().unwrap();
-
-        let pt_entry1: &mut PtEntry = &mut pt1[Self::get_idx(1, virtual_address)];
-        if !pt_entry1.is_set() {
-            pt_entry1.set_pt(IPagetable::alloc().map_err(PTError::AllocFail)?);
-        }
-
-        let pt0: &mut IPagetable = pt_entry1.as_pt_mut().unwrap();
-
-        Ok(pt0.index_mut(Self::get_idx(0, virtual_address)))
+        let pt = self.inner_mut()?;
+        Ok(&mut pt[Self::get_idx(2, virtual_address)])
     }
 
     /// # Errors
@@ -128,61 +106,23 @@ impl<'inner> Pagetable<'inner> {
     //#[attr_wrapper::time_me(0)]
     pub fn translate(&self, va: usize) -> Result<usize, PTError> {
         let page = va / PGSIZE * PGSIZE;
-        self.walk(page)
-            .and_then(|pte| pte.addr())
-            .map(|pa| pa + (va - page))
+        Ok(self.walk_kilo(page)?.get()?.0 + (va - page))
     }
 
-    /// # Errors
-    /// see `MMapError`
-    /// # Panics
-    /// if contains bugs
-    #[track_caller]
-    pub fn map_page(
-        &mut self,
-        virtual_address: usize,
-        physical_address: usize,
-        perm: Mode,
-    ) -> Result<(), PTError> {
-        let pte = self.walk_mut(virtual_address)?;
-        if pte.is_set() {
-            return Err(PTError::Remap);
-        }
-        pte.set(physical_address, perm)?;
-
-        debug_assert_eq!(
-            self.walk(virtual_address)
-                .expect("failed to properly map")
-                .get(),
-            Some((physical_address, perm)),
-            "vmmap: read different value from one written"
-        );
-        Ok(())
-    }
-
-    /// # Errors
-    /// this address it not mapped
-    pub fn unmap_page(&mut self, virtual_address: usize) -> Result<(), PTError> {
-        // do not create pages to unmapped page
-        self.walk(virtual_address)?;
-        self.walk_mut(virtual_address)?.unset();
-        Ok(())
-    }
-
-    ///# Panics
-    /// if va is valid, then cannot panic
     ///# Errors
     /// see `MMapError`
     /// # Safety
     /// mapped page must be allocated
     pub unsafe fn unmap_page_and_free(&mut self, virtual_address: usize) -> Result<(), PTError> {
-        // do not create pages to unmapped page
-        let addr = self.walk(virtual_address)?.get().unwrap().0;
-        // SAFETY: page allocated so it's safe
+        let pte = self.walk_kilo_mut(virtual_address)?;
+        let addr = pte.get()?.0;
+        pte.unset();
+
+        // SAFETY: precondition
         unsafe {
-            let _ = Box::from_non_null(core::ptr::NonNull::new(addr as *mut Page).unwrap());
+            // use physical address because virtual just got unmapped
+            let _ = Box::from_raw(addr as *mut Page);
         }
-        self.walk_mut(virtual_address)?.unset();
         Ok(())
     }
 
@@ -197,12 +137,25 @@ impl<'inner> Pagetable<'inner> {
         size: usize,
         mode: Mode,
     ) -> Result<(), PTError> {
-        if size % PGSIZE != 0 {
+        if size % Self::KPGSIZE != 0 {
             return Err(PTError::UnalignedSize(size));
         }
-        (0usize..size).step_by(PGSIZE).try_for_each(|offset| {
-            self.map_page(virtual_address + offset, physical_address + offset, mode)
-        })
+        let mut pos = 0;
+        while pos < size {
+            if (virtual_address + pos) % Self::GPGSIZE == 0 && (pos + Self::GPGSIZE) <= size {
+                self.map_giga(virtual_address + pos, physical_address + pos, mode)?;
+                pos += Self::GPGSIZE;
+                continue;
+            }
+            if (virtual_address + pos) % Self::MPGSIZE == 0 && (pos + Self::MPGSIZE) <= size {
+                self.map_mega(virtual_address + pos, physical_address + pos, mode)?;
+                pos += Self::MPGSIZE;
+                continue;
+            }
+            self.map_kilo(virtual_address + pos, physical_address + pos, mode)?;
+            pos += Self::KPGSIZE;
+        }
+        Ok(())
     }
 
     /// # Errors
@@ -213,3 +166,80 @@ impl<'inner> Pagetable<'inner> {
         self.map_pages(reg.start(), reg.start(), reg.size(), mode)
     }
 }
+
+impl Drop for Inner<'_> {
+    fn drop(&mut self) {
+        if let Inner::Owned(_) = self {
+            panic!("owned pagetable got dropped");
+        }
+    }
+}
+
+macro_rules! walking {
+    ($walk:ident, $walk_mut:ident, $map:ident $(; $prev_walk:ident, $prev_walk_mut:ident, $ret:ty, $id:literal)?) => {
+        impl<'inner> Pagetable<'inner> {
+            /// # Errors
+            /// see `MMapError`
+            #[track_caller]
+            pub fn $map(
+                &mut self,
+                virtual_address: usize,
+                physical_address: usize,
+                perm: Mode,
+            ) -> Result<(), PTError> {
+                let pte = self.$walk_mut(virtual_address)?;
+                if pte.is_set() {
+                    return Err(PTError::Remap(virtual_address));
+                }
+                pte.set(physical_address, perm)?;
+                Ok(())
+            }
+
+            $(
+            /// # Errors
+            /// see `MMapError`
+            pub fn $walk(&self, virtual_address: usize) -> Result<&$ret, PTError> {
+                Self::verify_va(virtual_address)?;
+
+                let pt = self.$prev_walk(virtual_address)?.as_pt()?;
+                Ok(&pt[Self::get_idx($id, virtual_address)])
+            }
+            )?
+
+            $(
+            /// # Errors
+            /// see `MMapError`
+            pub fn $walk_mut(&mut self, virtual_address: usize) -> Result<&mut $ret, PTError> {
+                Self::verify_va(virtual_address)?;
+
+                let pt = self.$prev_walk_mut(virtual_address)?;
+                if !pt.is_set() {
+                    pt.set_pt(ThinBox::alloc()?.zeroed());
+                }
+                let pt = pt.as_pt_mut()?;
+                Ok(&mut pt[Self::get_idx($id, virtual_address)])
+            }
+            )?
+        }
+    };
+}
+
+walking!(walk_giga, walk_giga_mut, map_giga);
+walking!(
+    walk_mega,
+    walk_mega_mut,
+    map_mega;
+    walk_giga,
+    walk_giga_mut,
+    MegaPtEntry,
+    1
+);
+walking!(
+    walk_kilo,
+    walk_kilo_mut,
+    map_kilo;
+    walk_mega,
+    walk_mega_mut,
+    KiloPtEntry,
+    0
+);

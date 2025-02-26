@@ -9,15 +9,17 @@ pub mod pagetable;
 pub(crate) mod pt_inner;
 pub mod pte;
 
-#[derive(Error)]
+#[derive(Error, PartialEq)]
 #[non_exhaustive]
 pub enum PTError {
     #[error("this va is already mapped")]
-    Remap,
+    Remap(usize),
     #[error("failed to allocate memory")]
     AllocFail(#[from] AllocError),
     #[error("this va is not mapped")]
     NotMapped,
+    #[error("this PTE contains memory reference and not inner PT")]
+    NotTable,
     #[error("invalid va: {0:#x}")]
     InvalidVirtualAddress(usize),
     #[error("the va {0:#x} does not point to the start of the Page")]
